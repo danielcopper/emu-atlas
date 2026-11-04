@@ -1,9 +1,9 @@
 """The caveat codes of the save-portability question, and the closed vocabularies their data keys take.
 
 They live apart from :mod:`atlas.save_portability`, which raises them, because
-:data:`atlas.placement.ENUMERATED_DATA` registers the ``side`` and ``reason``
-vocabularies under these codes, and :mod:`atlas.placement` cannot import the
-module that imports its :class:`~atlas.placement.Caveat`.
+:data:`atlas.placement.ENUMERATED_DATA` registers the ``side``, ``reason`` and
+verdict vocabularies under these codes, and :mod:`atlas.placement` cannot
+import the module that imports its :class:`~atlas.placement.Caveat`.
 """
 
 from __future__ import annotations
@@ -34,8 +34,70 @@ CAVEAT_SAVE_ANSWER_UNRESOLVED: Final = "save-answer-unresolved"
 CAVEAT_ENTRY_LABEL_UNKNOWN: Final = "entry-label-unknown"
 # Both builds are confirmed and both records cover the pair, and one part still
 # answers unestablished: why is the ``reason``. ``data``: ``memory``, ``slot``
-# (absent for a memory a system has one of) and ``reason``.
+# (absent for a memory a system has one of) and ``reason``. Where the reason is
+# that the part's layout differs by the cartridge's kind (#577 D15), the
+# caveat also states what holds for each kind, one word of
+# :data:`CARTRIDGE_STATEMENTS` each: ``cartridges`` maps each cartridge kind
+# whose word differs from every other kind's to its word, and
+# ``other_cartridges`` is the word for every other kind — ``no-game-data``
+# where the part holds nothing of a game for them, as a clock does for a
+# cartridge without one (#577 D16).
 CAVEAT_SAVE_PART_UNESTABLISHED: Final = "save-part-unestablished"
+
+PortabilityVerdict = Literal["same-files", "same-data", "convertible", "unestablished", "not-readable"]
+PORTABILITY_SAME_FILES: PortabilityVerdict = "same-files"
+"""The target reads the source's files where they lie, under their names: nothing has to move."""
+PORTABILITY_SAME_DATA: PortabilityVerdict = "same-data"
+"""The target reads the same data once it is placed and named as the target's own save answer names it; ``moves``
+says what differs."""
+PORTABILITY_CONVERTIBLE: PortabilityVerdict = "convertible"
+"""The target reads the data only after a conversion a source states; ``conversion`` carries the rule where it is
+plain, and is ``null`` where a program performs it without one."""
+PORTABILITY_UNESTABLISHED: PortabilityVerdict = "unestablished"
+"""Nothing atlas read at a build it confirmed here settles whether the target reads it; the caveats say why."""
+PORTABILITY_NOT_READABLE: PortabilityVerdict = "not-readable"
+"""This part of the save does not carry over: the target keeps no such part in its live mode, or RetroArch loads the
+source's bytes as they are into a part the target keeps in another layout."""
+# The verdicts a part and a pair take, from the mildest to the most severe —
+# the order the summary is taken in (#577 D9). They live here, beside the
+# codes, because ``save-part-unestablished`` states one per cartridge kind and
+# :data:`atlas.placement.ENUMERATED_DATA` closes those words.
+PORTABILITY_VERDICTS = (
+    PORTABILITY_SAME_FILES,
+    PORTABILITY_SAME_DATA,
+    PORTABILITY_CONVERTIBLE,
+    PORTABILITY_UNESTABLISHED,
+    PORTABILITY_NOT_READABLE,
+)
+
+CartridgeStatement = Literal[
+    "same-files", "same-data", "convertible", "unestablished", "not-readable", "no-game-data"
+]
+CARTRIDGE_SAME_FILES: CartridgeStatement = "same-files"
+"""For a cartridge of this kind the target reads the source's files where they lie."""
+CARTRIDGE_SAME_DATA: CartridgeStatement = "same-data"
+"""For a cartridge of this kind the target reads the same data, placed or named as the part's ``moves`` say."""
+CARTRIDGE_CONVERTIBLE: CartridgeStatement = "convertible"
+"""For a cartridge of this kind the target reads the data only after a conversion a source states."""
+CARTRIDGE_UNESTABLISHED: CartridgeStatement = "unestablished"
+"""For a cartridge of this kind nothing atlas read settles whether the target reads it."""
+CARTRIDGE_NOT_READABLE: CartridgeStatement = "not-readable"
+"""For a cartridge of this kind the part does not carry over: the target does not run such a cartridge, keeps no such
+part for it, or reads the source's bytes as a layout of its own."""
+PART_NO_GAME_DATA: CartridgeStatement = "no-game-data"
+"""For a cartridge of this kind the part holds no game data — no file at all, or a clock file a cartridge without a
+clock still gets — so nothing of the game is lost with it (#577 D16)."""
+# What ``save-part-unestablished`` states for one cartridge kind: the part's
+# verdict for it, in the words of :data:`PORTABILITY_VERDICTS`, or that the
+# part holds no game data for it.
+CARTRIDGE_STATEMENTS = (
+    CARTRIDGE_SAME_FILES,
+    CARTRIDGE_SAME_DATA,
+    CARTRIDGE_CONVERTIBLE,
+    CARTRIDGE_UNESTABLISHED,
+    CARTRIDGE_NOT_READABLE,
+    PART_NO_GAME_DATA,
+)
 
 PortabilitySide = Literal["source", "target"]
 SIDE_SOURCE: PortabilitySide = "source"
@@ -54,12 +116,20 @@ record of its build."""
 # Why a build was not confirmed, the vocabulary of ``reason``.
 BUILD_UNCONFIRMED_REASONS = (REASON_OTHER_BUILD, REASON_BUILD_UNREAD)
 
-PartUnestablishedReason = Literal["target-file-unnamed", "no-conversion-stated"]
+PartUnestablishedReason = Literal["target-file-unnamed", "no-conversion-stated", "layout-differs-by-cartridge"]
 REASON_TARGET_FILE_UNNAMED: PartUnestablishedReason = "target-file-unnamed"
 """The target's live mode keeps such a part, and its save answer names no file for it: a card that lists the file only
 as an observation candidate, or an observed directory the file is not written to yet."""
 REASON_NO_CONVERSION_STATED: PartUnestablishedReason = "no-conversion-stated"
-"""The two entries keep the part in two formats, and no source the records cite states a conversion between them."""
+"""The two entries keep the part in two formats, the target opens the file itself, and no source the records cite
+states a conversion between them."""
+REASON_LAYOUT_DIFFERS_BY_CARTRIDGE: PartUnestablishedReason = "layout-differs-by-cartridge"
+"""The verdict depends on the cartridge's kind, which atlas does not read (#577 D15): the caveat's ``cartridges`` and
+``other_cartridges`` state what holds for each kind."""
 # Why a part with both builds confirmed is still unestablished, the vocabulary
 # of ``save-part-unestablished``'s ``reason``.
-PART_UNESTABLISHED_REASONS = (REASON_TARGET_FILE_UNNAMED, REASON_NO_CONVERSION_STATED)
+PART_UNESTABLISHED_REASONS = (
+    REASON_TARGET_FILE_UNNAMED,
+    REASON_NO_CONVERSION_STATED,
+    REASON_LAYOUT_DIFFERS_BY_CARTRIDGE,
+)

@@ -18,7 +18,10 @@ from typing import Any
 import pytest
 
 from atlas.oddities import load_oddities
+from atlas.save_memory import load_save_memory
 from atlas.save_formats import (
+    CARTRIDGE_KINDS,
+    CLOCK_CARTRIDGE_KINDS,
     SAVE_MEMORIES,
     load_save_formats,
     save_formats,
@@ -33,6 +36,10 @@ _REGISTRATIONS = Path(__file__).resolve().parent / "data" / "core_registrations.
 # rather than by a name the card spells.
 _CLAIMED_BY_READING = {("pcee2", "<memory_card_file>")}
 
+# The systems whose records tell cartridge kinds apart: every record covering
+# one of them is held to a cited statement per kind.
+_GAME_BOY_SYSTEMS = {"gb", "gbc"}
+
 
 def _card_templates(mode: Any, rules: Any) -> tuple[str, ...]:
     """Every file name a card mode spells, outside what the record sets aside by directory or by name."""
@@ -45,7 +52,7 @@ def _card_templates(mode: Any, rules: Any) -> tuple[str, ...]:
     )
 
 
-def _claimed(template: str, rules: Any, mode_name: str) -> bool:
+def _claimed(template: str, rules: Any, mode_name: str | None) -> bool:
     """Whether a rule speaking for *mode_name* claims *template*."""
     return any(rule.applies(mode_name) and rule.specificity(template, {}) is not None for rule in rules.parts)
 
@@ -57,7 +64,7 @@ def _table(**changes: Any) -> dict[str, Any]:
         "spec": "docs/research/save-portability.md",
         "formats": {"raw": "a raw image"},
         "conversions": [],
-        "retroarch": {"compressed": "[V] save.c:1 at a79435a"},
+        "retroarch": {"compressed": "[V] save.c:1 at a79435a", "loads_raw": "[V] save.c:2 at a79435a"},
         "emulators": {
             "demo": {
                 "kind": "libretro",
@@ -178,6 +185,109 @@ class TestTheLoaderFailsClosed:
         systems = load_save_formats(json.dumps(table)).emulators["demo"].systems
         assert systems["psxjp"] is systems["psx"]
 
+    def test_the_retroarch_load_citation_is_required(self):
+        text = json.dumps(_table(retroarch={"compressed": "[V] save.c:1 at a79435a"}))
+        with pytest.raises(ValueError, match="loads_raw"):
+            load_save_formats(text)
+
+    def test_a_kind_outside_the_vocabulary_is_refused(self):
+        text = _with_part(kinds={"mbc4": "raw"})
+        with pytest.raises(ValueError, match="kind must be one of"):
+            load_save_formats(text)
+
+    def test_a_kind_format_the_table_does_not_state_is_refused(self):
+        text = _with_part(kinds={"mbc2": "packed"})
+        with pytest.raises(ValueError, match="for 'mbc2' is not one the table states"):
+            load_save_formats(text)
+
+    def test_a_clock_names_only_kinds_that_carry_a_clock(self):
+        text = _with_part(memory="cartridge-clock", kinds={"mbc2": "raw"})
+        with pytest.raises(ValueError, match="names only kinds that carry a clock"):
+            load_save_formats(text)
+
+    def test_a_null_format_needs_a_kind_that_names_one(self):
+        table = _table()
+        part = table["emulators"]["demo"]["systems"]["psx"]["parts"][0]
+        part.update(memory="cartridge-clock", format=None, kinds={"huc3": None})
+        text = json.dumps(table)
+        with pytest.raises(ValueError, match="a null format needs kinds that name a format"):
+            load_save_formats(text)
+
+    def test_a_null_format_keeps_the_part_for_the_kinds_it_names_alone(self):
+        table = _table()
+        part = table["emulators"]["demo"]["systems"]["psx"]["parts"][0]
+        part.update(memory="cartridge-clock", format=None, kinds={"mbc3-timer": "raw", "huc3": None})
+        rule = load_save_formats(json.dumps(table)).emulators["demo"].systems["psx"].parts[0]
+        assert [rule.format_for(kind) for kind in ("mbc3-timer", "huc3", "tama5", None)] == ["raw", None, None, None]
+
+    def test_a_kind_a_rule_names_overrides_the_format_for_it_alone(self):
+        table = _table(formats={"raw": "a", "packed": "b"})
+        table["emulators"]["demo"]["systems"]["psx"]["parts"][0]["kinds"] = {"mbc2": "packed"}
+        rule = load_save_formats(json.dumps(table)).emulators["demo"].systems["psx"].parts[0]
+        assert [rule.format_for(kind) for kind in ("mbc2", "mbc7", None)] == ["packed", "raw", "raw"]
+
+    def test_an_unread_kind_without_its_revision_in_the_citation_is_refused(self):
+        text = _with_part(unread=[{"kinds": ["huc1"], "citation": "[O] not read"}])
+        with pytest.raises(ValueError, match="does not name the revision"):
+            load_save_formats(text)
+
+    def test_an_unread_kind_outside_the_vocabulary_is_refused(self):
+        text = _with_part(unread=[{"kinds": ["mbc4"], "citation": "[O] x.c at abc1234"}])
+        with pytest.raises(ValueError, match="kinds must be a non-empty list drawn from"):
+            load_save_formats(text)
+
+    def test_a_kind_both_stated_and_unread_is_refused(self):
+        text = _with_part(kinds={"huc1": "raw"}, unread=[{"kinds": ["huc1"], "citation": "[O] x.c at abc1234"}])
+        with pytest.raises(ValueError, match="either stated or unread"):
+            load_save_formats(text)
+
+    def test_an_unread_kind_is_found_with_its_citation(self):
+        text = _with_part(unread=[{"kinds": ["huc1", "mmm01"], "citation": "[O] x.c at abc1234"}])
+        rule = load_save_formats(text).emulators["demo"].systems["psx"].parts[0]
+        assert (rule.unread_for("mmm01"), rule.unread_for("mbc2"), rule.unread_for(None)) == (
+            "[O] x.c at abc1234",
+            None,
+            None,
+        )
+
+    def test_a_mirror_handling_outside_the_vocabulary_is_refused(self):
+        table = _table()
+        table["emulators"]["demo"]["systems"]["psx"]["mirrors"] = [{"kinds": ["mbc2"], "handling": "wraps", "citation": "c"}]
+        text = json.dumps(table)
+        with pytest.raises(ValueError, match="handling must be one of"):
+            load_save_formats(text)
+
+    def test_a_mirror_statement_names_kinds_of_the_vocabulary(self):
+        table = _table()
+        table["emulators"]["demo"]["systems"]["psx"]["mirrors"] = [{"kinds": ["mbc4"], "handling": "folds", "citation": "c"}]
+        text = json.dumps(table)
+        with pytest.raises(ValueError, match="kinds must be a non-empty list drawn from"):
+            load_save_formats(text)
+
+    def test_a_mirror_statement_is_found_for_its_kinds(self):
+        table = _table()
+        table["emulators"]["demo"]["systems"]["psx"]["mirrors"] = [{"kinds": ["mbc2"], "handling": "drops", "citation": "c"}]
+        system = load_save_formats(json.dumps(table)).emulators["demo"].systems["psx"]
+        found = system.mirrors_for("mbc2")
+        assert found is not None
+        assert (found.handling, system.mirrors_for("mbc7")) == ("drops", None)
+
+    def test_a_kind_not_run_outside_the_vocabulary_is_refused(self):
+        table = _table()
+        table["emulators"]["demo"]["systems"]["psx"]["not_run"] = [{"kinds": ["mbc4"], "citation": "c"}]
+        text = json.dumps(table)
+        with pytest.raises(ValueError, match="kinds must be a non-empty list drawn from"):
+            load_save_formats(text)
+
+    def test_a_kind_not_run_is_found_with_its_citation(self):
+        table = _table()
+        table["emulators"]["demo"]["systems"]["psx"]["not_run"] = [{"kinds": ["mbc6", "mbc7"], "citation": "c"}]
+        system = load_save_formats(json.dumps(table)).emulators["demo"].systems["psx"]
+        refusal = system.does_not_run("mbc7")
+        assert refusal is not None
+        assert refusal.citation == "c"
+        assert system.does_not_run("mbc2") is None
+
 
 class TestARuleMatchesTheNamesItsAnswerStates:
     def _rule(self, **changes: Any):
@@ -228,12 +338,26 @@ class TestThePackagedTable:
     def test_every_format_is_one_a_record_or_a_conversion_uses(self):
         table = save_formats()
         used = {
-            rule.format
+            format_name
             for record in table.emulators.values()
             for system in record.systems.values()
             for rule in system.parts
+            for format_name in (rule.format, *(value for _, value in rule.kinds))
+            if format_name is not None
         } | {side for c in table.conversions for side in (c.source, c.target)}
         assert used == set(table.formats)
+
+    def test_every_cartridge_kind_is_one_a_record_states(self):
+        stated = {
+            kind
+            for record in save_formats().emulators.values()
+            for system in record.systems.values()
+            for kind in (
+                *(kind for rule in system.parts for kind, _ in rule.kinds),
+                *(kind for statement in system.not_run for kind in statement.kinds),
+            )
+        }
+        assert stated == set(CARTRIDGE_KINDS)
 
 
 class TestEveryPinIsTheBuildAtlasAlreadyRecorded:
@@ -254,12 +378,32 @@ class TestEveryPinIsTheBuildAtlasAlreadyRecorded:
         captured = json.loads(_REGISTRATIONS.read_text(encoding="utf-8"))["cores"]
         cards = {card.key: card for card in load_oddities()}
         for record in save_formats().emulators.values():
-            if record.kind != "libretro":
+            if record.kind != "libretro" or record.key not in captured:
                 continue
             build = captured[record.key]["build"]
             assert build in record.build.pins, record.key
             named_by = build if record.build.names == "commit" else cards[record.key].provenance
             assert record.build.revision in named_by, record.key
+
+    def test_a_core_without_a_capture_pins_its_save_memory_build(self):
+        # A core whose registration was never captured has its build recorded
+        # where its save files are: the verified_core of each system its
+        # record covers. A commit-named pin names the revision; a release-named
+        # one cannot, and its build citation says what it was read at instead.
+        captured = json.loads(_REGISTRATIONS.read_text(encoding="utf-8"))["cores"]
+        memory = {record.key: record for record in load_save_memory()}
+        checked = []
+        for record in save_formats().emulators.values():
+            if record.kind != "libretro" or record.key in captured:
+                continue
+            for system in record.systems:
+                stated = memory[record.key].for_system(system)
+                assert stated is not None, (record.key, system)
+                assert stated.verified_core in record.build.pins, (record.key, system)
+            named_by = record.build.pins[0] if record.build.names == "commit" else record.build.citation
+            assert record.build.revision in named_by, record.key
+            checked.append(record.key)
+        assert checked, "no record is held to a save_memory build"
 
     def test_a_standalone_pin_is_its_save_cards_build(self):
         cards = {card.token: card for card in load_standalone_saves()}
@@ -333,3 +477,107 @@ class TestEveryCardFileIsAPart:
                         if name not in spelled and rule.reading is None
                     ]
         assert invented == []
+
+
+class TestEveryRetroArchFileIsAPart:
+    """For a core RetroArch writes the save for, every file its memory ids give is a part, and RetroArch's.
+
+    Such a core has no save card: its save answer names the files RetroArch
+    writes for the memory ids the core fills (``atlas/data/save_memory.json``),
+    so the record is held to that statement the way a carded core's record is
+    held to its card.
+    """
+
+    @staticmethod
+    def _covered() -> list[tuple[Any, str, Any]]:
+        cards = {card.key for card in load_oddities()}
+        memory = {record.key: record for record in load_save_memory()}
+        return [
+            (record, system, memory[record.key].for_system(system))
+            for record in save_formats().emulators.values()
+            if record.kind == "libretro" and record.key not in cards and record.key in memory
+            for system in record.systems
+        ]
+
+    def test_every_memory_id_file_is_claimed(self):
+        unclaimed = [
+            f"{record.key} {system}: {template}"
+            for record, system, stated in self._covered()
+            for template in stated.file_templates
+            if not _claimed(template, record.systems[system], None)
+        ]
+        assert self._covered()
+        assert unclaimed == []
+
+    def test_every_rule_is_retroarchs(self):
+        wrong = [
+            f"{record.key} {system}: {rule.names}"
+            for record, system, _ in self._covered()
+            for rule in record.systems[system].parts
+            if not rule.frontend
+        ]
+        assert wrong == []
+
+    def test_a_rule_names_only_what_the_memory_ids_give(self):
+        invented = [
+            f"{record.key} {system}: {name}"
+            for record, system, stated in self._covered()
+            for rule in record.systems[system].parts
+            for name in rule.names
+            if name not in stated.file_templates
+        ]
+        assert invented == []
+
+
+class TestEveryCartridgeKindIsAccountedFor:
+    """In a record that tells cartridge kinds apart, every kind a part can hold game data for is stated, cited, apart.
+
+    Every record of a Game Boy system is held. A kind counts as covered for a
+    rule when exactly one cited statement names
+    it: the system's ``not_run`` (the emulator does not run it), the rule's
+    ``kinds`` (the format the rule's citation reads for it, or ``null`` where
+    it keeps no such part), or the rule's ``unread`` (no read establishes it,
+    and the citation says why). Nothing falls back to the rule's base format
+    unnamed, so a verdict never rests on a kind no read covered (#577 D15). A
+    clock rule is held to the kinds that carry a clock; for every other kind a
+    clock part holds no game data by construction (#577 D16).
+    """
+
+    @staticmethod
+    def _miscounted(rule: Any, refused: set[str]) -> list[tuple[str, int]]:
+        """Every kind of the rule's universe whose cited statements are not exactly one, with their count."""
+        universe = CLOCK_CARTRIDGE_KINDS if rule.memory == "cartridge-clock" else CARTRIDGE_KINDS
+        stated = [kind for kind, _ in rule.kinds]
+        unread = [kind for group in rule.unread for kind in group.kinds]
+        counts = ((kind, (kind in refused) + stated.count(kind) + unread.count(kind)) for kind in universe)
+        return [(kind, count) for kind, count in counts if count != 1]
+
+    def test_every_kind_has_exactly_one_cited_statement(self):
+        # Every record of a Game Boy system is held, whatever it states: one
+        # that tells no kind apart fails rather than escaping the sweep.
+        unaccounted = [
+            f"{record.key} {system} {rule.memory} {kind}: {count} statements"
+            for record in save_formats().emulators.values()
+            for system, rules in record.systems.items()
+            if system in _GAME_BOY_SYSTEMS
+            for rule in rules.parts
+            for kind, count in self._miscounted(rule, {k for statement in rules.not_run for k in statement.kinds})
+        ]
+        assert unaccounted == []
+
+    def test_every_game_boy_record_that_runs_mbc2_states_its_mirror_handling(self):
+        # Every MBC2 cartridge's RAM is small enough to be mirrored, so where a
+        # record's emulator runs it, how it keeps a mirror write is stated (#577 D18).
+        unstated = [
+            f"{record.key} {system}"
+            for record in save_formats().emulators.values()
+            for system, rules in record.systems.items()
+            if system in _GAME_BOY_SYSTEMS
+            and rules.does_not_run("mbc2") is None
+            and rules.mirrors_for("mbc2") is None
+        ]
+        assert unstated == []
+
+    def test_the_sweep_holds_records(self):
+        held = {record.key for record in save_formats().emulators.values() if set(record.systems) & _GAME_BOY_SYSTEMS}
+        assert len(held) >= 8

@@ -69,8 +69,8 @@ A fourth question is not about firmware at all: whether one catalogue entry read
 asked as they stand, a packaged record per emulator (`atlas/data/save_formats.json`) labels their file groups with the
 memory, slot and format the emulator's source pins at a stated build, and a verdict holds only where the machine names
 that build. A record's pins are held to the builds atlas already recorded for the same emulator, and every file a
-covered core's card spells to a rule that claims it (`tests/test_save_formats.py`), so a re-pinned card or a recaptured
-core turns red until its formats are read again.
+covered core's card spells, or its memory ids give, to a rule that claims it (`tests/test_save_formats.py`), so a
+re-pinned card or a recaptured core turns red until its formats are read again.
 
 ## The generated contract reference
 

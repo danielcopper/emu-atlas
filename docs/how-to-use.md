@@ -2233,14 +2233,31 @@ the mildest:
 - `convertible` — the target reads it only after a conversion a source states: PCSX2's folder card into a file card, or
   a card RetroArch wrote compressed (`save_file_compression`) toward an emulator that opens the file itself.
 - `unestablished` — nothing atlas read at a build it confirmed here settles it; the caveats say why.
-- `not-readable` — the target keeps no such part in its live mode.
+- `not-readable` — the target keeps no such part in its live mode, or RetroArch loads the source's bytes as they are
+  into a part the target keeps in another layout.
 
 Both entries' save questions are asked with the `content_path`, `cwd` and `appendconfig` you pass, so the live mode each
 one reads — Kronos's Beetle-saves switch, LRPS2's card mode, DuckStation's card types — decides the parts. A verdict
 holds only where the machine names the build the emulators' sources were read at; elsewhere the part is `unestablished`
-with `save-format-build-unconfirmed`, and its groups are still stated. The records cover the PlayStation, PlayStation 2
-and Saturn entries so far; every other pair answers `unestablished` with `save-format-unrecorded`. The evidence is in
-`docs/research/save-portability.md`.
+with `save-format-build-unconfirmed`, and its groups are still stated.
+
+On the Game Boy a part can be laid out differently by the cartridge's kind — mGBA packs an MBC2 cartridge's RAM its own
+way — or a core may not run that kind at all, or no read establishes its layout for a kind, and atlas does not read the
+cartridge. Such a part is `unestablished` (a kind nobody read is `unestablished` too, never folded into the others), and
+its `save-part-unestablished` caveat (`reason` `layout-differs-by-cartridge`) states what holds per kind, each a word of
+`atlas.CARTRIDGE_STATEMENTS` — a verdict, or `no-game-data`:
+
+```python
+answer = install.save_portability("gb", source="Gambatte", target="mGBA", content_path=rom)
+caveat = next(c for c in answer.caveats if c.code == atlas.CAVEAT_SAVE_PART_UNESTABLISHED)
+caveat.data["cartridges"]        # {'mbc2': 'not-readable'} — keyed by a word of atlas.CARTRIDGE_KINDS
+caveat.data["other_cartridges"]  # 'same-files' — every kind the mapping does not name
+```
+
+A cartridge clock exists only on the kinds in `atlas.CLOCK_CARTRIDGE_KINDS`, so a clock part's caveat says
+`no-game-data` for every other kind: there is no clock there, and nothing of the game is lost with it. The records cover
+the PlayStation, PlayStation 2, Saturn, Game Boy and Game Boy Color entries so far; every other pair answers
+`unestablished` with `save-format-unrecorded`. The evidence is in `docs/research/save-portability.md`.
 
 ## Where do texture packs go?
 

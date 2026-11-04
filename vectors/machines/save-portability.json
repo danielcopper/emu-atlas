@@ -5807,8 +5807,768 @@
       }
     },
     {
+      "name": "saturn-kronos-with-beetle-saves-leaves-the-declared-cartridge-unestablished",
+      "rationale": "Before either core has written a save, Kronos's declared answer with kronos_use_beetle_saves enabled names <stem>.bkr and keeps <stem>.bcr an observation candidate: the switch names the 4 Mbit cartridge, but the emulator's game table replaces the cartridge for the discs it lists (DBLookup, ctrl/src/yabause.c:392-393 at 6709c1d), and atlas reads no disc. The backup RAM is the same file; whether Kronos keeps a cartridge for this game is unestablished, and the caveat says why.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>saturn</name><path>%ROMPATH%/saturn</path>\n    <command label=\"Beetle Saturn\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mednafen_saturn_libretro.so %ROM%</command>\n    <command label=\"Kronos\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/kronos_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/mnt/sd/retrodeck/roms/saturn/Example Game (USA).chd": "rom",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "kronos_use_beetle_saves = \"enabled\"\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mednafen_saturn_libretro.so": {
+            "library_name": "Beetle Saturn",
+            "library_version": "v1.29.0 ccba526",
+            "options": {
+              "beetle_saturn_shared_int": {
+                "default": "disabled",
+                "values": [
+                  "enabled",
+                  "disabled"
+                ]
+              },
+              "beetle_saturn_shared_ext": {
+                "default": "disabled",
+                "values": [
+                  "enabled",
+                  "disabled"
+                ]
+              }
+            }
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/kronos_libretro.so": {
+            "library_name": "Kronos",
+            "library_version": "v2.7.0 6709c1d",
+            "options": {
+              "kronos_use_beetle_saves": {
+                "default": "disabled",
+                "values": [
+                  "disabled",
+                  "enabled"
+                ]
+              }
+            }
+          }
+        },
+        "save_portability_query": {
+          "system": "saturn",
+          "source": "Beetle Saturn",
+          "target": "Kronos",
+          "content_path": "/mnt/sd/retrodeck/roms/saturn/Example Game (USA).chd"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "save_portability": {
+          "verdict": "unestablished",
+          "source": {
+            "system": "saturn",
+            "label": "Beetle Saturn",
+            "kind": "libretro",
+            "core_so": "mednafen_saturn_libretro.so",
+            "emulator": "mednafen_saturn_libretro.so",
+            "declared_index": 0,
+            "selection": null,
+            "availability": "unestablished",
+            "launcher": null,
+            "core_path": null,
+            "caveats": [
+              {
+                "code": "find-rules-unreadable",
+                "data": {
+                  "layer": "bundled"
+                }
+              }
+            ]
+          },
+          "target": {
+            "system": "saturn",
+            "label": "Kronos",
+            "kind": "libretro",
+            "core_so": "kronos_libretro.so",
+            "emulator": "kronos_libretro.so",
+            "declared_index": 1,
+            "selection": null,
+            "availability": "unestablished",
+            "launcher": null,
+            "core_path": null,
+            "caveats": [
+              {
+                "code": "find-rules-unreadable",
+                "data": {
+                  "layer": "bundled"
+                }
+              }
+            ]
+          },
+          "parts": [
+            {
+              "memory": "internal-backup-ram",
+              "slot": null,
+              "verdict": "same-files",
+              "source_group": {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Example Game (USA).bkr"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              },
+              "target_group": {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Example Game (USA).bkr"
+                ],
+                "granularity": "per-game-files",
+                "role": "battery",
+                "size_fixed": true
+              },
+              "moves": [],
+              "conversion": null
+            },
+            {
+              "memory": "cartridge-backup-ram",
+              "slot": null,
+              "verdict": "unestablished",
+              "source_group": {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Example Game (USA).bcr"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              },
+              "target_group": null,
+              "moves": [],
+              "conversion": null
+            }
+          ],
+          "caveats": [
+            {
+              "code": "save-part-unestablished",
+              "data": {
+                "memory": "cartridge-backup-ram",
+                "reason": "target-file-unnamed"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
       "name": "a-system-no-format-record-covers-states-why-it-is-unestablished",
-      "rationale": "No packaged save-format record covers either Game Boy core yet, so both sides say so and the pair is unestablished rather than guessed from the file names.",
+      "rationale": "No packaged save-format record covers either Game Boy Advance core yet, so both sides say so and the pair is unestablished rather than guessed from the file names.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>gba</name><path>%ROMPATH%/gba</path>\n    <command label=\"mGBA\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mgba_libretro.so %ROM%</command>\n    <command label=\"VBA-M\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/vbam_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/mnt/sd/retrodeck/roms/gba/Example Game (USA).gba": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mgba_libretro.so": {
+            "library_name": "mGBA",
+            "library_version": "0.11-dev c758314"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/vbam_libretro.so": {
+            "library_name": "VBA-M",
+            "library_version": "2.2.3 d0787ae"
+          }
+        },
+        "save_portability_query": {
+          "system": "gba",
+          "source": "mGBA",
+          "target": "VBA-M",
+          "content_path": "/mnt/sd/retrodeck/roms/gba/Example Game (USA).gba"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "save_portability": {
+          "verdict": "unestablished",
+          "source": {
+            "system": "gba",
+            "label": "mGBA",
+            "kind": "libretro",
+            "core_so": "mgba_libretro.so",
+            "emulator": "mgba_libretro.so",
+            "declared_index": 0,
+            "selection": null,
+            "availability": "unestablished",
+            "launcher": null,
+            "core_path": null,
+            "caveats": [
+              {
+                "code": "find-rules-unreadable",
+                "data": {
+                  "layer": "bundled"
+                }
+              }
+            ]
+          },
+          "target": {
+            "system": "gba",
+            "label": "VBA-M",
+            "kind": "libretro",
+            "core_so": "vbam_libretro.so",
+            "emulator": "vbam_libretro.so",
+            "declared_index": 1,
+            "selection": null,
+            "availability": "unestablished",
+            "launcher": null,
+            "core_path": null,
+            "caveats": [
+              {
+                "code": "find-rules-unreadable",
+                "data": {
+                  "layer": "bundled"
+                }
+              }
+            ]
+          },
+          "parts": [],
+          "caveats": [
+            {
+              "code": "save-format-unrecorded",
+              "data": {
+                "side": "source",
+                "core": "mgba"
+              }
+            },
+            {
+              "code": "save-format-unrecorded",
+              "data": {
+                "side": "target",
+                "core": "vbam"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "gb-mesen-s-to-sameboy-states-its-mbc3-ram-apart",
+      "rationale": "Mesen-S keeps plain, MBC1, MBC2 and MBC5 cartridges' RAM as the same raw image SameBoy keeps. For an MBC3 cartridge, with a clock or not, it maps RAM bank n at byte offset n rather than at n × 0x2000 (Core/GbMbc3.h:36 at 9e4fdeb): the first bank lies where SameBoy reads it, every further one overlaps, and whether a save uses them is the header's, which atlas does not read, so MBC3 is unestablished (#577 D17). Its MBC5 bank select keeps a rumble cartridge's motor bit, so that kind is unestablished too. Mesen-S writes no clock, so there is no clock part; the RAM answers unestablished with each kind stated.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>gb</name><path>%ROMPATH%/gb</path>\n    <command label=\"Mesen-S\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mesen-s_libretro.so %ROM%</command>\n    <command label=\"SameBoy\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/sameboy_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/mnt/sd/retrodeck/roms/gb/Example Game (USA).gb": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mesen-s_libretro.so": {
+            "library_name": "Mesen-S",
+            "library_version": "0.4.0"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/sameboy_libretro.so": {
+            "library_name": "SameBoy",
+            "library_version": "1.0.2 be2c352"
+          }
+        },
+        "save_portability_query": {
+          "system": "gb",
+          "source": "Mesen-S",
+          "target": "SameBoy",
+          "content_path": "/mnt/sd/retrodeck/roms/gb/Example Game (USA).gb"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "save_portability": {
+          "verdict": "unestablished",
+          "source": {
+            "system": "gb",
+            "label": "Mesen-S",
+            "kind": "libretro",
+            "core_so": "mesen-s_libretro.so",
+            "emulator": "mesen-s_libretro.so",
+            "declared_index": 0,
+            "selection": null,
+            "availability": "unestablished",
+            "launcher": null,
+            "core_path": null,
+            "caveats": [
+              {
+                "code": "find-rules-unreadable",
+                "data": {
+                  "layer": "bundled"
+                }
+              }
+            ]
+          },
+          "target": {
+            "system": "gb",
+            "label": "SameBoy",
+            "kind": "libretro",
+            "core_so": "sameboy_libretro.so",
+            "emulator": "sameboy_libretro.so",
+            "declared_index": 1,
+            "selection": null,
+            "availability": "unestablished",
+            "launcher": null,
+            "core_path": null,
+            "caveats": [
+              {
+                "code": "find-rules-unreadable",
+                "data": {
+                  "layer": "bundled"
+                }
+              }
+            ]
+          },
+          "parts": [
+            {
+              "memory": "cartridge-ram",
+              "slot": null,
+              "verdict": "unestablished",
+              "source_group": {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Example Game (USA).srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              },
+              "target_group": {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Example Game (USA).srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              },
+              "moves": [],
+              "conversion": null
+            }
+          ],
+          "caveats": [
+            {
+              "code": "save-part-unestablished",
+              "data": {
+                "memory": "cartridge-ram",
+                "reason": "layout-differs-by-cartridge",
+                "cartridges": {
+                  "mbc3-timer": "unestablished",
+                  "mbc3": "unestablished",
+                  "mbc5-rumble": "unestablished"
+                },
+                "other_cartridges": "same-files"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "gb-gambatte-to-sameboy-states-the-ram-and-the-clock-per-cartridge-kind",
+      "rationale": "Gambatte and SameBoy keep a Game Boy cartridge's RAM as the same raw image in <stem>.srm for MBC1, MBC2, MBC3 and MBC5 cartridges. Gambatte writes its .rtc, a base time SameBoy does not keep, only for an MBC3 or HuC3 cartridge with a clock: for those the clock does not carry over, and for every other kind there is no clock and nothing to lose (#577 D16). Where no read establishes a kind's layout on either side (a cartridge with RAM and no mapper on Gambatte, HuC1 and HuC3 on most cores, an MBC5 cartridge with rumble where the motor bit can select a bank, MBC2 between cores that keep a write through a mirror differently), that kind is unestablished rather than folded into the others (#577 D15). Both parts answer unestablished and state each kind.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>gb</name><path>%ROMPATH%/gb</path>\n    <command label=\"Gambatte\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/gambatte_libretro.so %ROM%</command>\n    <command label=\"SameBoy\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/sameboy_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/mnt/sd/retrodeck/roms/gb/Example Game (USA).gb": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/gambatte_libretro.so": {
+            "library_name": "Gambatte",
+            "library_version": "v0.5.0-netlink 6924c76"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/sameboy_libretro.so": {
+            "library_name": "SameBoy",
+            "library_version": "1.0.2 be2c352"
+          }
+        },
+        "save_portability_query": {
+          "system": "gb",
+          "source": "Gambatte",
+          "target": "SameBoy",
+          "content_path": "/mnt/sd/retrodeck/roms/gb/Example Game (USA).gb"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "save_portability": {
+          "verdict": "unestablished",
+          "source": {
+            "system": "gb",
+            "label": "Gambatte",
+            "kind": "libretro",
+            "core_so": "gambatte_libretro.so",
+            "emulator": "gambatte_libretro.so",
+            "declared_index": 0,
+            "selection": null,
+            "availability": "unestablished",
+            "launcher": null,
+            "core_path": null,
+            "caveats": [
+              {
+                "code": "find-rules-unreadable",
+                "data": {
+                  "layer": "bundled"
+                }
+              }
+            ]
+          },
+          "target": {
+            "system": "gb",
+            "label": "SameBoy",
+            "kind": "libretro",
+            "core_so": "sameboy_libretro.so",
+            "emulator": "sameboy_libretro.so",
+            "declared_index": 1,
+            "selection": null,
+            "availability": "unestablished",
+            "launcher": null,
+            "core_path": null,
+            "caveats": [
+              {
+                "code": "find-rules-unreadable",
+                "data": {
+                  "layer": "bundled"
+                }
+              }
+            ]
+          },
+          "parts": [
+            {
+              "memory": "cartridge-ram",
+              "slot": null,
+              "verdict": "unestablished",
+              "source_group": {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Example Game (USA).srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              },
+              "target_group": {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Example Game (USA).srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              },
+              "moves": [],
+              "conversion": null
+            },
+            {
+              "memory": "cartridge-clock",
+              "slot": null,
+              "verdict": "unestablished",
+              "source_group": {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Example Game (USA).rtc"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              },
+              "target_group": {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Example Game (USA).rtc"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              },
+              "moves": [],
+              "conversion": null
+            }
+          ],
+          "caveats": [
+            {
+              "code": "save-part-unestablished",
+              "data": {
+                "memory": "cartridge-ram",
+                "reason": "layout-differs-by-cartridge",
+                "cartridges": {
+                  "mbc2": "unestablished",
+                  "rom-ram": "unestablished",
+                  "mbc5-rumble": "unestablished",
+                  "huc3": "unestablished",
+                  "huc1": "unestablished"
+                },
+                "other_cartridges": "same-files"
+              }
+            },
+            {
+              "code": "save-part-unestablished",
+              "data": {
+                "memory": "cartridge-clock",
+                "reason": "layout-differs-by-cartridge",
+                "cartridges": {
+                  "mbc3-timer": "not-readable",
+                  "huc3": "unestablished"
+                },
+                "other_cartridges": "no-game-data"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "gb-sameboy-to-gambatte-states-the-clock-per-cartridge-kind",
+      "rationale": "SameBoy writes its clock section for every cartridge with a battery, a clock or not (#577 D10), and Gambatte reads none of it: for an MBC3 or TPP1 cartridge's clock that is the clock lost, for every other kind the file holds no game data and nothing is lost (#577 D16). The RAM carries over in place for the kinds both read alike, and not for the MMM01, MBC7, TPP1 and Pocket Camera cartridges SameBoy runs and Gambatte refuses. Where no read establishes a kind's layout on either side (a cartridge with RAM and no mapper on Gambatte, HuC1 and HuC3 on most cores, an MBC5 cartridge with rumble where the motor bit can select a bank, MBC2 between cores that keep a write through a mirror differently), that kind is unestablished rather than folded into the others (#577 D15).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>gb</name><path>%ROMPATH%/gb</path>\n    <command label=\"SameBoy\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/sameboy_libretro.so %ROM%</command>\n    <command label=\"Gambatte\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/gambatte_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/mnt/sd/retrodeck/roms/gb/Example Game (USA).gb": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/sameboy_libretro.so": {
+            "library_name": "SameBoy",
+            "library_version": "1.0.2 be2c352"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/gambatte_libretro.so": {
+            "library_name": "Gambatte",
+            "library_version": "v0.5.0-netlink 6924c76"
+          }
+        },
+        "save_portability_query": {
+          "system": "gb",
+          "source": "SameBoy",
+          "target": "Gambatte",
+          "content_path": "/mnt/sd/retrodeck/roms/gb/Example Game (USA).gb"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "save_portability": {
+          "verdict": "unestablished",
+          "source": {
+            "system": "gb",
+            "label": "SameBoy",
+            "kind": "libretro",
+            "core_so": "sameboy_libretro.so",
+            "emulator": "sameboy_libretro.so",
+            "declared_index": 0,
+            "selection": null,
+            "availability": "unestablished",
+            "launcher": null,
+            "core_path": null,
+            "caveats": [
+              {
+                "code": "find-rules-unreadable",
+                "data": {
+                  "layer": "bundled"
+                }
+              }
+            ]
+          },
+          "target": {
+            "system": "gb",
+            "label": "Gambatte",
+            "kind": "libretro",
+            "core_so": "gambatte_libretro.so",
+            "emulator": "gambatte_libretro.so",
+            "declared_index": 1,
+            "selection": null,
+            "availability": "unestablished",
+            "launcher": null,
+            "core_path": null,
+            "caveats": [
+              {
+                "code": "find-rules-unreadable",
+                "data": {
+                  "layer": "bundled"
+                }
+              }
+            ]
+          },
+          "parts": [
+            {
+              "memory": "cartridge-ram",
+              "slot": null,
+              "verdict": "unestablished",
+              "source_group": {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Example Game (USA).srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              },
+              "target_group": {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Example Game (USA).srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              },
+              "moves": [],
+              "conversion": null
+            },
+            {
+              "memory": "cartridge-clock",
+              "slot": null,
+              "verdict": "unestablished",
+              "source_group": {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Example Game (USA).rtc"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              },
+              "target_group": {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Example Game (USA).rtc"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              },
+              "moves": [],
+              "conversion": null
+            }
+          ],
+          "caveats": [
+            {
+              "code": "save-part-unestablished",
+              "data": {
+                "memory": "cartridge-ram",
+                "reason": "layout-differs-by-cartridge",
+                "cartridges": {
+                  "mbc2": "unestablished",
+                  "rom-ram": "unestablished",
+                  "mmm01": "not-readable",
+                  "mbc5-rumble": "unestablished",
+                  "mbc7": "not-readable",
+                  "tpp1": "not-readable",
+                  "pocket-camera": "not-readable",
+                  "huc3": "unestablished",
+                  "huc1": "unestablished"
+                },
+                "other_cartridges": "same-files"
+              }
+            },
+            {
+              "code": "save-part-unestablished",
+              "data": {
+                "memory": "cartridge-clock",
+                "reason": "layout-differs-by-cartridge",
+                "cartridges": {
+                  "mbc3-timer": "not-readable",
+                  "tpp1": "not-readable",
+                  "huc3": "unestablished"
+                },
+                "other_cartridges": "no-game-data"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "gb-gambatte-to-mgba-states-the-mbc2-ram-apart",
+      "rationale": "mGBA packs an MBC2 cartridge's 512 four-bit cells two to a byte, where Gambatte keeps one to a byte, so for that kind RetroArch hands mGBA a layout it reads as its own and the RAM does not carry over; for the plain bank kinds it carries over in place. The clock, a base time mGBA does not keep, is lost for a clock cartridge and holds nothing for the others. Where no read establishes a kind's layout on either side (a cartridge with RAM and no mapper on Gambatte, HuC1 and HuC3 on most cores, an MBC5 cartridge with rumble where the motor bit can select a bank, MBC2 between cores that keep a write through a mirror differently), that kind is unestablished rather than folded into the others (#577 D15).",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -5894,20 +6654,1243 @@
               }
             ]
           },
-          "parts": [],
+          "parts": [
+            {
+              "memory": "cartridge-ram",
+              "slot": null,
+              "verdict": "unestablished",
+              "source_group": {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Example Game (USA).srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              },
+              "target_group": {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Example Game (USA).srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              },
+              "moves": [],
+              "conversion": null
+            },
+            {
+              "memory": "cartridge-clock",
+              "slot": null,
+              "verdict": "unestablished",
+              "source_group": {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Example Game (USA).rtc"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              },
+              "target_group": {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Example Game (USA).rtc"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              },
+              "moves": [],
+              "conversion": null
+            }
+          ],
+          "caveats": [
+            {
+              "code": "save-part-unestablished",
+              "data": {
+                "memory": "cartridge-ram",
+                "reason": "layout-differs-by-cartridge",
+                "cartridges": {
+                  "mbc2": "not-readable",
+                  "rom-ram": "unestablished",
+                  "mbc5-rumble": "unestablished",
+                  "huc3": "unestablished",
+                  "huc1": "unestablished"
+                },
+                "other_cartridges": "same-files"
+              }
+            },
+            {
+              "code": "save-part-unestablished",
+              "data": {
+                "memory": "cartridge-clock",
+                "reason": "layout-differs-by-cartridge",
+                "cartridges": {
+                  "mbc3-timer": "not-readable",
+                  "huc3": "not-readable"
+                },
+                "other_cartridges": "no-game-data"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "gb-gearboy-to-vba-m-states-the-pocket-camera-ram-apart",
+      "rationale": "Gearboy and VBA-M keep the same raw cartridge RAM for MBC1, MBC2 and MBC5 and the same 48-byte MBC3 clock. Gearboy's MBC3 bank select stops at bank 3 where an MBC30 goes to 7, so its MBC3 RAM is unestablished (#577 D17), and it runs the Pocket Camera as an MBC3 and keeps only its first four RAM banks, where VBA-M keeps none of the camera's RAM in its save: for that kind the RAM does not carry over. The clock carries over in place where a cartridge has one; VBA-M's HuC3 and TAMA5 clocks are no question here, because Gearboy runs neither cartridge. Where no read establishes a kind's layout on either side (a cartridge with RAM and no mapper on Gambatte, HuC1 and HuC3 on most cores, an MBC5 cartridge with rumble where the motor bit can select a bank, MBC2 between cores that keep a write through a mirror differently), that kind is unestablished rather than folded into the others (#577 D15).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>gb</name><path>%ROMPATH%/gb</path>\n    <command label=\"Gearboy\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/gearboy_libretro.so %ROM%</command>\n    <command label=\"VBA-M\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/vbam_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/mnt/sd/retrodeck/roms/gb/Example Game (USA).gb": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/gearboy_libretro.so": {
+            "library_name": "Gearboy",
+            "library_version": "3.7.4-8-g37c21f7"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/vbam_libretro.so": {
+            "library_name": "VBA-M",
+            "library_version": "2.2.3 d0787ae"
+          }
+        },
+        "save_portability_query": {
+          "system": "gb",
+          "source": "Gearboy",
+          "target": "VBA-M",
+          "content_path": "/mnt/sd/retrodeck/roms/gb/Example Game (USA).gb"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "save_portability": {
+          "verdict": "unestablished",
+          "source": {
+            "system": "gb",
+            "label": "Gearboy",
+            "kind": "libretro",
+            "core_so": "gearboy_libretro.so",
+            "emulator": "gearboy_libretro.so",
+            "declared_index": 0,
+            "selection": null,
+            "availability": "unestablished",
+            "launcher": null,
+            "core_path": null,
+            "caveats": [
+              {
+                "code": "find-rules-unreadable",
+                "data": {
+                  "layer": "bundled"
+                }
+              }
+            ]
+          },
+          "target": {
+            "system": "gb",
+            "label": "VBA-M",
+            "kind": "libretro",
+            "core_so": "vbam_libretro.so",
+            "emulator": "vbam_libretro.so",
+            "declared_index": 1,
+            "selection": null,
+            "availability": "unestablished",
+            "launcher": null,
+            "core_path": null,
+            "caveats": [
+              {
+                "code": "find-rules-unreadable",
+                "data": {
+                  "layer": "bundled"
+                }
+              }
+            ]
+          },
+          "parts": [
+            {
+              "memory": "cartridge-ram",
+              "slot": null,
+              "verdict": "unestablished",
+              "source_group": {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Example Game (USA).srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              },
+              "target_group": {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Example Game (USA).srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              },
+              "moves": [],
+              "conversion": null
+            },
+            {
+              "memory": "cartridge-clock",
+              "slot": null,
+              "verdict": "same-files",
+              "source_group": {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Example Game (USA).rtc"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              },
+              "target_group": {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Example Game (USA).rtc"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              },
+              "moves": [],
+              "conversion": null
+            }
+          ],
+          "caveats": [
+            {
+              "code": "save-part-unestablished",
+              "data": {
+                "memory": "cartridge-ram",
+                "reason": "layout-differs-by-cartridge",
+                "cartridges": {
+                  "rom-ram": "unestablished",
+                  "mbc3-timer": "unestablished",
+                  "mbc3": "unestablished",
+                  "mbc5-rumble": "unestablished",
+                  "pocket-camera": "not-readable",
+                  "huc1": "unestablished"
+                },
+                "other_cartridges": "same-files"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "gb-gambatte-to-vba-m-states-the-mbc2-mirror-apart",
+      "rationale": "Gambatte and VBA-M keep an MBC2 cartridge's 512 cells one to a byte, but Gambatte keeps a write through a mirror of them at its window offset, past the cells, while VBA-M drops it (#577 D18): a game that writes through a mirror leaves a save VBA-M does not hold whole, so for MBC2 the RAM is unestablished. Gambatte's clock, a base time VBA-M does not keep, does not carry over for a clock cartridge and holds nothing for the rest. The kinds no read establishes on either side stay unestablished as well (#577 D17).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>gb</name><path>%ROMPATH%/gb</path>\n    <command label=\"Gambatte\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/gambatte_libretro.so %ROM%</command>\n    <command label=\"VBA-M\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/vbam_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/mnt/sd/retrodeck/roms/gb/Example Game (USA).gb": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/gambatte_libretro.so": {
+            "library_name": "Gambatte",
+            "library_version": "v0.5.0-netlink 6924c76"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/vbam_libretro.so": {
+            "library_name": "VBA-M",
+            "library_version": "2.2.3 d0787ae"
+          }
+        },
+        "save_portability_query": {
+          "system": "gb",
+          "source": "Gambatte",
+          "target": "VBA-M",
+          "content_path": "/mnt/sd/retrodeck/roms/gb/Example Game (USA).gb"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "save_portability": {
+          "verdict": "unestablished",
+          "source": {
+            "system": "gb",
+            "label": "Gambatte",
+            "kind": "libretro",
+            "core_so": "gambatte_libretro.so",
+            "emulator": "gambatte_libretro.so",
+            "declared_index": 0,
+            "selection": null,
+            "availability": "unestablished",
+            "launcher": null,
+            "core_path": null,
+            "caveats": [
+              {
+                "code": "find-rules-unreadable",
+                "data": {
+                  "layer": "bundled"
+                }
+              }
+            ]
+          },
+          "target": {
+            "system": "gb",
+            "label": "VBA-M",
+            "kind": "libretro",
+            "core_so": "vbam_libretro.so",
+            "emulator": "vbam_libretro.so",
+            "declared_index": 1,
+            "selection": null,
+            "availability": "unestablished",
+            "launcher": null,
+            "core_path": null,
+            "caveats": [
+              {
+                "code": "find-rules-unreadable",
+                "data": {
+                  "layer": "bundled"
+                }
+              }
+            ]
+          },
+          "parts": [
+            {
+              "memory": "cartridge-ram",
+              "slot": null,
+              "verdict": "unestablished",
+              "source_group": {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Example Game (USA).srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              },
+              "target_group": {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Example Game (USA).srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              },
+              "moves": [],
+              "conversion": null
+            },
+            {
+              "memory": "cartridge-clock",
+              "slot": null,
+              "verdict": "unestablished",
+              "source_group": {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Example Game (USA).rtc"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              },
+              "target_group": {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Example Game (USA).rtc"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              },
+              "moves": [],
+              "conversion": null
+            }
+          ],
+          "caveats": [
+            {
+              "code": "save-part-unestablished",
+              "data": {
+                "memory": "cartridge-ram",
+                "reason": "layout-differs-by-cartridge",
+                "cartridges": {
+                  "mbc2": "unestablished",
+                  "rom-ram": "unestablished",
+                  "mbc5-rumble": "unestablished",
+                  "huc3": "unestablished",
+                  "huc1": "unestablished"
+                },
+                "other_cartridges": "same-files"
+              }
+            },
+            {
+              "code": "save-part-unestablished",
+              "data": {
+                "memory": "cartridge-clock",
+                "reason": "layout-differs-by-cartridge",
+                "cartridges": {
+                  "mbc3-timer": "not-readable",
+                  "huc3": "not-readable"
+                },
+                "other_cartridges": "no-game-data"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "gb-vba-m-to-mgba-states-the-clock-per-cartridge-kind",
+      "rationale": "VBA-M writes a clock for MBC3, HuC3 and TAMA5 cartridges. mGBA reads the MBC3 one as it lies and keeps no clock for HuC3 and TAMA5 although it runs both. For the RAM, mGBA packs MBC2 its own way, and VBA-M keeps no TAMA5 or Pocket Camera memory in its save, so those kinds hold no game data. Where no read establishes a kind's layout on either side (a cartridge with RAM and no mapper on Gambatte, HuC1 and HuC3 on most cores, an MBC5 cartridge with rumble where the motor bit can select a bank, MBC2 between cores that keep a write through a mirror differently), that kind is unestablished rather than folded into the others (#577 D15).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>gb</name><path>%ROMPATH%/gb</path>\n    <command label=\"VBA-M\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/vbam_libretro.so %ROM%</command>\n    <command label=\"mGBA\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mgba_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/mnt/sd/retrodeck/roms/gb/Example Game (USA).gb": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/vbam_libretro.so": {
+            "library_name": "VBA-M",
+            "library_version": "2.2.3 d0787ae"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mgba_libretro.so": {
+            "library_name": "mGBA",
+            "library_version": "0.11-dev c758314"
+          }
+        },
+        "save_portability_query": {
+          "system": "gb",
+          "source": "VBA-M",
+          "target": "mGBA",
+          "content_path": "/mnt/sd/retrodeck/roms/gb/Example Game (USA).gb"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "save_portability": {
+          "verdict": "unestablished",
+          "source": {
+            "system": "gb",
+            "label": "VBA-M",
+            "kind": "libretro",
+            "core_so": "vbam_libretro.so",
+            "emulator": "vbam_libretro.so",
+            "declared_index": 0,
+            "selection": null,
+            "availability": "unestablished",
+            "launcher": null,
+            "core_path": null,
+            "caveats": [
+              {
+                "code": "find-rules-unreadable",
+                "data": {
+                  "layer": "bundled"
+                }
+              }
+            ]
+          },
+          "target": {
+            "system": "gb",
+            "label": "mGBA",
+            "kind": "libretro",
+            "core_so": "mgba_libretro.so",
+            "emulator": "mgba_libretro.so",
+            "declared_index": 1,
+            "selection": null,
+            "availability": "unestablished",
+            "launcher": null,
+            "core_path": null,
+            "caveats": [
+              {
+                "code": "find-rules-unreadable",
+                "data": {
+                  "layer": "bundled"
+                }
+              }
+            ]
+          },
+          "parts": [
+            {
+              "memory": "cartridge-ram",
+              "slot": null,
+              "verdict": "unestablished",
+              "source_group": {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Example Game (USA).srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              },
+              "target_group": {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Example Game (USA).srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              },
+              "moves": [],
+              "conversion": null
+            },
+            {
+              "memory": "cartridge-clock",
+              "slot": null,
+              "verdict": "unestablished",
+              "source_group": {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Example Game (USA).rtc"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              },
+              "target_group": {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Example Game (USA).rtc"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              },
+              "moves": [],
+              "conversion": null
+            }
+          ],
+          "caveats": [
+            {
+              "code": "save-part-unestablished",
+              "data": {
+                "memory": "cartridge-ram",
+                "reason": "layout-differs-by-cartridge",
+                "cartridges": {
+                  "mbc2": "not-readable",
+                  "rom-ram": "unestablished",
+                  "mmm01": "unestablished",
+                  "mbc5-rumble": "unestablished",
+                  "pocket-camera": "no-game-data",
+                  "tama5": "no-game-data",
+                  "huc3": "unestablished",
+                  "huc1": "unestablished"
+                },
+                "other_cartridges": "same-files"
+              }
+            },
+            {
+              "code": "save-part-unestablished",
+              "data": {
+                "memory": "cartridge-clock",
+                "reason": "layout-differs-by-cartridge",
+                "cartridges": {
+                  "mbc3-timer": "same-files",
+                  "tama5": "not-readable",
+                  "huc3": "not-readable"
+                },
+                "other_cartridges": "no-game-data"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "gb-tgb-dual-to-doublecherrygb-states-the-hudson-kinds-apart",
+      "rationale": "DoubleCherryGB is a TGB Dual fork with the same cartridge RAM and the same 4-byte clock written for every game, so for the plain bank kinds the save carries over in place, and where a cartridge has no clock the file holds nothing to lose. Neither core's HuC1, HuC3 or MMM01 banking is read (MMM01 runs for one title the code names), so those kinds are unestablished (#577 D15), and TAMA5 memory, which neither keeps, holds no game data.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>gb</name><path>%ROMPATH%/gb</path>\n    <command label=\"TGB Dual\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/tgbdual_libretro.so %ROM%</command>\n    <command label=\"DoubleCherryGB\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/DoubleCherryGB_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/mnt/sd/retrodeck/roms/gb/Example Game (USA).gb": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/tgbdual_libretro.so": {
+            "library_name": "TGB Dual",
+            "library_version": "v0.8.3 933707c"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/DoubleCherryGB_libretro.so": {
+            "library_name": "DoubleCherryGB",
+            "library_version": "v0.17.0 5dbc8c9"
+          }
+        },
+        "save_portability_query": {
+          "system": "gb",
+          "source": "TGB Dual",
+          "target": "DoubleCherryGB",
+          "content_path": "/mnt/sd/retrodeck/roms/gb/Example Game (USA).gb"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "save_portability": {
+          "verdict": "unestablished",
+          "source": {
+            "system": "gb",
+            "label": "TGB Dual",
+            "kind": "libretro",
+            "core_so": "tgbdual_libretro.so",
+            "emulator": "tgbdual_libretro.so",
+            "declared_index": 0,
+            "selection": null,
+            "availability": "unestablished",
+            "launcher": null,
+            "core_path": null,
+            "caveats": [
+              {
+                "code": "find-rules-unreadable",
+                "data": {
+                  "layer": "bundled"
+                }
+              }
+            ]
+          },
+          "target": {
+            "system": "gb",
+            "label": "DoubleCherryGB",
+            "kind": "libretro",
+            "core_so": "DoubleCherryGB_libretro.so",
+            "emulator": "DoubleCherryGB_libretro.so",
+            "declared_index": 1,
+            "selection": null,
+            "availability": "unestablished",
+            "launcher": null,
+            "core_path": null,
+            "caveats": [
+              {
+                "code": "find-rules-unreadable",
+                "data": {
+                  "layer": "bundled"
+                }
+              }
+            ]
+          },
+          "parts": [
+            {
+              "memory": "cartridge-ram",
+              "slot": null,
+              "verdict": "unestablished",
+              "source_group": {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Example Game (USA).srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              },
+              "target_group": {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Example Game (USA).srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              },
+              "moves": [],
+              "conversion": null
+            },
+            {
+              "memory": "cartridge-clock",
+              "slot": null,
+              "verdict": "unestablished",
+              "source_group": {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Example Game (USA).rtc"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              },
+              "target_group": {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Example Game (USA).rtc"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              },
+              "moves": [],
+              "conversion": null
+            }
+          ],
+          "caveats": [
+            {
+              "code": "save-part-unestablished",
+              "data": {
+                "memory": "cartridge-ram",
+                "reason": "layout-differs-by-cartridge",
+                "cartridges": {
+                  "mmm01": "unestablished",
+                  "tama5": "no-game-data",
+                  "huc3": "unestablished",
+                  "huc1": "unestablished"
+                },
+                "other_cartridges": "same-files"
+              }
+            },
+            {
+              "code": "save-part-unestablished",
+              "data": {
+                "memory": "cartridge-clock",
+                "reason": "layout-differs-by-cartridge",
+                "cartridges": {
+                  "mbc3-timer": "same-files",
+                  "huc3": "unestablished"
+                },
+                "other_cartridges": "no-game-data"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "gb-sameboy-to-mesen-s-states-the-ram-and-the-clock-per-cartridge-kind",
+      "rationale": "Mesen-S runs plain, MBC1, MBC2, MBC3 and MBC5 cartridges and keeps no cartridge clock at all. SameBoy's RAM carries over in place for the plain, MBC1, MBC2 and MBC5 ones; MBC3, whose banks past the first Mesen-S overlaps, is unestablished, and the others SameBoy runs do not carry over; its clock section, written for every battery cartridge, is a clock lost for a cartridge with one and nothing lost for the rest (#577 D16). Both parts answer unestablished with each kind's verdict, the clock with no target group.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>gb</name><path>%ROMPATH%/gb</path>\n    <command label=\"SameBoy\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/sameboy_libretro.so %ROM%</command>\n    <command label=\"Mesen-S\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mesen-s_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/mnt/sd/retrodeck/roms/gb/Example Game (USA).gb": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/sameboy_libretro.so": {
+            "library_name": "SameBoy",
+            "library_version": "1.0.2 be2c352"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mesen-s_libretro.so": {
+            "library_name": "Mesen-S",
+            "library_version": "0.4.0"
+          }
+        },
+        "save_portability_query": {
+          "system": "gb",
+          "source": "SameBoy",
+          "target": "Mesen-S",
+          "content_path": "/mnt/sd/retrodeck/roms/gb/Example Game (USA).gb"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "save_portability": {
+          "verdict": "unestablished",
+          "source": {
+            "system": "gb",
+            "label": "SameBoy",
+            "kind": "libretro",
+            "core_so": "sameboy_libretro.so",
+            "emulator": "sameboy_libretro.so",
+            "declared_index": 0,
+            "selection": null,
+            "availability": "unestablished",
+            "launcher": null,
+            "core_path": null,
+            "caveats": [
+              {
+                "code": "find-rules-unreadable",
+                "data": {
+                  "layer": "bundled"
+                }
+              }
+            ]
+          },
+          "target": {
+            "system": "gb",
+            "label": "Mesen-S",
+            "kind": "libretro",
+            "core_so": "mesen-s_libretro.so",
+            "emulator": "mesen-s_libretro.so",
+            "declared_index": 1,
+            "selection": null,
+            "availability": "unestablished",
+            "launcher": null,
+            "core_path": null,
+            "caveats": [
+              {
+                "code": "find-rules-unreadable",
+                "data": {
+                  "layer": "bundled"
+                }
+              }
+            ]
+          },
+          "parts": [
+            {
+              "memory": "cartridge-ram",
+              "slot": null,
+              "verdict": "unestablished",
+              "source_group": {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Example Game (USA).srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              },
+              "target_group": {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Example Game (USA).srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              },
+              "moves": [],
+              "conversion": null
+            },
+            {
+              "memory": "cartridge-clock",
+              "slot": null,
+              "verdict": "unestablished",
+              "source_group": {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Example Game (USA).rtc"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              },
+              "target_group": null,
+              "moves": [],
+              "conversion": null
+            }
+          ],
+          "caveats": [
+            {
+              "code": "save-part-unestablished",
+              "data": {
+                "memory": "cartridge-ram",
+                "reason": "layout-differs-by-cartridge",
+                "cartridges": {
+                  "rom-ram": "not-readable",
+                  "mmm01": "not-readable",
+                  "mbc3-timer": "unestablished",
+                  "mbc3": "unestablished",
+                  "mbc5-rumble": "unestablished",
+                  "mbc7": "not-readable",
+                  "tpp1": "not-readable",
+                  "pocket-camera": "not-readable",
+                  "huc3": "not-readable",
+                  "huc1": "not-readable"
+                },
+                "other_cartridges": "same-files"
+              }
+            },
+            {
+              "code": "save-part-unestablished",
+              "data": {
+                "memory": "cartridge-clock",
+                "reason": "layout-differs-by-cartridge",
+                "cartridges": {
+                  "mbc3-timer": "not-readable",
+                  "tpp1": "not-readable",
+                  "huc3": "not-readable"
+                },
+                "other_cartridges": "no-game-data"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "gbc-reads-the-game-boy-records",
+      "rationale": "A Game Boy Color cartridge's save is laid out as a Game Boy one's, so each record states gbc as the same as gb: the pair answers exactly as on gb.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>gbc</name><path>%ROMPATH%/gbc</path>\n    <command label=\"Gambatte\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/gambatte_libretro.so %ROM%</command>\n    <command label=\"SameBoy\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/sameboy_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/mnt/sd/retrodeck/roms/gbc/Example Game (USA).gbc": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/gambatte_libretro.so": {
+            "library_name": "Gambatte",
+            "library_version": "v0.5.0-netlink 6924c76"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/sameboy_libretro.so": {
+            "library_name": "SameBoy",
+            "library_version": "1.0.2 be2c352"
+          }
+        },
+        "save_portability_query": {
+          "system": "gbc",
+          "source": "Gambatte",
+          "target": "SameBoy",
+          "content_path": "/mnt/sd/retrodeck/roms/gbc/Example Game (USA).gbc"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "save_portability": {
+          "verdict": "unestablished",
+          "source": {
+            "system": "gbc",
+            "label": "Gambatte",
+            "kind": "libretro",
+            "core_so": "gambatte_libretro.so",
+            "emulator": "gambatte_libretro.so",
+            "declared_index": 0,
+            "selection": null,
+            "availability": "unestablished",
+            "launcher": null,
+            "core_path": null,
+            "caveats": [
+              {
+                "code": "find-rules-unreadable",
+                "data": {
+                  "layer": "bundled"
+                }
+              }
+            ]
+          },
+          "target": {
+            "system": "gbc",
+            "label": "SameBoy",
+            "kind": "libretro",
+            "core_so": "sameboy_libretro.so",
+            "emulator": "sameboy_libretro.so",
+            "declared_index": 1,
+            "selection": null,
+            "availability": "unestablished",
+            "launcher": null,
+            "core_path": null,
+            "caveats": [
+              {
+                "code": "find-rules-unreadable",
+                "data": {
+                  "layer": "bundled"
+                }
+              }
+            ]
+          },
+          "parts": [
+            {
+              "memory": "cartridge-ram",
+              "slot": null,
+              "verdict": "unestablished",
+              "source_group": {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Example Game (USA).srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              },
+              "target_group": {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Example Game (USA).srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              },
+              "moves": [],
+              "conversion": null
+            },
+            {
+              "memory": "cartridge-clock",
+              "slot": null,
+              "verdict": "unestablished",
+              "source_group": {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Example Game (USA).rtc"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              },
+              "target_group": {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Example Game (USA).rtc"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              },
+              "moves": [],
+              "conversion": null
+            }
+          ],
+          "caveats": [
+            {
+              "code": "save-part-unestablished",
+              "data": {
+                "memory": "cartridge-ram",
+                "reason": "layout-differs-by-cartridge",
+                "cartridges": {
+                  "mbc2": "unestablished",
+                  "rom-ram": "unestablished",
+                  "mbc5-rumble": "unestablished",
+                  "huc3": "unestablished",
+                  "huc1": "unestablished"
+                },
+                "other_cartridges": "same-files"
+              }
+            },
+            {
+              "code": "save-part-unestablished",
+              "data": {
+                "memory": "cartridge-clock",
+                "reason": "layout-differs-by-cartridge",
+                "cartridges": {
+                  "mbc3-timer": "not-readable",
+                  "huc3": "unestablished"
+                },
+                "other_cartridges": "no-game-data"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "gb-bsnes-has-no-record-for-a-game-boy-cartridge",
+      "rationale": "bsnes runs a Game Boy cartridge through its Super Game Boy and writes the save itself; no packaged record states what that file holds, so the pair says so and is unestablished.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>gb</name><path>%ROMPATH%/gb</path>\n    <command label=\"Gambatte\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/gambatte_libretro.so %ROM%</command>\n    <command label=\"bsnes\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/bsnes_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/mnt/sd/retrodeck/roms/gb/Example Game (USA).gb": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/gambatte_libretro.so": {
+            "library_name": "Gambatte",
+            "library_version": "v0.5.0-netlink 6924c76"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/bsnes_libretro.so": {
+            "library_name": "bsnes",
+            "library_version": "115"
+          }
+        },
+        "save_portability_query": {
+          "system": "gb",
+          "source": "Gambatte",
+          "target": "bsnes",
+          "content_path": "/mnt/sd/retrodeck/roms/gb/Example Game (USA).gb"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "save_portability": {
+          "verdict": "unestablished",
+          "source": {
+            "system": "gb",
+            "label": "Gambatte",
+            "kind": "libretro",
+            "core_so": "gambatte_libretro.so",
+            "emulator": "gambatte_libretro.so",
+            "declared_index": 0,
+            "selection": null,
+            "availability": "unestablished",
+            "launcher": null,
+            "core_path": null,
+            "caveats": [
+              {
+                "code": "find-rules-unreadable",
+                "data": {
+                  "layer": "bundled"
+                }
+              }
+            ]
+          },
+          "target": {
+            "system": "gb",
+            "label": "bsnes",
+            "kind": "libretro",
+            "core_so": "bsnes_libretro.so",
+            "emulator": "bsnes_libretro.so",
+            "declared_index": 1,
+            "selection": null,
+            "availability": "unestablished",
+            "launcher": null,
+            "core_path": null,
+            "caveats": [
+              {
+                "code": "find-rules-unreadable",
+                "data": {
+                  "layer": "bundled"
+                }
+              }
+            ]
+          },
+          "parts": [
+            {
+              "memory": "cartridge-ram",
+              "slot": null,
+              "verdict": "unestablished",
+              "source_group": {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Example Game (USA).srm"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              },
+              "target_group": null,
+              "moves": [],
+              "conversion": null
+            },
+            {
+              "memory": "cartridge-clock",
+              "slot": null,
+              "verdict": "unestablished",
+              "source_group": {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Example Game (USA).rtc"
+                ],
+                "granularity": "per-game-file",
+                "role": "battery",
+                "size_fixed": true
+              },
+              "target_group": null,
+              "moves": [],
+              "conversion": null
+            }
+          ],
           "caveats": [
             {
               "code": "save-format-unrecorded",
               "data": {
-                "side": "source",
-                "core": "gambatte"
-              }
-            },
-            {
-              "code": "save-format-unrecorded",
-              "data": {
                 "side": "target",
-                "core": "mgba"
+                "core": "bsnes",
+                "mode": "always"
               }
             }
           ]

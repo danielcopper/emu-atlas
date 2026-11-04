@@ -167,7 +167,7 @@ AGGREGATE_ANSWER_FIELDS = {"installation", "answer"}
 # and the memory a part holds.
 KNOWN_PORTABILITY_VERDICTS = ["same-files", "same-data", "convertible", "unestablished", "not-readable"]
 KNOWN_SAVE_MOVES = ["directory", "name", "granularity"]
-KNOWN_SAVE_MEMORIES = {"memory-card", "internal-backup-ram", "cartridge-backup-ram"}
+KNOWN_SAVE_MEMORIES = {"memory-card", "internal-backup-ram", "cartridge-backup-ram", "cartridge-ram", "cartridge-clock"}
 SAVE_PORTABILITY_FIELDS = {"verdict", "source", "target", "parts", "caveats"}
 SAVE_PART_FIELDS = {"memory", "slot", "verdict", "source_group", "target_group", "moves", "conversion"}
 # The launchability verdicts — the vocabulary expected.launchable.verdict draws
@@ -2014,13 +2014,15 @@ def _data_words(value: Any) -> list[str]:
 # select it, and the card-image index options a Beetle PSX card refuses on,
 # which map an option key to the value read for it. Three are the BIOS search's
 # listing, which says one thing about each of several files, keyed by the path
-# it is about.
+# it is about. One is a save part's verdict per cartridge kind, keyed by the
+# kind (#577 D15).
 OBJECT_VALUED_KEYS = {
     ("per-game-alternative-emulator", "emulators"),
     ("core-mode-unestablished", "options"),
     ("firmware-search-candidates", "readings"),
     ("firmware-search-candidates", "images"),
     ("firmware-search-candidates", "image_regions"),
+    ("save-part-unestablished", "cartridges"),
 }
 
 
@@ -3998,8 +4000,6 @@ def _validate_save_part(name: str, part: Any) -> None:
         fail(f"{name}: a part's moves name each value once, in {KNOWN_SAVE_MOVES} order")
     if bool(moves) != (part["verdict"] == "same-data"):
         fail(f"{name}: a part's moves stand exactly where its verdict is same-data")
-    if part["verdict"] == "not-readable" and part["target_group"] is not None:
-        fail(f"{name}: a not-readable part is one the target keeps no group for")
     conversion = part["conversion"]
     if conversion is not None:
         _require_exact(name, conversion, {"rule", "length"}, "a part's conversion")

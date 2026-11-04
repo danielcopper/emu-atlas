@@ -9,10 +9,23 @@
     "saturn-backup-cartridge-4mbit": "A 4 Mbit Saturn backup cartridge: the 512 KiB on the odd bytes of its bus window, stored packed and raw.",
     "saturn-backup-cartridge-8mbit": "An 8 Mbit Saturn backup cartridge as Kronos keeps it: 1 MiB on the odd bytes of its bus window, stored packed and raw.",
     "saturn-backup-cartridge-16mbit": "A 16 Mbit Saturn backup cartridge as Kronos keeps it: 2 MiB on the odd bytes of its bus window, stored packed and raw.",
-    "saturn-backup-cartridge-32mbit": "A 32 Mbit Saturn backup cartridge as Kronos keeps it: 4 MiB on the odd bytes of its bus window, stored packed and raw."
+    "saturn-backup-cartridge-32mbit": "A 32 Mbit Saturn backup cartridge as Kronos keeps it: 4 MiB on the odd bytes of its bus window, stored packed and raw.",
+    "gb-cartridge-ram": "A Game Boy cartridge's save memory as one raw image from its first address: the RAM banks in order, one byte per address (an MBC2 cartridge's 512 four-bit cells one to a byte), and an MBC7 EEPROM's 16-bit words high byte first. Each emulator sizes the image its own way, and RetroArch loads what fits, so two lengths of this layout hold the same data where the cartridge's memory fits both.",
+    "gb-cartridge-ram-mbc2-packed": "mGBA's MBC2 RAM: the 512 four-bit cells packed two to a byte, the even cell in the low nibble, 256 bytes.",
+    "gb-cartridge-ram-mbc6-with-flash": "mGBA's MBC6 save: the cartridge's RAM followed by its flash in one image.",
+    "gb-cartridge-ram-mbc7-low-byte-first": "SameBoy's MBC7 EEPROM: its 16-bit words low byte first.",
+    "gb-cartridge-ram-first-four-banks": "Gearboy's Pocket Camera RAM: only the first four 8 KiB banks of the camera's 128 KiB, the banks Gearboy's MBC3 rule keeps.",
+    "gb-cartridge-ram-tama5-mgba": "mGBA's TAMA5 memory: the mapper's 32 bytes, one byte per TAMA5 RAM address.",
+    "gb-clock-gambatte": "Gambatte's cartridge clock: the 64-bit base time its clock's counters are derived from, 8 bytes.",
+    "gb-clock-sameboy": "SameBoy's clock section: the real and the latched clock registers, the last second it counted and its cycle count, laid out as its save state's rtc section.",
+    "gb-clock-tgbdual": "TGB Dual's clock: one 32-bit time the core keeps for every game, 4 bytes.",
+    "gb-clock-vba-mbc3": "An MBC3 clock as VBA-M lays it out: ten 32-bit registers (seconds, minutes, hours, days and control, then the same five latched) and a 64-bit time, 48 bytes. Gearboy keeps the time as 32 bits followed by a word it sets to zero, the same bytes while the time fits in 32 bits.",
+    "gb-clock-vbam-huc3": "VBA-M's HuC3 clock: the time it last read the clock at, as one time_t.",
+    "gb-clock-vbam-tama5": "VBA-M's TAMA5 clock: fourteen 32-bit clock registers and a 64-bit time."
   },
   "retroarch": {
-    "compressed": "[V] save.c:644-657 at RetroArch a79435a — with save_file_compression on, RetroArch writes a file it saves through a core's memory id as an RZIP stream (rzipstream_write_file), and reads every such file back through rzipstream_read_file, which reads an uncompressed file as well (save.c:511-518). An emulator that does not load the file through RetroArch reads the compressed bytes, so the file has to be decompressed first, by no rule a client applies itself."
+    "compressed": "[V] save.c:644-657 at RetroArch a79435a — with save_file_compression on, RetroArch writes a file it saves through a core's memory id as an RZIP stream (rzipstream_write_file), and reads every such file back through rzipstream_read_file, which reads an uncompressed file as well (save.c:511-518). An emulator that does not load the file through RetroArch reads the compressed bytes, so the file has to be decompressed first, by no rule a client applies itself.",
+    "loads_raw": "[V] save.c:492-541 at RetroArch a79435a — content_load_ram_file reads a file it keeps for a core's memory id and copies it byte for byte into the core's buffer, a longer file cut at the buffer's size and a shorter one filling its start (:523-533); nothing converts it, so a file laid out another way is read as the core's own layout."
   },
   "conversions": [
     {
@@ -469,6 +482,597 @@
         },
         "saturnjp": {
           "same_as": "saturn"
+        }
+      }
+    },
+    "gambatte": {
+      "kind": "libretro",
+      "build": {
+        "pins": ["v0.5.0-netlink 6924c76"],
+        "names": "commit",
+        "revision": "6924c76",
+        "citation": "The shipped build names this string in its library_version, the verified_core atlas/data/save_memory.json pins for the core's Game Boy systems; the reads are at gambatte-libretro 6924c76."
+      },
+      "systems": {
+        "gb": {
+          "parts": [
+            {
+              "memory": "cartridge-ram",
+              "slot": null,
+              "format": "gb-cartridge-ram",
+              "names": ["<rom_stem>.srm"],
+              "frontend": true,
+              "citation": "[V] libgambatte/src/mem/cartridge_libretro.cpp:43-56 and libgambatte/src/mem/cartridge.cpp:589-607 at gambatte-libretro 6924c76 — SAVE_RAM is rambankdata, the RAM banks of 0x2000 bytes the header allocates (one bank for an MBC2 cartridge and for a 2 KiB one), mapped straight onto the RAM window (memptrs.setRambank, cartridge.cpp:202-216), and each mapper's bank select (cartridge.cpp:83, :244 and :424 for MBC1, MBC3 and MBC5) maps bank n at n × 0x2000 (libgambatte/src/mem/memptrs.cpp:88-96), so each address is one byte at its bank's offset.",
+              "kinds": {
+                "mbc2": "gb-cartridge-ram",
+                "mbc3-timer": "gb-cartridge-ram",
+                "mbc3": "gb-cartridge-ram"
+              },
+              "unread": [
+                {
+                  "kinds": ["rom-ram"],
+                  "citation": "[O] libgambatte/src/mem/cartridge.cpp:559-560 and :208-213 at gambatte-libretro 6924c76 — a cartridge with RAM and no mapper runs on the MBC2 mapper, whose RAM is locked until a game writes the enable value, which such a game has no reason to; whether its RAM is kept as it would be is not read."
+                },
+                {
+                  "kinds": ["huc3"],
+                  "citation": "[O] libgambatte/src/mem/cartridge.cpp at gambatte-libretro 6924c76 — the HuC3 mapper's RAM banking was not read."
+                },
+                {
+                  "kinds": ["huc1"],
+                  "citation": "[O] libgambatte/src/mem/cartridge.cpp:298-330 at gambatte-libretro 6924c76 — HuC1 RAM banks switch on a mode write here where other cores bank on every write; which bank a save lands in was not compared."
+                },
+                {
+                  "kinds": ["mbc5-rumble"],
+                  "citation": "[O] libgambatte/src/mem/cartridge.cpp:450-458 at gambatte-libretro 6924c76 — the motor bit is masked off the MBC5 RAM bank only for a write at 0x4000-0x4FFF; a write at 0x5000-0x5FFF keeps it, so where a rumble cartridge's save lands depends on the game."
+                }
+              ]
+            },
+            {
+              "memory": "cartridge-clock",
+              "slot": null,
+              "format": null,
+              "names": ["<rom_stem>.rtc"],
+              "frontend": true,
+              "citation": "[V] libgambatte/src/mem/cartridge_libretro.cpp:30-41 and :58-80 at gambatte-libretro 6924c76 — RTC is the clock's 64-bit base time (rtc.h:81, huc3.h:60), only for header bytes 0x0F, 0x10 and 0xFE.",
+              "kinds": {
+                "mbc3-timer": "gb-clock-gambatte",
+                "huc3": "gb-clock-gambatte"
+              }
+            }
+          ],
+          "not_run": [
+            {
+              "kinds": ["mmm01", "mbc6", "mbc7", "tpp1", "pocket-camera", "tama5"],
+              "citation": "[V] libgambatte/src/mem/cartridge.cpp:562-564 and :579-586 at gambatte-libretro 6924c76 — the loader refuses MMM01, MBC6, MBC7, Pocket Camera and Bandai TAMA5 cartridges by name and every type it does not name, TPP1 among them (return -1)."
+            }
+          ],
+          "mirrors": [
+            {
+              "kinds": ["mbc2"],
+              "handling": "stores-unfolded",
+              "citation": "[V] libgambatte/src/mem/cartridge.cpp:589-595 and libgambatte/src/mem/memptrs.cpp:93 at gambatte-libretro 6924c76 — an MBC2 cartridge gets one 8 KiB RAM bank mapped over the whole window, so a write through a mirror of its 512 cells is kept at its window offset."
+            }
+          ]
+        },
+        "gbc": {
+          "same_as": "gb"
+        }
+      }
+    },
+    "sameboy": {
+      "kind": "libretro",
+      "build": {
+        "pins": ["1.0.2 be2c352"],
+        "names": "commit",
+        "revision": "be2c352",
+        "citation": "The shipped build names this string in its library_version, the verified_core atlas/data/save_memory.json pins for the core's Game Boy systems; the reads are at libretro/SameBoy be2c352."
+      },
+      "systems": {
+        "gb": {
+          "parts": [
+            {
+              "memory": "cartridge-ram",
+              "slot": null,
+              "format": "gb-cartridge-ram",
+              "names": ["<rom_stem>.srm"],
+              "frontend": true,
+              "citation": "[V] Core/mbc.c:207-235 and Core/memory.c:454 and :1293 at libretro/SameBoy be2c352 — SAVE_RAM is mbc_ram, sized from the header (0x200 for MBC2, 0x100 for MBC7), each address one byte at bank n × 0x2000 plus its offset (Core/memory.c:1293), a cartridge without a mapper at bank 0, the 512 MBC2 cells mirrored onto it; the MBC7 EEPROM's words are read and written low byte first (Core/memory.c:1142, :1159-1203); a rumble cartridge's motor bit is masked off the MBC5 RAM bank (Core/memory.c:876-883).",
+              "kinds": {
+                "mbc2": "gb-cartridge-ram",
+                "rom-ram": "gb-cartridge-ram",
+                "mbc3-timer": "gb-cartridge-ram",
+                "mbc3": "gb-cartridge-ram",
+                "mbc5-rumble": "gb-cartridge-ram",
+                "mbc7": "gb-cartridge-ram-mbc7-low-byte-first"
+              },
+              "unread": [
+                {
+                  "kinds": ["mmm01"],
+                  "citation": "[O] Core/mbc.c:104-131 and Core/memory.c:920-926 at libretro/SameBoy be2c352 — the MMM01 RAM bank math masks and locks banks its own way; it was not compared with the other cores'."
+                },
+                {
+                  "kinds": ["tpp1", "pocket-camera"],
+                  "citation": "[O] Core/mbc.c:148-151 at libretro/SameBoy be2c352 — the TPP1 and Pocket Camera RAM banking was not read beyond the generic mapping."
+                },
+                {
+                  "kinds": ["huc3"],
+                  "citation": "[O] Core/memory.c at libretro/SameBoy be2c352 — the HuC3 RAM banking was not read."
+                },
+                {
+                  "kinds": ["huc1"],
+                  "citation": "[O] Core/mbc.c:140-143 and Core/memory.c:939-944 at libretro/SameBoy be2c352 — HuC1 RAM banks follow its own bank_high register; which bank a save lands in was not compared with the other cores'."
+                }
+              ]
+            },
+            {
+              "memory": "cartridge-clock",
+              "slot": null,
+              "format": "gb-clock-sameboy",
+              "names": ["<rom_stem>.rtc"],
+              "frontend": true,
+              "citation": "[V] libretro/libretro.c:1690-1693 and :1763-1766 and Core/gb.h:554-559 at libretro/SameBoy be2c352 — RTC is the rtc section, GB_SECTION_SIZE(rtc), for every cartridge with a battery.",
+              "kinds": {
+                "mbc3-timer": "gb-clock-sameboy",
+                "tpp1": "gb-clock-sameboy"
+              },
+              "unread": [
+                {
+                  "kinds": ["huc3"],
+                  "citation": "[O] Core/gb.h:554-559 at libretro/SameBoy be2c352 — the rtc section is the MBC3 and TPP1 clock's; what it holds for a HuC3 cartridge was not read."
+                }
+              ]
+            }
+          ],
+          "not_run": [
+            {
+              "kinds": ["mbc6", "tama5"],
+              "citation": "[V] Core/mbc.c:5-46 at libretro/SameBoy be2c352 — GB_cart_defs has no MBC6 entry (header byte 0x20) and lists the Bandai TAMA5 as not supported, both without a mapper or a battery."
+            }
+          ],
+          "mirrors": [
+            {
+              "kinds": ["mbc2"],
+              "handling": "folds",
+              "citation": "[V] Core/memory.c:1293 at libretro/SameBoy be2c352 — every RAM write is masked by the RAM's size, so a write through a mirror of MBC2's 512 cells lands on the cell itself."
+            }
+          ]
+        },
+        "gbc": {
+          "same_as": "gb"
+        }
+      }
+    },
+    "gearboy": {
+      "kind": "libretro",
+      "build": {
+        "pins": ["3.7.4-8-g37c21f7"],
+        "names": "commit",
+        "revision": "37c21f7",
+        "citation": "The shipped build names this string in its library_version, the verified_core atlas/data/save_memory.json pins for the core's Game Boy systems; the reads are at drhelius/Gearboy 37c21f7."
+      },
+      "systems": {
+        "gb": {
+          "parts": [
+            {
+              "memory": "cartridge-ram",
+              "slot": null,
+              "format": "gb-cartridge-ram",
+              "names": ["<rom_stem>.srm"],
+              "frontend": true,
+              "citation": "[V] src/MBC1MemoryRule.cpp:246-249, src/MBC2MemoryRule.cpp:120-140 and :188-196, src/MBC3MemoryRule.cpp:374-377 and src/MBC5MemoryRule.cpp:189-192 and src/RomOnlyMemoryRule.cpp:117-125 at drhelius/Gearboy 37c21f7 — SAVE_RAM is the rule's RAM banks of 0x2000 bytes each (always 0x8000 for MBC3; a cartridge without a mapper keeps its RAM at 0xA000), each address one byte at bank n × 0x2000 plus its offset (src/MBC1MemoryRule.cpp:137-139, src/MBC3MemoryRule.cpp:172-176, src/MBC5MemoryRule.cpp:118-120), an MBC2 cell a byte at 0xA000-0xA1FF; a Pocket Camera runs as an MBC3 (src/Cartridge.cpp:362-365), whose RAM bank select stops at bank 3 (src/MBC3MemoryRule.cpp:165-176), so only the camera's first four banks are kept.",
+              "kinds": {
+                "mbc2": "gb-cartridge-ram",
+                "rom-ram": "gb-cartridge-ram",
+                "pocket-camera": "gb-cartridge-ram-first-four-banks"
+              },
+              "unread": [
+                {
+                  "kinds": ["mbc3-timer", "mbc3"],
+                  "citation": "[O] src/MBC3MemoryRule.cpp:172-181 at drhelius/Gearboy 37c21f7 — the MBC3 RAM bank select takes only banks 0-3 and logs 4-7, in a buffer fixed at 0x8000, so an MBC30 cartridge's 64 KiB of RAM lands elsewhere than in the cores that bank it to 7 (SameBoy's is_mbc30, VBA-M and mGBA take up to eight banks); whether a cartridge is an MBC30 is its header's, which atlas does not read."
+                },
+                {
+                  "kinds": ["huc1"],
+                  "citation": "[O] src/Cartridge.cpp:330-333 at drhelius/Gearboy 37c21f7 — a HuC1 cartridge runs on the MBC1 rule, whose RAM banking is not HuC1's; which bank a save lands in was not compared."
+                },
+                {
+                  "kinds": ["mbc5-rumble"],
+                  "citation": "[O] src/MBC5MemoryRule.cpp:116-121 at drhelius/Gearboy 37c21f7 — the MBC5 RAM bank is value & 0x0F masked by the header's bank count, so the motor bit drops only where the header declares at most eight banks."
+                }
+              ]
+            },
+            {
+              "memory": "cartridge-clock",
+              "slot": null,
+              "format": null,
+              "names": ["<rom_stem>.rtc"],
+              "frontend": true,
+              "citation": "[V] src/MBC3MemoryRule.h:25-39 and src/MBC3MemoryRule.cpp:40-64, :379-382 and :420-423 at drhelius/Gearboy 37c21f7 — RTC is RTC_Registers, ten s32 registers, an s32 time and a padding word reset to zero, only for an MBC3 cartridge with a clock.",
+              "kinds": {
+                "mbc3-timer": "gb-clock-vba-mbc3"
+              }
+            }
+          ],
+          "not_run": [
+            {
+              "kinds": ["mmm01", "mbc6", "mbc7", "tpp1", "tama5", "huc3"],
+              "citation": "[V] src/Cartridge.cpp:386-394 and :400-421 at drhelius/Gearboy 37c21f7 — MMM01, MBC7, TAMA5 and HuC3 cartridges are CartridgeNotSupported, and so is every type the switch does not name, MBC6 (0x20) and TPP1 among them."
+            }
+          ],
+          "mirrors": [
+            {
+              "kinds": ["mbc2"],
+              "handling": "drops",
+              "citation": "[V] src/MBC2MemoryRule.cpp:128-141 at drhelius/Gearboy 37c21f7 — an MBC2 RAM write is kept only below 0xA200 and logged above it, so a write through a mirror is not kept."
+            }
+          ]
+        },
+        "gbc": {
+          "same_as": "gb"
+        }
+      }
+    },
+    "tgbdual": {
+      "kind": "libretro",
+      "build": {
+        "pins": ["v0.8.3 933707c"],
+        "names": "commit",
+        "revision": "933707c",
+        "citation": "The shipped build names this string in its library_version, the verified_core atlas/data/save_memory.json pins for the core's Game Boy systems; the reads are at libretro/tgbdual-libretro 933707c."
+      },
+      "systems": {
+        "gb": {
+          "parts": [
+            {
+              "memory": "cartridge-ram",
+              "slot": null,
+              "format": "gb-cartridge-ram",
+              "names": ["<rom_stem>.srm"],
+              "frontend": true,
+              "citation": "[V] gb_core/rom.cpp:53-57, gb_core/cpu.cpp:141 and :184 and gb_core/mbc.cpp:230-231 at libretro/tgbdual-libretro 933707c — SAVE_RAM is the cartridge's sram, 0x2000 bytes per header bank, each address one byte at bank n × 0x2000 plus its offset (gb_core/mbc.cpp:515, :550, and :596 and :603 for MBC5) (an MBC2 cell a byte, a cartridge without a mapper at bank 0), and the MBC7 EEPROM's words high byte first; its TAMA5 mapper write is an empty stub (gb_core/mbc.cpp:728-732), so a TAMA5 cartridge's memory is never kept; a rumble cartridge's MBC5 RAM bank takes the low three bits, the motor bit masked off (gb_core/mbc.cpp:593-596).",
+              "kinds": {
+                "mbc2": "gb-cartridge-ram",
+                "rom-ram": "gb-cartridge-ram",
+                "mbc3-timer": "gb-cartridge-ram",
+                "mbc3": "gb-cartridge-ram",
+                "mbc5-rumble": "gb-cartridge-ram",
+                "mbc7": "gb-cartridge-ram",
+                "tama5": null
+              },
+              "unread": [
+                {
+                  "kinds": ["mmm01"],
+                  "citation": "[O] gb_core/rom.cpp:76-78 at libretro/tgbdual-libretro 933707c — the header-byte dispatch has no MMM01 case, but the one title the code names, MOMOCOL, runs on its MMM01 mapper, and atlas does not read the title; that mapper's RAM layout was not compared with the other cores'."
+                },
+                {
+                  "kinds": ["huc3"],
+                  "citation": "[O] gb_core/mbc.cpp at libretro/tgbdual-libretro 933707c — the HuC3 mapper's RAM banking was not read."
+                },
+                {
+                  "kinds": ["huc1"],
+                  "citation": "[O] gb_core/mbc.cpp:631-660 at libretro/tgbdual-libretro 933707c — HuC1 RAM banks switch its own way; which bank a save lands in was not compared with the other cores'."
+                }
+              ]
+            },
+            {
+              "memory": "cartridge-clock",
+              "slot": null,
+              "format": "gb-clock-tgbdual",
+              "names": ["<rom_stem>.rtc"],
+              "frontend": true,
+              "citation": "[V] libretro/libretro.cpp:493-496 and libretro/dmy_renderer.h:40 at libretro/tgbdual-libretro 933707c — RTC is the renderer's fixed_time, a 4-byte dword, for every game; the TAMA5 mapper write is an empty stub, so no TAMA5 clock is kept.",
+              "kinds": {
+                "mbc3-timer": "gb-clock-tgbdual",
+                "tama5": null
+              },
+              "unread": [
+                {
+                  "kinds": ["huc3"],
+                  "citation": "[O] gb_core/mbc.cpp at libretro/tgbdual-libretro 933707c — whether the HuC3 mapper's clock runs on the renderer's fixed_time was not read."
+                }
+              ]
+            }
+          ],
+          "not_run": [
+            {
+              "kinds": ["mbc6", "tpp1", "pocket-camera"],
+              "citation": "[V] gb_core/mbc.cpp:72-114 at libretro/tgbdual-libretro 933707c — the mapper dispatch has no case for MBC6 (0x20) or the Pocket Camera (0xFC), and the source names no TPP1 mapper anywhere."
+            }
+          ],
+          "mirrors": [
+            {
+              "kinds": ["mbc2"],
+              "handling": "stores-unfolded",
+              "citation": "[V] gb_core/rom.cpp:55-56 and gb_core/cpu.cpp:184 at libretro/tgbdual-libretro 933707c — an MBC2 cartridge gets an 8 KiB sram written at adr & 0x1FFF, so a write through a mirror of its 512 cells is kept at its window offset."
+            }
+          ]
+        },
+        "gbc": {
+          "same_as": "gb"
+        }
+      }
+    },
+    "DoubleCherryGB": {
+      "kind": "libretro",
+      "build": {
+        "pins": ["v0.17.0 5dbc8c9"],
+        "names": "commit",
+        "revision": "5dbc8c9",
+        "citation": "The shipped build names this string in its library_version, the verified_core atlas/data/save_memory.json pins for the core's Game Boy systems; the reads are at TimOelrichs/doublecherryGB-libretro 5dbc8c9."
+      },
+      "systems": {
+        "gb": {
+          "parts": [
+            {
+              "memory": "cartridge-ram",
+              "slot": null,
+              "format": "gb-cartridge-ram",
+              "names": ["<rom_stem>.srm"],
+              "frontend": true,
+              "citation": "[V] gb_core/cpu.cpp:168 and :216 and gb_core/mbc.cpp:255-256 at TimOelrichs/doublecherryGB-libretro 5dbc8c9 — the tgbdual core's sram, each address one byte at bank n × 0x2000 plus its offset (gb_core/mbc.cpp:540, :575, and :621 and :628 for MBC5) (an MBC2 cell a byte, a cartridge without a mapper at bank 0), and the MBC7 EEPROM's words high byte first; its TAMA5 mapper write is an empty stub (gb_core/mbc.cpp:1045-1049), so a TAMA5 cartridge's memory is never kept; a rumble cartridge's MBC5 RAM bank takes the low three bits, the motor bit masked off (gb_core/mbc.cpp:618-621).",
+              "kinds": {
+                "mbc2": "gb-cartridge-ram",
+                "rom-ram": "gb-cartridge-ram",
+                "mbc3-timer": "gb-cartridge-ram",
+                "mbc3": "gb-cartridge-ram",
+                "mbc5-rumble": "gb-cartridge-ram",
+                "mbc7": "gb-cartridge-ram",
+                "tama5": null
+              },
+              "unread": [
+                {
+                  "kinds": ["mmm01"],
+                  "citation": "[O] gb_core/rom.cpp:93-95 at TimOelrichs/doublecherryGB-libretro 5dbc8c9 — the header-byte dispatch has no MMM01 case, but the one title the code names, MOMOCOL, runs on its MMM01 mapper, and atlas does not read the title; that mapper's RAM layout was not compared with the other cores'."
+                },
+                {
+                  "kinds": ["huc3"],
+                  "citation": "[O] gb_core/mbc.cpp at TimOelrichs/doublecherryGB-libretro 5dbc8c9 — the HuC3 mapper's RAM banking was not read."
+                },
+                {
+                  "kinds": ["huc1"],
+                  "citation": "[O] gb_core/mbc.cpp:656-685 at TimOelrichs/doublecherryGB-libretro 5dbc8c9 — HuC1 RAM banks switch its own way; which bank a save lands in was not compared with the other cores'."
+                }
+              ]
+            },
+            {
+              "memory": "cartridge-clock",
+              "slot": null,
+              "format": "gb-clock-tgbdual",
+              "names": ["<rom_stem>.rtc"],
+              "frontend": true,
+              "citation": "[V] libretro/libretro.cpp:434-436 and libretro/dmy_renderer.h:237 at TimOelrichs/doublecherryGB-libretro 5dbc8c9 — RTC is a renderer's fixed_time, a 4-byte dword, for every game; the TAMA5 mapper write is an empty stub, so no TAMA5 clock is kept.",
+              "kinds": {
+                "mbc3-timer": "gb-clock-tgbdual",
+                "tama5": null
+              },
+              "unread": [
+                {
+                  "kinds": ["huc3"],
+                  "citation": "[O] gb_core/mbc.cpp at TimOelrichs/doublecherryGB-libretro 5dbc8c9 — whether the HuC3 mapper's clock runs on the renderer's fixed_time was not read."
+                }
+              ]
+            }
+          ],
+          "not_run": [
+            {
+              "kinds": ["mbc6", "tpp1", "pocket-camera"],
+              "citation": "[V] gb_core/mbc.cpp:95-136 at TimOelrichs/doublecherryGB-libretro 5dbc8c9 — the mapper dispatch has no case for MBC6 (0x20) or the Pocket Camera (0xFC), and the source names no TPP1 mapper anywhere."
+            }
+          ],
+          "mirrors": [
+            {
+              "kinds": ["mbc2"],
+              "handling": "stores-unfolded",
+              "citation": "[V] gb_core/cpu.cpp:216 at TimOelrichs/doublecherryGB-libretro 5dbc8c9 — the sram is written at adr & 0x1FFF, so a write through a mirror of MBC2's 512 cells is kept at its window offset."
+            }
+          ]
+        },
+        "gbc": {
+          "same_as": "gb"
+        }
+      }
+    },
+    "mesen-s": {
+      "kind": "libretro",
+      "build": {
+        "pins": ["0.4.0"],
+        "names": "release",
+        "revision": "9e4fdeb",
+        "citation": "The shipped build names the release '0.4.0' in its library_version (Libretro/libretro.cpp:750), the verified_core atlas/data/save_memory.json pins for the core's Game Boy systems; the reads are at libretro/Mesen-S 9e4fdeb, a revision that release string does not name."
+      },
+      "systems": {
+        "gb": {
+          "parts": [
+            {
+              "memory": "cartridge-ram",
+              "slot": null,
+              "format": "gb-cartridge-ram",
+              "names": ["<rom_stem>.srm"],
+              "frontend": true,
+              "citation": "[V] Core/GameboyHeader.h:29-45 and Core/GbMbc2.h:34 and :54 at libretro/Mesen-S 9e4fdeb — SAVE_RAM is the Game Boy cartridge's RAM sized from the header (0x200 for MBC2), each address one byte at bank n × 0x2000 plus its offset for MBC1 and MBC5 (Core/GbMbc1.h:33, Core/GbMbc5.h:29), the 512 MBC2 cells mirrored onto it.",
+              "kinds": {
+                "mbc2": "gb-cartridge-ram"
+              },
+              "unread": [
+                {
+                  "kinds": ["mbc3-timer", "mbc3"],
+                  "citation": "[O] Core/GbMbc3.h:36 at libretro/Mesen-S 9e4fdeb — the MBC3 mapper maps RAM bank n at byte offset n (offsets taken as bytes by Core/GbMemoryManager.cpp:107-117): bank 0 lies at offset 0 as in every core, so a single-bank save carries over, and every further bank overlaps the one before; whether a save uses them is the header's bank count, which atlas does not read."
+                },
+                {
+                  "kinds": ["mbc5-rumble"],
+                  "citation": "[O] Core/GbMbc5.h:59-62 at libretro/Mesen-S 9e4fdeb — the MBC5 RAM bank is value & 0x0F with no motor bit masked off, wrapped only by the RAM's size (Core/GbMemoryManager.cpp:107-117), so where a rumble cartridge's save lands depends on its header."
+                }
+              ]
+            }
+          ],
+          "not_run": [
+            {
+              "kinds": ["rom-ram", "mmm01", "mbc6", "mbc7", "tpp1", "pocket-camera", "tama5", "huc3", "huc1"],
+              "citation": "[V] Core/GbCartFactory.h:14-34 at libretro/Mesen-S 9e4fdeb — the factory builds a plain ROM, MBC1, MBC2, MBC3 and MBC5 cartridges and no other — no ROM with RAM (0x08, 0x09), MMM01, Pocket Camera or Hudson mapper."
+            }
+          ],
+          "mirrors": [
+            {
+              "kinds": ["mbc2"],
+              "handling": "folds",
+              "citation": "[V] Core/GbMbc2.h:36 and :51-54 at libretro/Mesen-S 9e4fdeb — with RAM enabled the whole window is mapped as write registers, and every write to it lands in _cartRam[addr & 0x1FF] (reached through Core/GbMemoryManager.cpp:192-193 and :419), so a write through a mirror lands on the cell itself."
+            }
+          ]
+        },
+        "gbc": {
+          "same_as": "gb"
+        }
+      }
+    },
+    "mgba": {
+      "kind": "libretro",
+      "build": {
+        "pins": ["0.11-dev c758314"],
+        "names": "commit",
+        "revision": "c758314",
+        "citation": "The shipped build names this string in its library_version, the verified_core atlas/data/save_memory.json pins for the core's Game Boy systems; the reads are at libretro/mgba c758314."
+      },
+      "systems": {
+        "gb": {
+          "parts": [
+            {
+              "memory": "cartridge-ram",
+              "slot": null,
+              "format": "gb-cartridge-ram",
+              "names": ["<rom_stem>.srm"],
+              "frontend": true,
+              "citation": "[V] src/gb/mbc.c:277-304 at libretro/mgba c758314 — SAVE_RAM is sramSize from the header (0x2000 for a 2 KiB cartridge), each address one byte at bank n × 0x2000 plus its offset (GBMBCSwitchSramBank, src/gb/mbc.c:247-255) and the MBC7 EEPROM's words high byte first (src/gb/mbc/mbc.c:518-519); MBC2 packs two cells to a byte in 0x100 bytes (src/gb/mbc.c:399-404, src/gb/mbc/mbc.c:123-174), MBC6 appends its flash to the RAM (src/gb/mbc.c:414-421), and TAMA5 keeps its mapper's 0x20 bytes there one byte per address (src/gb/mbc.c:438-445, src/gb/mbc/tama5.c:205-215).",
+              "kinds": {
+                "mbc2": "gb-cartridge-ram-mbc2-packed",
+                "mbc3-timer": "gb-cartridge-ram",
+                "mbc3": "gb-cartridge-ram",
+                "mbc6": "gb-cartridge-ram-mbc6-with-flash",
+                "mbc7": "gb-cartridge-ram",
+                "tama5": "gb-cartridge-ram-tama5-mgba"
+              },
+              "unread": [
+                {
+                  "kinds": ["rom-ram", "pocket-camera", "huc3"],
+                  "citation": "[O] src/gb/mbc.c at libretro/mgba c758314 — the RAM mapping of a cartridge without a mapper, the Pocket Camera and HuC3 was not read beyond sramSize."
+                },
+                {
+                  "kinds": ["mmm01"],
+                  "citation": "[O] src/gb/mbc/licensed.c:44-46 at libretro/mgba c758314 — the MMM01 banking offsets every bank by the selected game's; it was not compared with the other cores'."
+                },
+                {
+                  "kinds": ["huc1"],
+                  "citation": "[O] src/gb/mbc/licensed.c:58-81 at libretro/mgba c758314 — HuC1 RAM banks switch its own way; which bank a save lands in was not compared with the other cores'."
+                },
+                {
+                  "kinds": ["mbc5-rumble"],
+                  "citation": "[O] src/gb/mbc/mbc.c:253-262 at libretro/mgba c758314 — the motor bit is masked off the MBC5 RAM bank only while a rumble interface is attached; without one it selects a bank, so where a rumble cartridge's save lands depends on the frontend."
+                }
+              ]
+            },
+            {
+              "memory": "cartridge-clock",
+              "slot": null,
+              "format": null,
+              "names": ["<rom_stem>.rtc"],
+              "frontend": true,
+              "citation": "[V] src/platform/libretro/libretro.c:2357-2366 and include/mgba/internal/gb/mbc.h:34-46 at libretro/mgba c758314 — RTC is struct GBMBCRTCSaveBuffer, ten u32 registers and a u64 time, for a GB_MBC3_RTC cartridge alone; HuC3 and TAMA5 cartridges get no RTC memory.",
+              "kinds": {
+                "mbc3-timer": "gb-clock-vba-mbc3",
+                "huc3": null,
+                "tama5": null
+              }
+            }
+          ],
+          "not_run": [
+            {
+              "kinds": ["tpp1"],
+              "citation": "[V] src/gb/mbc.c:130 at libretro/mgba c758314 — TPP1 appears only as a GBX mapper label left to autodetection, marked TODO; no TPP1 mapper is implemented."
+            }
+          ],
+          "mirrors": [
+            {
+              "kinds": ["mbc2"],
+              "handling": "folds",
+              "citation": "[V] src/gb/mbc/mbc.c:155 and :171 at libretro/mgba c758314 — an MBC2 address is masked to 0x1FF before it reaches the RAM, so a write through a mirror lands on the cell itself."
+            }
+          ]
+        },
+        "gbc": {
+          "same_as": "gb"
+        }
+      }
+    },
+    "vbam": {
+      "kind": "libretro",
+      "build": {
+        "pins": ["2.2.3 d0787ae"],
+        "names": "commit",
+        "revision": "d0787ae",
+        "citation": "The shipped build names this string in its library_version, the verified_core atlas/data/save_memory.json pins for the core's Game Boy systems; the reads are at libretro/vbam-libretro d0787ae."
+      },
+      "systems": {
+        "gb": {
+          "parts": [
+            {
+              "memory": "cartridge-ram",
+              "slot": null,
+              "format": "gb-cartridge-ram",
+              "names": ["<rom_stem>.srm"],
+              "frontend": true,
+              "citation": "[V] src/core/gb/gbCartData.cpp:446-465 and :275-281, src/core/gb/gbMemory.cpp:258-267 and :701-702 at libretro/vbam-libretro d0787ae — SAVE_RAM is gbRam, sized from the header (512 bytes for MBC2), each address one byte at bank n × 0x2000 plus its offset (src/core/gb/gbMemory.cpp:83-87, :377-380 and :548-552 for MBC1, MBC3 and MBC5), and the MBC7 EEPROM's words high byte first; a TAMA5 cartridge's memory is gbTAMA5ram (src/core/gb/gbMemory.cpp:1390-1396), which no memory id exposes (src/libretro/libretro.cpp:336-341, :384-391), so its save holds none of it; a Pocket Camera gets no battery (src/core/gb/gbCartData.cpp:380-382), so SAVE_RAM answers no size for it (src/libretro/libretro.cpp:338-339, :386-387) and its save holds none of its RAM; a rumble cartridge's motor bit is masked off the MBC5 RAM bank (src/core/gb/gbMemory.cpp:540-545).",
+              "kinds": {
+                "mbc2": "gb-cartridge-ram",
+                "mbc3-timer": "gb-cartridge-ram",
+                "mbc3": "gb-cartridge-ram",
+                "mbc5-rumble": "gb-cartridge-ram",
+                "mbc7": "gb-cartridge-ram",
+                "pocket-camera": null,
+                "tama5": null
+              },
+              "unread": [
+                {
+                  "kinds": ["rom-ram", "huc3"],
+                  "citation": "[O] src/core/gb/gbMemory.cpp at libretro/vbam-libretro d0787ae — the RAM mapping of a cartridge without a mapper and of HuC3 was not read."
+                },
+                {
+                  "kinds": ["mmm01"],
+                  "citation": "[O] src/core/gb/gbMemory.cpp:1508-1520 at libretro/vbam-libretro d0787ae — the MMM01 mapping offsets its banks by the selected game; it was not compared with the other cores'."
+                },
+                {
+                  "kinds": ["huc1"],
+                  "citation": "[O] src/core/gb/gbMemory.cpp:876-890 at libretro/vbam-libretro d0787ae — HuC1 RAM banks switch only in its 4/32 memory model; which bank a save lands in was not compared with the other cores'."
+                }
+              ]
+            },
+            {
+              "memory": "cartridge-clock",
+              "slot": null,
+              "format": null,
+              "names": ["<rom_stem>.rtc"],
+              "frontend": true,
+              "citation": "[V] src/libretro/libretro.cpp:166-216 and src/core/gb/gbMemory.h:206-208 at libretro/vbam-libretro d0787ae — RTC starts at the mapper's mapperSeconds: ten int registers and a 64-bit time for MBC3, fourteen and a 64-bit time for TAMA5, and HuC3's last time alone.",
+              "kinds": {
+                "mbc3-timer": "gb-clock-vba-mbc3",
+                "huc3": "gb-clock-vbam-huc3",
+                "tama5": "gb-clock-vbam-tama5"
+              }
+            }
+          ],
+          "not_run": [
+            {
+              "kinds": ["mbc6", "tpp1"],
+              "citation": "[V] src/core/gb/gbCartData.cpp:352-353 and src/core/gb/gb.cpp:3600-3604 at libretro/vbam-libretro d0787ae — an MBC6 cartridge gets no battery and no memory map, and the source names no TPP1 mapper anywhere."
+            }
+          ],
+          "mirrors": [
+            {
+              "kinds": ["mbc2"],
+              "handling": "drops",
+              "citation": "[V] src/core/gb/gbMemory.cpp:259-267 at libretro/vbam-libretro d0787ae — an MBC2 RAM write is kept only below 0xA200, so a write through a mirror is not kept."
+            }
+          ]
+        },
+        "gbc": {
+          "same_as": "gb"
         }
       }
     }

@@ -36,6 +36,8 @@ SaveMemory = Literal[
     "memory-card",
     "internal-backup-ram",
     "cartridge-backup-ram",
+    "cartridge-ram",
+    "cartridge-clock",
 ]
 MEMORY_MEMORY_CARD: SaveMemory = "memory-card"
 """A memory card in one of the console's card slots, which ``slot`` names."""
@@ -43,6 +45,11 @@ MEMORY_INTERNAL_BACKUP_RAM: SaveMemory = "internal-backup-ram"
 """The battery-backed save memory built into the console, such as the Saturn's 32 KiB."""
 MEMORY_CARTRIDGE_BACKUP_RAM: SaveMemory = "cartridge-backup-ram"
 """A backup memory cartridge plugged into the console beside the game, such as a Saturn backup cartridge."""
+MEMORY_CARTRIDGE_RAM: SaveMemory = "cartridge-ram"
+"""The game cartridge's own battery-backed save memory, such as a Game Boy cartridge's RAM or EEPROM."""
+MEMORY_CARTRIDGE_CLOCK: SaveMemory = "cartridge-clock"
+"""The game cartridge's real-time clock. Only a cartridge of a kind in :data:`CLOCK_CARTRIDGE_KINDS` has one; for
+every other kind a clock part holds no game data, so nothing of the game is lost with it (#577 D16)."""
 # What one part of a save holds, the vocabulary of a part's ``memory``. It
 # grows with the systems the records cover, and only with words a record
 # states.
@@ -50,7 +57,82 @@ SAVE_MEMORIES = (
     MEMORY_MEMORY_CARD,
     MEMORY_INTERNAL_BACKUP_RAM,
     MEMORY_CARTRIDGE_BACKUP_RAM,
+    MEMORY_CARTRIDGE_RAM,
+    MEMORY_CARTRIDGE_CLOCK,
 )
+
+CartridgeKind = Literal[
+    "mbc2", "rom-ram", "mmm01", "mbc3-timer", "mbc3", "mbc5-rumble", "mbc6", "mbc7", "tpp1", "pocket-camera", "tama5", "huc3", "huc1"
+]
+CARTRIDGE_MBC2: CartridgeKind = "mbc2"
+"""A Game Boy MBC2 cartridge (header byte 0x147 of 0x05 or 0x06): 512 four-bit cells of RAM built into the mapper."""
+CARTRIDGE_ROM_RAM: CartridgeKind = "rom-ram"
+"""A Game Boy cartridge with RAM and no mapper (header byte 0x147 of 0x08 or 0x09)."""
+CARTRIDGE_MMM01: CartridgeKind = "mmm01"
+"""A Game Boy MMM01 multi-game cartridge (header byte 0x147 of 0x0B, 0x0C or 0x0D)."""
+CARTRIDGE_MBC3_TIMER: CartridgeKind = "mbc3-timer"
+"""A Game Boy MBC3 cartridge with its clock (header byte 0x147 of 0x0F or 0x10)."""
+CARTRIDGE_MBC3: CartridgeKind = "mbc3"
+"""A Game Boy MBC3 cartridge without a clock (header byte 0x147 of 0x11, 0x12 or 0x13)."""
+CARTRIDGE_MBC5_RUMBLE: CartridgeKind = "mbc5-rumble"
+"""A Game Boy MBC5 cartridge with a rumble motor (header byte 0x147 of 0x1C, 0x1D or 0x1E), whose RAM bank select
+carries the motor bit."""
+CARTRIDGE_MBC6: CartridgeKind = "mbc6"
+"""A Game Boy MBC6 cartridge (header byte 0x147 of 0x20): RAM beside flash memory the game writes."""
+CARTRIDGE_MBC7: CartridgeKind = "mbc7"
+"""A Game Boy MBC7 cartridge (header byte 0x147 of 0x22): an EEPROM of 16-bit words instead of RAM."""
+CARTRIDGE_TPP1: CartridgeKind = "tpp1"
+"""A Game Boy TPP1 cartridge (header byte 0x147 of 0xBC with the TPP1 signature), whose header may declare a clock."""
+CARTRIDGE_POCKET_CAMERA: CartridgeKind = "pocket-camera"
+"""The Game Boy Camera (header byte 0x147 of 0xFC): 128 KiB of RAM holding its photos."""
+CARTRIDGE_TAMA5: CartridgeKind = "tama5"
+"""A Game Boy Bandai TAMA5 cartridge (header byte 0x147 of 0xFD): a small memory and a clock behind the mapper."""
+CARTRIDGE_HUC3: CartridgeKind = "huc3"
+"""A Game Boy HuC3 cartridge (header byte 0x147 of 0xFE): RAM and a clock behind Hudson's mapper."""
+CARTRIDGE_HUC1: CartridgeKind = "huc1"
+"""A Game Boy HuC1 cartridge (header byte 0x147 of 0xFF): RAM behind Hudson's infrared mapper."""
+# The kinds of cartridge a save-format record tells apart where a part's
+# layout, or whether an emulator keeps the part at all, differs between them
+# (#577 D15) — the vocabulary of a rule's ``kinds``, a record's ``not_run`` and
+# the ``cartridges`` a part's caveat states, in header-byte order. It grows only
+# with kinds a record names. The header bytes are those Gambatte's loader
+# switches on (libgambatte/src/mem/cartridge.cpp:552-586 at gambatte-libretro
+# 6924c76) and, for TPP1, SameBoy's signature check (Core/mbc.c:181-186 at
+# libretro/SameBoy be2c352). atlas does not read a cartridge's kind (#768 is
+# that question).
+CARTRIDGE_KINDS = (
+    CARTRIDGE_MBC2,
+    CARTRIDGE_ROM_RAM,
+    CARTRIDGE_MMM01,
+    CARTRIDGE_MBC3_TIMER,
+    CARTRIDGE_MBC3,
+    CARTRIDGE_MBC5_RUMBLE,
+    CARTRIDGE_MBC6,
+    CARTRIDGE_MBC7,
+    CARTRIDGE_TPP1,
+    CARTRIDGE_POCKET_CAMERA,
+    CARTRIDGE_TAMA5,
+    CARTRIDGE_HUC3,
+    CARTRIDGE_HUC1,
+)
+
+# A write through a mirror of a small RAM lands on the RAM's own address, as on
+# the cartridge; is kept at its window offset, past the RAM's own size; or is
+# not kept at all.
+MirrorHandling = Literal["folds", "stores-unfolded", "drops"]
+MIRRORS_FOLD: MirrorHandling = "folds"
+MIRRORS_STORED_UNFOLDED: MirrorHandling = "stores-unfolded"
+MIRRORS_DROPPED: MirrorHandling = "drops"
+# How an emulator handles a write through a mirror of a cartridge RAM smaller
+# than its window (#577 D18), the vocabulary of a record's ``mirrors``, which
+# no answer serializes. Two emulators that handle it differently keep a game
+# that writes through a mirror at different offsets, so a kind every cartridge
+# of which is that small is not established between them.
+MIRROR_HANDLINGS = (MIRRORS_FOLD, MIRRORS_STORED_UNFOLDED, MIRRORS_DROPPED)
+
+# The kinds that can carry a clock. A cartridge-clock part holds game data for
+# these alone (#577 D16).
+CLOCK_CARTRIDGE_KINDS = (CARTRIDGE_MBC3_TIMER, CARTRIDGE_TPP1, CARTRIDGE_TAMA5, CARTRIDGE_HUC3)
 
 # The rules a conversion can be stated by as data (#577 D4), where a source
 # pins one as plain as a length. None does yet: every conversion the records
@@ -88,6 +170,19 @@ class FormatBuild:
 
 
 @dataclass(frozen=True, slots=True)
+class UnreadKinds:
+    """Cartridge kinds an emulator runs whose layout for this part no read establishes, and the citation saying why.
+
+    A verdict for such a kind would be a guess, so the portability answer
+    judges it ``unestablished`` (#577 D15) rather than letting it fall into
+    every other kind's verdict.
+    """
+
+    kinds: tuple[str, ...]
+    citation: str
+
+
+@dataclass(frozen=True, slots=True)
 class PartRule:
     """How one part of an emulator's save is told apart in its save answer, and what it holds.
 
@@ -98,11 +193,18 @@ class PartRule:
     only where the mode matches it, and everywhere when it is ``None``. A
     ``folder`` rule matches a group whose names are not stated and whose
     directory carries the name instead — PCSX2's folder card.
+
+    ``kinds`` states, for a cartridge kind (:data:`CARTRIDGE_KINDS`) whose part
+    this emulator keeps differently, the format it keeps it in — or ``None``
+    where it keeps no such part for that kind although it runs the cartridge
+    (mGBA's HuC3 clock). ``format`` is the format for every kind ``kinds`` does
+    not name, and ``None`` where the part exists for the named kinds alone (a
+    clock only MBC3 cartridges get).
     """
 
     memory: str
     slot: str | None
-    format: str
+    format: str | None
     names: tuple[str, ...]
     citation: str
     modes: re.Pattern[str] | None = None
@@ -111,6 +213,18 @@ class PartRule:
     frontend: bool = False
     """The file is RetroArch's: the core hands it over through a memory id and RetroArch writes and loads it, so
     RetroArch's own ``save_file_compression`` applies to it."""
+    kinds: tuple[tuple[str, str | None], ...] = ()
+    unread: tuple[UnreadKinds, ...] = ()
+    """The kinds whose layout for this part no read establishes, each list with its citation."""
+
+    def unread_for(self, kind: str | None) -> str | None:
+        """The citation saying the layout for *kind* is not read, or ``None`` where it is."""
+        return next((group.citation for group in self.unread if kind in group.kinds), None)
+
+    def format_for(self, kind: str | None) -> str | None:
+        """The format this part takes for a cartridge of *kind* — ``None`` for every kind ``kinds`` does not name —
+        or ``None`` where it holds no such part for that kind."""
+        return dict(self.kinds).get(kind, self.format) if kind is not None else self.format
 
     def applies(self, mode: str | None) -> bool:
         """Whether this rule speaks for a save answer in *mode*."""
@@ -157,11 +271,43 @@ class IgnoredGroup:
 
 
 @dataclass(frozen=True, slots=True)
+class NotRun:
+    """Cartridge kinds an emulator does not run at all, and the citation that says so.
+
+    As the source, such an emulator has no save of the kind to carry, so the
+    portability answer judges none; as the target, it reads none of a save of
+    that kind, so the kind is not readable (#577 D15).
+    """
+
+    kinds: tuple[str, ...]
+    citation: str
+
+
+@dataclass(frozen=True, slots=True)
+class Mirrors:
+    """How an emulator handles a write through a mirror of the small RAM of some cartridge kinds, and why (#577 D18)."""
+
+    kinds: tuple[str, ...]
+    handling: str
+    citation: str
+
+
+@dataclass(frozen=True, slots=True)
 class SystemFormats:
-    """One emulator's part rules for one system, and the directories that hold no part of it."""
+    """One emulator's part rules for one system, the directories that hold no part of it, and the kinds it never runs."""
 
     parts: tuple[PartRule, ...]
     ignore: tuple[IgnoredGroup, ...] = ()
+    not_run: tuple[NotRun, ...] = ()
+    mirrors: tuple[Mirrors, ...] = ()
+
+    def mirrors_for(self, kind: str) -> Mirrors | None:
+        """The statement of how this emulator handles a mirror write for *kind*, or ``None`` where none says."""
+        return next((statement for statement in self.mirrors if kind in statement.kinds), None)
+
+    def does_not_run(self, kind: str) -> NotRun | None:
+        """The statement that this emulator does not run *kind*, or ``None`` where none says so."""
+        return next((statement for statement in self.not_run if kind in statement.kinds), None)
 
 
 @dataclass(frozen=True, slots=True)
@@ -195,13 +341,16 @@ class SaveFormats:
     ``compressed`` is the citation for what RetroArch's ``save_file_compression``
     does to a file it writes for a core: an RZIP stream RetroArch reads back
     and an emulator that does not load the file through RetroArch has to have
-    decompressed first.
+    decompressed first. ``loads_raw`` is the citation for how RetroArch loads a
+    file it keeps for a core: byte for byte into the core's buffer, so a file
+    laid out another way is read as the target's own layout.
     """
 
     formats: Mapping[str, str]
     conversions: tuple[FormatConversion, ...]
     emulators: Mapping[str, EmulatorFormats]
     compressed: str
+    loads_raw: str
 
     def conversion(self, source: str, target: str) -> FormatConversion | None:
         """The stated conversion from *source* to *target*, or ``None``."""
@@ -246,11 +395,25 @@ def _build(where: str, entry: Any) -> FormatBuild:
     )
 
 
+def _kinds(where: str, entry: Any, *, memory: str, formats: Mapping[str, str]) -> tuple[tuple[str, str | None], ...]:
+    """A rule's per-kind formats, each kind one of :data:`CARTRIDGE_KINDS` and each format one the table states."""
+    if not isinstance(entry, dict) or not entry:
+        raise ValueError(f"{where}: kinds must be a non-empty object, got {entry!r}")
+    for kind, value in entry.items():
+        if kind not in CARTRIDGE_KINDS:
+            raise ValueError(f"{where}: kind must be one of {CARTRIDGE_KINDS}, got {kind!r}")
+        if memory == MEMORY_CARTRIDGE_CLOCK and kind not in CLOCK_CARTRIDGE_KINDS:
+            raise ValueError(f"{where}: a clock part names only kinds that carry a clock, got {kind!r}")
+        if value is not None and value not in formats:
+            raise ValueError(f"{where}: format {value!r} for {kind!r} is not one the table states")
+    return tuple((kind, entry[kind]) for kind in CARTRIDGE_KINDS if kind in entry)
+
+
 def _part(where: str, entry: Any, *, formats: Mapping[str, str], revision: str) -> PartRule:
     entry = _exact(
         entry,
         {"memory", "slot", "format", "names", "citation"},
-        {"modes", "reading", "folder", "frontend"},
+        {"modes", "reading", "folder", "frontend", "kinds", "unread"},
         where,
     )
     if entry["memory"] not in SAVE_MEMORIES:
@@ -258,7 +421,15 @@ def _part(where: str, entry: Any, *, formats: Mapping[str, str], revision: str) 
     slot = entry["slot"]
     if slot is not None:
         _expect_str(slot, f"{where}.slot")
-    if entry["format"] not in formats:
+    kinds = (
+        _kinds(f"{where}.kinds", entry["kinds"], memory=entry["memory"], formats=formats) if "kinds" in entry else ()
+    )
+    if entry["format"] is None:
+        # A part that exists for the named kinds alone names at least one it
+        # keeps; otherwise it states nothing.
+        if not any(value is not None for _, value in kinds):
+            raise ValueError(f"{where}: a null format needs kinds that name a format")
+    elif entry["format"] not in formats:
         raise ValueError(f"{where}: format {entry['format']!r} is not one the table states")
     names = entry["names"]
     if not isinstance(names, list) or not names:
@@ -269,6 +440,13 @@ def _part(where: str, entry: Any, *, formats: Mapping[str, str], revision: str) 
     folder, frontend = entry.get("folder", False), entry.get("frontend", False)
     if type(folder) is not bool or type(frontend) is not bool:
         raise ValueError(f"{where}: folder and frontend must be true or false, got {folder!r}, {frontend!r}")
+    unread = tuple(
+        _unread(f"{where}.unread[{i}]", item, memory=entry["memory"], revision=revision)
+        for i, item in enumerate(entry.get("unread", []))
+    )
+    both = {kind for kind, _ in kinds} & {kind for group in unread for kind in group.kinds}
+    if both:
+        raise ValueError(f"{where}: a kind is either stated or unread, not both: {sorted(both)}")
     modes = entry.get("modes")
     return PartRule(
         memory=entry["memory"],
@@ -280,6 +458,40 @@ def _part(where: str, entry: Any, *, formats: Mapping[str, str], revision: str) 
         reading=None if entry.get("reading") is None else _expect_str(entry["reading"], f"{where}.reading"),
         folder=folder,
         frontend=frontend,
+        kinds=kinds,
+        unread=unread,
+    )
+
+
+def _unread(where: str, entry: Any, *, memory: str, revision: str) -> UnreadKinds:
+    entry = _exact(entry, {"kinds", "citation"}, set(), where)
+    kinds = entry["kinds"]
+    allowed = CLOCK_CARTRIDGE_KINDS if memory == MEMORY_CARTRIDGE_CLOCK else CARTRIDGE_KINDS
+    if not isinstance(kinds, list) or not kinds or any(kind not in allowed for kind in kinds):
+        raise ValueError(f"{where}: kinds must be a non-empty list drawn from {allowed}, got {kinds!r}")
+    citation = _expect_str(entry["citation"], f"{where}.citation")
+    if revision not in citation:
+        raise ValueError(f"{where}: the citation does not name the revision {revision!r} it was read at")
+    return UnreadKinds(kinds=tuple(kinds), citation=citation)
+
+
+def _not_run(where: str, entry: Any) -> NotRun:
+    entry = _exact(entry, {"kinds", "citation"}, set(), where)
+    kinds = entry["kinds"]
+    if not isinstance(kinds, list) or not kinds or any(kind not in CARTRIDGE_KINDS for kind in kinds):
+        raise ValueError(f"{where}: kinds must be a non-empty list drawn from {CARTRIDGE_KINDS}, got {kinds!r}")
+    return NotRun(kinds=tuple(kinds), citation=_expect_str(entry["citation"], f"{where}.citation"))
+
+
+def _mirrors(where: str, entry: Any) -> Mirrors:
+    entry = _exact(entry, {"kinds", "handling", "citation"}, set(), where)
+    kinds = entry["kinds"]
+    if not isinstance(kinds, list) or not kinds or any(kind not in CARTRIDGE_KINDS for kind in kinds):
+        raise ValueError(f"{where}: kinds must be a non-empty list drawn from {CARTRIDGE_KINDS}, got {kinds!r}")
+    if entry["handling"] not in MIRROR_HANDLINGS:
+        raise ValueError(f"{where}: handling must be one of {MIRROR_HANDLINGS}, got {entry['handling']!r}")
+    return Mirrors(
+        kinds=tuple(kinds), handling=entry["handling"], citation=_expect_str(entry["citation"], f"{where}.citation")
     )
 
 
@@ -298,7 +510,7 @@ def _ignored(where: str, entry: Any) -> IgnoredGroup:
 
 
 def _system(where: str, entry: Any, *, formats: Mapping[str, str], revision: str) -> SystemFormats:
-    entry = _exact(entry, {"parts"}, {"ignore"}, where)
+    entry = _exact(entry, {"parts"}, {"ignore", "not_run", "mirrors"}, where)
     parts = entry["parts"]
     if not isinstance(parts, list) or not parts:
         raise ValueError(f"{where}: parts must be a non-empty list, got {parts!r}")
@@ -307,6 +519,8 @@ def _system(where: str, entry: Any, *, formats: Mapping[str, str], revision: str
             _part(f"{where}.parts[{i}]", part, formats=formats, revision=revision) for i, part in enumerate(parts)
         ),
         ignore=tuple(_ignored(f"{where}.ignore[{i}]", item) for i, item in enumerate(entry.get("ignore", []))),
+        not_run=tuple(_not_run(f"{where}.not_run[{i}]", item) for i, item in enumerate(entry.get("not_run", []))),
+        mirrors=tuple(_mirrors(f"{where}.mirrors[{i}]", item) for i, item in enumerate(entry.get("mirrors", []))),
     )
 
 
@@ -370,7 +584,7 @@ def load_save_formats(text: str | None = None) -> SaveFormats:
             f"(this atlas reads schema {SAVE_FORMATS_SCHEMA})"
         )
     raw = _exact(raw, {"schema", "spec", "formats", "conversions", "emulators", "retroarch"}, set(), "save_formats")
-    retroarch = _exact(raw["retroarch"], {"compressed"}, set(), "save_formats: retroarch")
+    retroarch = _exact(raw["retroarch"], {"compressed", "loads_raw"}, set(), "save_formats: retroarch")
     formats = raw["formats"]
     if not isinstance(formats, dict) or not formats:
         raise ValueError(f"save_formats: formats must be a non-empty object, got {formats!r}")
@@ -388,6 +602,7 @@ def load_save_formats(text: str | None = None) -> SaveFormats:
             {key: _emulator(key, entry, formats=formats) for key, entry in raw["emulators"].items()}
         ),
         compressed=_expect_str(retroarch["compressed"], "save_formats: retroarch.compressed"),
+        loads_raw=_expect_str(retroarch["loads_raw"], "save_formats: retroarch.loads_raw"),
     )
 
 
