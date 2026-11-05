@@ -266,11 +266,10 @@ carries, ordered by what is at stake:
    keeps being used unless strict mode forbids it, Boot-OS setups add `-CDRIVE.sav` and hash-keyed disks. `desmume`:
    carded — its backup device writes `<save dir>/<rom_stem>.dsv` (mc.cpp:232-235 at 7f05a8d) with the battery path
    defaulting to the save directory this generation fills (path.cpp:196-222); no `.dsv.bak` here, the copy is gated on a
-   Windows-only setting — the 2015 card's pair shrinks to one file. `scummvm`: audited **standard-dir** here, not yet
-   carded — saves are target-keyed slot files in ScummVM's own `savepath` setting (default: the save directory, flat;
-   truth in `<system dir>/scummvm.ini`, libretro-os-utils.cpp:64-69, :212-221 at 686cdd1) — a card needed the
-   ini-reading code rule plus #170's mode form; both arrived in #174, and the card there states the directory while
-   refusing the names.
+   Windows-only setting. `scummvm`: audited **standard-dir** here, not yet carded — saves are target-keyed slot files in
+   ScummVM's own `savepath` setting (default: the save directory, flat; truth in `<system dir>/scummvm.ini`,
+   libretro-os-utils.cpp:64-69, :212-221 at 686cdd1) — a card needed the ini-reading code rule plus #170's mode form;
+   both arrived in #174, and the card there states the directory while refusing the names.
 9. ~~**`melondsds`**~~ — closed 2026-08-17: no host file appears beside the frontend's `.srm` on the catalogue route.
    The `.sav` hits are NAND-internal spellings inside the image kept in the system directory, firmware and Wi-Fi
    settings flush to the system directory (core/tasks.cpp:263-292 at v1.2.0), and the GBA slot writes back to the save
