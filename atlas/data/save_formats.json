@@ -1141,12 +1141,6 @@
               },
               "citation": "[V] desmume/src/mc.cpp:236-240, :893-930 and :397-434 at DeSmuME 2015 af397ff — the core keeps the card's save memory in <rom_stem>.dsv, written in place at each address the game writes, padded with uninitializedValue (0xFF, :233) and closed by the same footer as DeSmuME 7f05a8d's: the text (:70), the five BackupDeviceFileInfo fields, the version 0 and the cookie (:71); on load the footer is read and strlen(cookie) + strlen(text) + 24 = 122 bytes set aside (:318-332). The load path reads the same fields in the same order as 7f05a8d's (:397-434 against 7f05a8d :414-457)."
             }
-          ],
-          "ignore": [
-            {
-              "names": ["<rom_stem>.dsv.bak"],
-              "citation": "[V] desmume/src/mc.cpp:246-266 at DeSmuME 2015 af397ff — the .dsv.bak is a copy of the .dsv taken at load only where CommonSettings.backupSave is set, which defaults to false (desmume/src/NDSSystem.h:515) and which nothing in the tree sets; no code reads the copy back, so it is no part of the save another emulator would read."
-            }
           ]
         }
       }

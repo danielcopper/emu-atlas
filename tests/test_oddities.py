@@ -974,7 +974,10 @@ class TestACardRootedInTheLaunchsWorkingDirectory:
         # The names are established even though the directory is not — that is
         # the whole reason this root exists rather than a refusal.
         assert p.file_set.state == "declared"
-        assert p.file_set.files == ("Game (Europe).dsv", "Game (Europe).dsv.bak")
+        # The one file this build writes: the .dsv.bak copy is gated on a
+        # setting that defaults to off and nothing sets (mc.cpp:246-269,
+        # NDSSystem.h:515 at af397ff).
+        assert p.file_set.files == ("Game (Europe).dsv",)
         assert [g.dir for g in p.file_set.groups] == ["<cwd>"]
 
     def test_the_caveat_says_whose_property_the_directory_is(self):

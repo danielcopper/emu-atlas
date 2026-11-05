@@ -329,7 +329,7 @@
         }
       },
       "provenance": {
-        "source": "DeSmuME source at 7f05a8d, the revision the shipped binary names in its library_version ('git 7f05a8d'). retro_get_memory answers only system RAM (frontend/libretro/libretro.cpp:2473-2488), so RetroArch writes no save file. The core's backup device builds one itself: the battery path defaults to the module path (path.cpp:265-277, :246-262), which the libretro build fills with the frontend's save directory — falling back to the system directory and then the content's own when no save directory is named (LoadModulePath, path.cpp:196-222) — and the file is that path joined with the content's stem and '.dsv' (mc.cpp:232-235, the stem via getpathnoext, path.cpp:417-421). Where no .dsv exists, a '<rom_stem>.sav' lying beside it is imported once and the state dumped back out as the .dsv (mc.cpp:270-283) — the .sav is read, never written. This build writes no '.dsv.bak': the copy is gated on a setting only the Windows frontend reads, and its default is off (mc.cpp:241, NDSSystem.h:534, frontend/windows/main.cpp:1962) — where DeSmuME 2015's card declares the pair, this generation declares the one file. The registered options govern firmware, CPU and video ('desmume_cpu_mode', 'desmume_internal_resolution', …), none moves a file — one mode.",
+        "source": "DeSmuME source at 7f05a8d, the revision the shipped binary names in its library_version ('git 7f05a8d'). retro_get_memory answers only system RAM (frontend/libretro/libretro.cpp:2473-2488), so RetroArch writes no save file. The core's backup device builds one itself: the battery path defaults to the module path (path.cpp:265-277, :246-262), which the libretro build fills with the frontend's save directory — falling back to the system directory and then the content's own when no save directory is named (LoadModulePath, path.cpp:196-222) — and the file is that path joined with the content's stem and '.dsv' (mc.cpp:232-235, the stem via getpathnoext, path.cpp:417-421). Where no .dsv exists, a '<rom_stem>.sav' lying beside it is imported once and the state dumped back out as the .dsv (mc.cpp:270-283) — the .sav is read, never written. This build writes no '.dsv.bak': the copy is gated on a setting only the Windows frontend reads, and its default is off (mc.cpp:241, NDSSystem.h:534, frontend/windows/main.cpp:1962). The registered options govern firmware, CPU and video ('desmume_cpu_mode', 'desmume_internal_resolution', …), none moves a file — one mode.",
         "status": {
           "always": "[D] Read from source at 7f05a8d, the revision the shipped binary names. Not live-observed."
         }
@@ -349,10 +349,9 @@
               {
                 "subdir": null,
                 "files": [
-                  "<rom_stem>.dsv",
-                  "<rom_stem>.dsv.bak"
+                  "<rom_stem>.dsv"
                 ],
-                "granularity": "per-game-files",
+                "granularity": "per-game-file",
                 "role": "battery"
               }
             ]
@@ -361,14 +360,11 @@
         "anchors": {
           "<rom_stem>.dsv": {
             "literal": ".dsv"
-          },
-          "<rom_stem>.dsv.bak": {
-            "literal": ".dsv.bak"
           }
         }
       },
       "provenance": {
-        "source": "DeSmuME 2015 source at af397ff, the revision the shipped binary names ('git af397ff'). retro_get_memory_size answers only RETRO_MEMORY_SYSTEM_RAM (desmume/src/libretro/libretro.cpp:1771-1778), so RetroArch writes no save file. The core builds its own: path.getpathnoext(path.BATTERY) plus '.dsv' (desmume/src/mc.cpp:237-240), the name being the content's file name without its extension (path.h:307-311, :417-422), and it renames an existing file to '.dsv.bak' before writing anew (mc.cpp:248) — so the pair is the upper bound, and the .bak exists only once a save was overwritten. getpath(BATTERY) returns pathToBattery (path.h:222-224), a member the class fills from an ini via ReadKey (:185) — **and the libretro unit never fills it**: no setpath, no ReadPathSettings, no assignment to pathToBattery anywhere in that translation unit. The whole path machinery belongs to DeSmuME's own frontends, and this build uses none of them, so the prefix is the empty string and the file lands relative to the working directory of whatever process loaded the core. That is a property of the launch, not of the machine, which is what the working_directory root says: the answer is a <cwd> template, the caller fills the hole, and the save-dir-launch-dependent caveat carries the sentence.\n\nBoth extensions are whole strings in the shipped binary, as is the message 'DeSmuME .dsv save file not found. Trying to load an old raw .sav file.' — the code is real and reached. The registered options govern video and input, none moves a file — one mode.",
+        "source": "DeSmuME 2015 source at af397ff, the revision the shipped binary names ('git af397ff'). retro_get_memory_size answers only RETRO_MEMORY_SYSTEM_RAM (desmume/src/libretro/libretro.cpp:1771-1778), so RetroArch writes no save file. The core builds its own: path.getpathnoext(path.BATTERY) plus '.dsv' (desmume/src/mc.cpp:237-240), the name being the content's file name without its extension (path.h:307-311, :417-422), and that is the one file it writes: it copies an existing .dsv to '.dsv.bak' at load only where CommonSettings.backupSave is set (mc.cpp:246-269), a setting that defaults to false (desmume/src/NDSSystem.h:515) and that nothing in the tree sets, and no code reads the copy back, so this build writes no '.dsv.bak'. getpath(BATTERY) returns pathToBattery (path.h:222-224), a member the class fills from an ini via ReadKey (:185) — **and the libretro unit never fills it**: no setpath, no ReadPathSettings, no assignment to pathToBattery anywhere in that translation unit. The whole path machinery belongs to DeSmuME's own frontends, and this build uses none of them, so the prefix is the empty string and the file lands relative to the working directory of whatever process loaded the core. That is a property of the launch, not of the machine, which is what the working_directory root says: the answer is a <cwd> template, the caller fills the hole, and the save-dir-launch-dependent caveat carries the sentence.\n\nThe extension is a whole string in the shipped binary, as is the message 'DeSmuME .dsv save file not found. Trying to load an old raw .sav file.' — the code is real and reached. The registered options govern video and input, none moves a file — one mode.",
         "status": {
           "always": "[D] Read from source at the revision the shipped binary names. Not live-observed — and not observable: the directory depends on the launch."
         }

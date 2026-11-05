@@ -106,11 +106,10 @@ Systems as the record states them, with the outcome each turned out to be.
 - [x] **`chailove`** — frontend writes nothing on chailove
 - [x] **`craft`** — frontend writes nothing on ports
 - [x] **`desmume`** — read as outcome 3 first and re-read as outcome 2: the frontend really writes nothing, and the
-      core's backup device writes `<save_dir>/<rom_stem>.dsv` itself — no `.dsv.bak` in this build, unlike the 2015
-      generation's pair, because the copy is gated on a setting only the Windows frontend reads. Its record became a
-      card
-- [x] **`desmume2015`** — outcome 2, and a card: `<rom_stem>.dsv` (with a `.dsv.bak` once overwritten) relative to the
-      launching process's working directory — the `working_directory` root's first and only core
+      core's backup device writes `<save_dir>/<rom_stem>.dsv` itself — no `.dsv.bak` in this build, because the copy is
+      gated on a setting only the Windows frontend reads. Its record became a card
+- [x] **`desmume2015`** — outcome 2, and a card: `<rom_stem>.dsv` relative to the launching process's working directory
+      — the `working_directory` root's first and only core
 - [x] **`dice`** — frontend writes nothing on arcade, mame
 - [x] **`dirksimple`** — frontend writes nothing on daphne, laserdisc
 - [x] **`dosbox_pure`** — read as outcome 3 first and re-read as outcome 2: the frontend really writes nothing, and the

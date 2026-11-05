@@ -8120,7 +8120,7 @@
     },
     {
       "name": "nds-desmume-2015-to-desmume-moves-the-dsv",
-      "rationale": "Both DeSmuME builds keep a DS card's save in <stem>.dsv: the raw save memory, padded with 0xFF as far as the game wrote, and the same 122-byte footer, which each reads back at the size the footer states. The .dsv moves from DeSmuME 2015's working directory to the save directory; the .dsv.bak DeSmuME 2015's card lists is a copy this build never writes or reads, so it is set aside with its citation.",
+      "rationale": "Both DeSmuME builds keep a DS card's save in <stem>.dsv: the raw save memory, padded with 0xFF as far as the game wrote, and the same 122-byte footer, which each reads back at the size the footer states. The .dsv moves from DeSmuME 2015's working directory to the save directory.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -8218,7 +8218,7 @@
                 "files": [
                   "Example Game (USA).dsv"
                 ],
-                "granularity": "per-game-files",
+                "granularity": "per-game-file",
                 "role": "battery",
                 "size_fixed": null,
                 "slots": []
