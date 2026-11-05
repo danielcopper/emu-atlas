@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.35.0](https://github.com/danielcopper/emu-atlas/compare/v0.34.0...v0.35.0) (2026-11-05)
+
+
+### ⚠ BREAKING CHANGES
+
+* **saves:** DeSmuME 2015's save answer no longer lists <rom_stem>.dsv.bak, and its group's granularity is per-game-file.
+* **saves:** GameCube and Wii save_portability pairs that answered unestablished with save-format-unrecorded now answer a verdict per part; every save part carries a region field (null where an emulator keeps no regions); every file group of a save answer carries a slots list (empty where an emulator keeps no slots, null where which slots read it is not established), and a card group holding two slots' files is stated one per slot: LRPS2's (enabled), PCEE2's, Beetle PSX's and Beetle PSX HW's (mcr+second-card, mcr+second-card-shared), SwanStation's (card1-shared+card2-shared, card1-per-title+card2-per-title, card1-per-code+card2-per-code) and Flycast's (disabled, VMU A1, All VMUs); SAVE_MEMORIES gains internal-storage; and save-part-unestablished gains the data key region and the reasons region-not-in-content and slots-unestablished.
+* **saves:** Nintendo DS save_portability pairs that answered unestablished with save-format-unrecorded now answer a verdict per part, and save-part-unestablished gains the reason save-length-differs-by-game with the data keys source_length, target_length, source_length_revision and target_length_revision.
+* **saves:** Game Boy and Game Boy Color save_portability pairs that answered unestablished with save-format-unrecorded now answer a verdict per part, and a not-readable part may name the target's file group.
+* **launch:** the caveat coded opens-entry-ignored carries a new data key, limit (the number of entries the emulator reads from the file, as a decimal string), so a client comparing caveat data exactly sees a key it did not see before.
+* **launch:** on ps2, psp and psx, an entry running PCSX2 with -batch %ROM%, PPSSPP with %ROM% or DuckStation with -batch %ROM% no longer answers launchable with entry-format-unestablished for the files its loader card now judges (on DuckStation, the files its opens reading does not read; the ones it reads keep that reading). A format its loader takes answers launchable with entry-format-content-unread, a .zip on PPSSPP launchable with archive-contents-unread, a format its loader refuses entry-not-accepted, and .ccd, .cpe and .elf on DuckStation launchable with entry-format-build-dependent. launch_formats.json is schema 4, which the loader requires, and a card may carry the new optional key build. In Python, StandaloneLaunchCard gains a build field.
+
+### Features
+
+* **launch:** give PCSX2, PPSSPP and DuckStation loader cards ([#755](https://github.com/danielcopper/emu-atlas/issues/755)) ([f9c1c93](https://github.com/danielcopper/emu-atlas/commit/f9c1c93f10787abd291a6316d5596688d022d91d))
+* **launch:** state the limit opens-entry-ignored stops reading at ([#758](https://github.com/danielcopper/emu-atlas/issues/758)) ([5c3a6e1](https://github.com/danielcopper/emu-atlas/commit/5c3a6e1925f7372e9e5d9eea20c935088a82a542))
+* **saves:** list the title directories Cemu holds ([#760](https://github.com/danielcopper/emu-atlas/issues/760)) ([1eb004e](https://github.com/danielcopper/emu-atlas/commit/1eb004ea3a3e6d96a6d958829ecd7615b121e93b))
+* **saves:** state whether game boy saves carry over between cores ([#770](https://github.com/danielcopper/emu-atlas/issues/770)) ([19dffaf](https://github.com/danielcopper/emu-atlas/commit/19dffafedc3ca4fc4742c279eb2e5271eccddee4))
+* **saves:** state whether gamecube and wii saves carry over ([#780](https://github.com/danielcopper/emu-atlas/issues/780)) ([7961d03](https://github.com/danielcopper/emu-atlas/commit/7961d0361655c89e879663d9c833cec8ee262346))
+* **saves:** state whether nintendo ds saves carry over between entries ([#775](https://github.com/danielcopper/emu-atlas/issues/775)) ([dbaa380](https://github.com/danielcopper/emu-atlas/commit/dbaa38088711c4945e3735368a428041b6924685))
+* **saves:** state whether one entry reads the save another wrote ([#767](https://github.com/danielcopper/emu-atlas/issues/767)) ([89e065b](https://github.com/danielcopper/emu-atlas/commit/89e065b13b568a104267a2ed6d5afe16ffa89ab1))
+
+
+### Bug Fixes
+
+* **saves:** drop the .dsv.bak the DeSmuME 2015 core never writes ([#781](https://github.com/danielcopper/emu-atlas/issues/781)) ([354c8da](https://github.com/danielcopper/emu-atlas/commit/354c8daa45e642607ec3d88f019a02195c7c75c8))
+
 ## [0.34.0](https://github.com/danielcopper/emu-atlas/compare/v0.33.0...v0.34.0) (2026-11-03)
 
 
