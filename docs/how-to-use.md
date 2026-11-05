@@ -937,7 +937,18 @@ for g in placement.file_set.groups:
     g.granularity  # whose is it: 'per-game-file' | 'per-game-files' | 'per-game-directory' | 'shared-card' | 'shared-file'
     g.role         # what is it:  'battery' | 'memory-card' | 'disk-diff' | 'high-score' | 'settings' | 'notes' | 'unknown'
     g.size_fixed   # does each file keep its size: True | False | None (not established)
+    g.slots        # the console's slots that read these files: ('1',), ('A', 'B'), () where it keeps no slots,
+                   # or None (not established)
 ```
+
+`slots` names the slots of the console that read a group's files, in the emulator's own words — a PlayStation's `1` and
+`2` (a PlayStation 2 multitap's `1B` … `2D`), Dolphin's `A` and `B`, Flycast's `A1` … `D2` — from the path the emulator
+resolves for each slot. A card group holding two slots' files is one group per slot, and two slots set to one file are
+one group read by both. A folder whose card names atlas cannot state (PCEE2's card folder it cannot list) names the
+slots switched on to open a card there. `None` says which slots read the group is not established, never that there are
+none: RPCS3's virtual memory cards, whose slot is a per-game setting atlas does not read, and PCEE2's card folder under
+a PCSX2 ini, whose multitap cards an unread setting may add. The save portability answer leaves a part kept per slot in
+such a group `unestablished` (`slots-unestablished`).
 
 `per-game-directory` says the directory itself is the unit: everything below it belongs to one game, so a sync client
 packs and moves the tree whole (Cemu's `usr/save/<save_id>` — the per-title MLC subtree — is the first). Its `dir` may
@@ -1104,18 +1115,19 @@ set to that same `dc` their names are in `files` beside the per-game VMU's.
 repeat. The settings an answer is read from can still meet one file twice — Dolphin's slot A raw card configured onto
 the path slot B's cartridge save lies at, xemu's disk image and EEPROM on one path, two DuckStation or PCSX2 slots on
 one card, MAME asked about content named `default` (its per-game `<rom_stem>.cfg` is then the shared `default.cfg`) —
-and the answer states the file once. Where every claim agreed, as two slots on one card do, that is all. Where they
-disagreed, the one group keeps a field only where every claim stated the same value — `role` is otherwise `unknown`,
-`size_fixed` is `None`, and `granularity` is `shared-file`, because a file that is not one game's alone is never synced
-as one game's — and a `file-set-claims-merged` caveat names the file (`data["dir"]`, `data["file"]`) with what the
-claims said: `roles`, `granularities` and `size_fixed`, each value once in the order the claims came, `size_fixed`
-spelled `true`, `false` or `null`. A list with one value is a field they agreed on. One name in two directories is two
-files and stays two groups: Kronos writes `<rom_stem>.ram` under both `kronos/saturn` and `kronos/stv`. A directory
-whose names are not established is one group the same way: two PCSX2 slots naming one folder card, or Dolphin's
-`GCIFolderAPath` and `GCIFolderBPath` naming one folder, state each directory once, with its `file-names-unestablished`
-once beside it and no collision named. The granularity block follows the merge too: Genesis Plus GX content named
-`4Mbit_cart` makes the per-game `<rom_stem>.brm` the shared `4Mbit_cart.brm`, and that answer's `granularity.value` and
-every alternative naming its mode say `shared-file`, the word of the one group the answer states.
+and the answer states the file once, its `slots` every slot that met on it. Where every claim agreed, as two slots on
+one card do, that is all. Where they disagreed, the one group keeps a field only where every claim stated the same value
+— `role` is otherwise `unknown`, `size_fixed` is `None`, and `granularity` is `shared-file`, because a file that is not
+one game's alone is never synced as one game's — and a `file-set-claims-merged` caveat names the file (`data["dir"]`,
+`data["file"]`) with what the claims said: `roles`, `granularities` and `size_fixed`, each value once in the order the
+claims came, `size_fixed` spelled `true`, `false` or `null`. A list with one value is a field they agreed on. One name
+in two directories is two files and stays two groups: Kronos writes `<rom_stem>.ram` under both `kronos/saturn` and
+`kronos/stv`. A directory whose names are not established is one group the same way: two PCSX2 slots naming one folder
+card, or Dolphin's `GCIFolderAPath` and `GCIFolderBPath` naming one folder, state each directory once, with its
+`file-names-unestablished` once beside it and no collision named. The granularity block follows the merge too: Genesis
+Plus GX content named `4Mbit_cart` makes the per-game `<rom_stem>.brm` the shared `4Mbit_cart.brm`, and that answer's
+`granularity.value` and every alternative naming its mode say `shared-file`, the word of the one group the answer
+states.
 
 **An observation's groups are what was found, and they describe one directory.** A declared set lists the parts a card
 states, including the ones no file has been written for yet, in the order the card states them; an observed set lists
@@ -2215,6 +2227,7 @@ answer = install.save_portability("psx", source="Beetle PSX", target="SwanStatio
 answer.verdict         # 'not-readable' — the most severe of the parts
 for part in answer.parts:
     part.memory, part.slot   # ('memory-card', '1'), then ('memory-card', '2')
+    part.region              # None — a word of atlas.SAVE_REGIONS where an emulator keeps a memory per region
     part.verdict             # 'same-files', then 'not-readable'
     part.source_group        # the source's file group for this part, as its save answer states it
     part.target_group        # the target's, or None where the target keeps no such part
@@ -2270,9 +2283,24 @@ caveat.data["source_length_revision"]  # '7a3c11f' — melonDS 0.9.3's list
 caveat.data["target_length_revision"]  # 'f6692df' — the list of the melonDS that melonDS DS builds
 ```
 
-The two DeSmuME builds size it alike and keep the same `.dsv`, so between them the save is `same-data`. The records
-cover the PlayStation, PlayStation 2, Saturn, Game Boy, Game Boy Color and Nintendo DS entries so far; every other pair
-answers `unestablished` with `save-format-unrecorded`. The evidence is in `docs/research/save-portability.md`.
+The two DeSmuME builds size it alike and keep the same `.dsv`, so between them the save is `same-data`.
+
+Dolphin keeps a GameCube card per region, so each region is a part of its own, named by `part.region` (a word of
+`atlas.SAVE_REGIONS`, `None` where an emulator keeps one memory for every region), and pairs with the target's card of
+the same slot and region:
+
+```python
+answer = install.save_portability("gc", source="Dolphin (Standalone)", target="Dolphin", content_path=rom)
+[(part.slot, part.region, part.verdict) for part in answer.parts]
+# [('A', 'USA', 'same-data'), ('A', 'EUR', 'same-data'), ('A', 'JAP', 'same-data')]
+```
+
+Content that names no region in its header (a `.dol` or `.elf`) runs in each Dolphin's fallback region, which atlas does
+not read, so asked with such a `content_path` every card part is `unestablished` (`reason` `region-not-in-content`). A
+raw card and a GCI folder convert into each other through Dolphin's memory-card manager (`convertible`); a Wii title's
+save is its data directory in the NAND (`internal-storage`). The records cover the PlayStation, PlayStation 2, Saturn,
+Game Boy, Game Boy Color, Nintendo DS, GameCube and Wii entries so far; every other pair answers `unestablished` with
+`save-format-unrecorded`. The evidence is in `docs/research/save-portability.md`.
 
 ## Where do texture packs go?
 

@@ -1022,7 +1022,17 @@
                   "vmu_save_D1.bin",
                   "vmu_save_D2.bin"
                 ],
-                "role": "memory-card"
+                "role": "memory-card",
+                "slots": {
+                  "vmu_save_A1.bin": "A1",
+                  "vmu_save_B1.bin": "B1",
+                  "vmu_save_C1.bin": "C1",
+                  "vmu_save_D1.bin": "D1",
+                  "vmu_save_A2.bin": "A2",
+                  "vmu_save_B2.bin": "B2",
+                  "vmu_save_C2.bin": "C2",
+                  "vmu_save_D2.bin": "D2"
+                }
               },
               {
                 "subdir": "dc",
@@ -1051,7 +1061,10 @@
                 "files_established_for": "console",
                 "files_citation": "flycast@1dac369 oslib.cpp:38-67 (names; per-content applies per port, :40-41), maple_cfg.cpp:246-253 (Naomi connects VMUs on B1 and C1 only, so port A1 never exists for arcade content)",
                 "granularity": "per-game-file",
-                "role": "memory-card"
+                "role": "memory-card",
+                "slots": {
+                  "<save_id>.A1.bin": "A1"
+                }
               },
               {
                 "root": "system_directory",
@@ -1062,7 +1075,12 @@
                   "vmu_save_D1.bin"
                 ],
                 "granularity": "shared-card",
-                "role": "memory-card"
+                "role": "memory-card",
+                "slots": {
+                  "vmu_save_B1.bin": "B1",
+                  "vmu_save_C1.bin": "C1",
+                  "vmu_save_D1.bin": "D1"
+                }
               },
               {
                 "root": "system_directory",
@@ -1099,7 +1117,13 @@
                 },
                 "files_established_for": "console",
                 "files_citation": "flycast@1dac369 oslib.cpp:38-67 (names), maple_cfg.cpp:246-253 (Naomi connects VMUs on B1 and C1 only)",
-                "role": "memory-card"
+                "role": "memory-card",
+                "slots": {
+                  "<save_id>.A1.bin": "A1",
+                  "<save_id>.B1.bin": "B1",
+                  "<save_id>.C1.bin": "C1",
+                  "<save_id>.D1.bin": "D1"
+                }
               },
               {
                 "root": "system_directory",
@@ -2825,7 +2849,11 @@
                   "Mcd002.ps2"
                 ],
                 "granularity": "shared-card",
-                "role": "memory-card"
+                "role": "memory-card",
+                "slots": {
+                  "Mcd001.ps2": "1",
+                  "Mcd002.ps2": "2"
+                }
               }
             ]
           },
@@ -2838,7 +2866,10 @@
                   "<rom_stem>.ps2"
                 ],
                 "granularity": "per-game-file",
-                "role": "memory-card"
+                "role": "memory-card",
+                "slots": {
+                  "<rom_stem>.ps2": "1"
+                }
               }
             ]
           }
@@ -3773,6 +3804,9 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "memory-card",
+                "slots": {
+                  "<rom_stem>.srm": "1"
+                },
                 "written_by_frontend": {
                   "memory": "save_ram",
                   "size": {
@@ -3792,6 +3826,9 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "memory-card",
+                "slots": {
+                  "<rom_stem>.srm": "1"
+                },
                 "written_by_frontend": {
                   "memory": "save_ram",
                   "size": {
@@ -3805,7 +3842,10 @@
                   "duckstation_shared_card_2.mcd"
                 ],
                 "granularity": "shared-file",
-                "role": "memory-card"
+                "role": "memory-card",
+                "slots": {
+                  "duckstation_shared_card_2.mcd": "2"
+                }
               }
             ]
           },
@@ -3818,6 +3858,9 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "memory-card",
+                "slots": {
+                  "<rom_stem>.srm": "1"
+                },
                 "written_by_frontend": {
                   "memory": "save_ram",
                   "size": {
@@ -3838,7 +3881,10 @@
                   "spelling": "path-segment"
                 },
                 "granularity": "per-game-file",
-                "role": "memory-card"
+                "role": "memory-card",
+                "slots": {
+                  "<save_id>_2.mcd": "2"
+                }
               }
             ]
           },
@@ -3851,6 +3897,9 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "memory-card",
+                "slots": {
+                  "<rom_stem>.srm": "1"
+                },
                 "written_by_frontend": {
                   "memory": "save_ram",
                   "size": {
@@ -3864,7 +3913,10 @@
                   "<rom_stem>_2.mcd"
                 ],
                 "granularity": "per-game-file",
-                "role": "memory-card"
+                "role": "memory-card",
+                "slots": {
+                  "<rom_stem>_2.mcd": "2"
+                }
               }
             ]
           },
@@ -3876,7 +3928,10 @@
                   "duckstation_shared_card_1.mcd"
                 ],
                 "granularity": "shared-file",
-                "role": "memory-card"
+                "role": "memory-card",
+                "slots": {
+                  "duckstation_shared_card_1.mcd": "1"
+                }
               }
             ]
           },
@@ -3889,7 +3944,11 @@
                   "duckstation_shared_card_2.mcd"
                 ],
                 "granularity": "shared-file",
-                "role": "memory-card"
+                "role": "memory-card",
+                "slots": {
+                  "duckstation_shared_card_1.mcd": "1",
+                  "duckstation_shared_card_2.mcd": "2"
+                }
               }
             ]
           },
@@ -3901,7 +3960,10 @@
                   "duckstation_shared_card_1.mcd"
                 ],
                 "granularity": "shared-file",
-                "role": "memory-card"
+                "role": "memory-card",
+                "slots": {
+                  "duckstation_shared_card_1.mcd": "1"
+                }
               },
               {
                 "files": [
@@ -3915,7 +3977,10 @@
                   "spelling": "path-segment"
                 },
                 "granularity": "per-game-file",
-                "role": "memory-card"
+                "role": "memory-card",
+                "slots": {
+                  "<save_id>_2.mcd": "2"
+                }
               }
             ]
           },
@@ -3927,14 +3992,20 @@
                   "duckstation_shared_card_1.mcd"
                 ],
                 "granularity": "shared-file",
-                "role": "memory-card"
+                "role": "memory-card",
+                "slots": {
+                  "duckstation_shared_card_1.mcd": "1"
+                }
               },
               {
                 "files": [
                   "<rom_stem>_2.mcd"
                 ],
                 "granularity": "per-game-file",
-                "role": "memory-card"
+                "role": "memory-card",
+                "slots": {
+                  "<rom_stem>_2.mcd": "2"
+                }
               }
             ]
           },
@@ -3953,7 +4024,10 @@
                   "spelling": "path-segment"
                 },
                 "granularity": "per-game-file",
-                "role": "memory-card"
+                "role": "memory-card",
+                "slots": {
+                  "<save_id>_1.mcd": "1"
+                }
               }
             ]
           },
@@ -3972,14 +4046,20 @@
                   "spelling": "path-segment"
                 },
                 "granularity": "per-game-file",
-                "role": "memory-card"
+                "role": "memory-card",
+                "slots": {
+                  "<save_id>_1.mcd": "1"
+                }
               },
               {
                 "files": [
                   "duckstation_shared_card_2.mcd"
                 ],
                 "granularity": "shared-file",
-                "role": "memory-card"
+                "role": "memory-card",
+                "slots": {
+                  "duckstation_shared_card_2.mcd": "2"
+                }
               }
             ]
           },
@@ -4000,7 +4080,11 @@
                   "spelling": "path-segment"
                 },
                 "granularity": "per-game-files",
-                "role": "memory-card"
+                "role": "memory-card",
+                "slots": {
+                  "<save_id>_1.mcd": "1",
+                  "<save_id>_2.mcd": "2"
+                }
               }
             ]
           },
@@ -4019,14 +4103,20 @@
                   "spelling": "path-segment"
                 },
                 "granularity": "per-game-file",
-                "role": "memory-card"
+                "role": "memory-card",
+                "slots": {
+                  "<save_id>_1.mcd": "1"
+                }
               },
               {
                 "files": [
                   "<rom_stem>_2.mcd"
                 ],
                 "granularity": "per-game-file",
-                "role": "memory-card"
+                "role": "memory-card",
+                "slots": {
+                  "<rom_stem>_2.mcd": "2"
+                }
               }
             ]
           },
@@ -4038,7 +4128,10 @@
                   "<rom_stem>_1.mcd"
                 ],
                 "granularity": "per-game-file",
-                "role": "memory-card"
+                "role": "memory-card",
+                "slots": {
+                  "<rom_stem>_1.mcd": "1"
+                }
               }
             ]
           },
@@ -4050,14 +4143,20 @@
                   "<rom_stem>_1.mcd"
                 ],
                 "granularity": "per-game-file",
-                "role": "memory-card"
+                "role": "memory-card",
+                "slots": {
+                  "<rom_stem>_1.mcd": "1"
+                }
               },
               {
                 "files": [
                   "duckstation_shared_card_2.mcd"
                 ],
                 "granularity": "shared-file",
-                "role": "memory-card"
+                "role": "memory-card",
+                "slots": {
+                  "duckstation_shared_card_2.mcd": "2"
+                }
               }
             ]
           },
@@ -4069,7 +4168,10 @@
                   "<rom_stem>_1.mcd"
                 ],
                 "granularity": "per-game-file",
-                "role": "memory-card"
+                "role": "memory-card",
+                "slots": {
+                  "<rom_stem>_1.mcd": "1"
+                }
               },
               {
                 "files": [
@@ -4083,7 +4185,10 @@
                   "spelling": "path-segment"
                 },
                 "granularity": "per-game-file",
-                "role": "memory-card"
+                "role": "memory-card",
+                "slots": {
+                  "<save_id>_2.mcd": "2"
+                }
               }
             ]
           },
@@ -4096,7 +4201,11 @@
                   "<rom_stem>_2.mcd"
                 ],
                 "granularity": "per-game-files",
-                "role": "memory-card"
+                "role": "memory-card",
+                "slots": {
+                  "<rom_stem>_1.mcd": "1",
+                  "<rom_stem>_2.mcd": "2"
+                }
               }
             ]
           },
@@ -4112,7 +4221,10 @@
                   "duckstation_shared_card_2.mcd"
                 ],
                 "granularity": "shared-file",
-                "role": "memory-card"
+                "role": "memory-card",
+                "slots": {
+                  "duckstation_shared_card_2.mcd": "2"
+                }
               }
             ]
           },
@@ -4131,7 +4243,10 @@
                   "spelling": "path-segment"
                 },
                 "granularity": "per-game-file",
-                "role": "memory-card"
+                "role": "memory-card",
+                "slots": {
+                  "<save_id>_2.mcd": "2"
+                }
               }
             ]
           },
@@ -4143,7 +4258,10 @@
                   "<rom_stem>_2.mcd"
                 ],
                 "granularity": "per-game-file",
-                "role": "memory-card"
+                "role": "memory-card",
+                "slots": {
+                  "<rom_stem>_2.mcd": "2"
+                }
               }
             ]
           }
@@ -4273,6 +4391,9 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "memory-card",
+                "slots": {
+                  "<rom_stem>.srm": "1"
+                },
                 "written_by_frontend": {
                   "memory": "save_ram",
                   "size": {
@@ -4286,7 +4407,10 @@
                   "<rom_stem>.1.mcr"
                 ],
                 "granularity": "per-game-file",
-                "role": "memory-card"
+                "role": "memory-card",
+                "slots": {
+                  "<rom_stem>.1.mcr": "2"
+                }
               }
             ]
           },
@@ -4299,6 +4423,9 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "memory-card",
+                "slots": {
+                  "<rom_stem>.srm": "1"
+                },
                 "written_by_frontend": {
                   "memory": "save_ram",
                   "size": {
@@ -4312,7 +4439,10 @@
                   "mednafen_psx_libretro_shared.1.mcr"
                 ],
                 "granularity": "shared-file",
-                "role": "memory-card"
+                "role": "memory-card",
+                "slots": {
+                  "mednafen_psx_libretro_shared.1.mcr": "2"
+                }
               }
             ]
           },
@@ -4325,6 +4455,9 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "memory-card",
+                "slots": {
+                  "<rom_stem>.srm": "1"
+                },
                 "written_by_frontend": {
                   "memory": "save_ram",
                   "size": {
@@ -4344,7 +4477,11 @@
                   "<rom_stem>.1.mcr"
                 ],
                 "granularity": "per-game-files",
-                "role": "memory-card"
+                "role": "memory-card",
+                "slots": {
+                  "<rom_stem>.0.mcr": "1",
+                  "<rom_stem>.1.mcr": "2"
+                }
               }
             ]
           },
@@ -4357,7 +4494,11 @@
                   "mednafen_psx_libretro_shared.1.mcr"
                 ],
                 "granularity": "shared-file",
-                "role": "memory-card"
+                "role": "memory-card",
+                "slots": {
+                  "mednafen_psx_libretro_shared.0.mcr": "1",
+                  "mednafen_psx_libretro_shared.1.mcr": "2"
+                }
               }
             ]
           },
@@ -4369,7 +4510,10 @@
                   "<rom_stem>.0.mcr"
                 ],
                 "granularity": "per-game-file",
-                "role": "memory-card"
+                "role": "memory-card",
+                "slots": {
+                  "<rom_stem>.0.mcr": "1"
+                }
               }
             ]
           },
@@ -4381,7 +4525,10 @@
                   "mednafen_psx_libretro_shared.0.mcr"
                 ],
                 "granularity": "shared-file",
-                "role": "memory-card"
+                "role": "memory-card",
+                "slots": {
+                  "mednafen_psx_libretro_shared.0.mcr": "1"
+                }
               }
             ]
           }
@@ -4476,6 +4623,9 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "memory-card",
+                "slots": {
+                  "<rom_stem>.srm": "1"
+                },
                 "written_by_frontend": {
                   "memory": "save_ram",
                   "size": {
@@ -4489,7 +4639,10 @@
                   "<rom_stem>.1.mcr"
                 ],
                 "granularity": "per-game-file",
-                "role": "memory-card"
+                "role": "memory-card",
+                "slots": {
+                  "<rom_stem>.1.mcr": "2"
+                }
               }
             ]
           },
@@ -4502,6 +4655,9 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "memory-card",
+                "slots": {
+                  "<rom_stem>.srm": "1"
+                },
                 "written_by_frontend": {
                   "memory": "save_ram",
                   "size": {
@@ -4515,7 +4671,10 @@
                   "mednafen_psx_libretro_shared.1.mcr"
                 ],
                 "granularity": "shared-file",
-                "role": "memory-card"
+                "role": "memory-card",
+                "slots": {
+                  "mednafen_psx_libretro_shared.1.mcr": "2"
+                }
               }
             ]
           },
@@ -4528,6 +4687,9 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "memory-card",
+                "slots": {
+                  "<rom_stem>.srm": "1"
+                },
                 "written_by_frontend": {
                   "memory": "save_ram",
                   "size": {
@@ -4547,7 +4709,11 @@
                   "<rom_stem>.1.mcr"
                 ],
                 "granularity": "per-game-files",
-                "role": "memory-card"
+                "role": "memory-card",
+                "slots": {
+                  "<rom_stem>.0.mcr": "1",
+                  "<rom_stem>.1.mcr": "2"
+                }
               }
             ]
           },
@@ -4560,7 +4726,11 @@
                   "mednafen_psx_libretro_shared.1.mcr"
                 ],
                 "granularity": "shared-file",
-                "role": "memory-card"
+                "role": "memory-card",
+                "slots": {
+                  "mednafen_psx_libretro_shared.0.mcr": "1",
+                  "mednafen_psx_libretro_shared.1.mcr": "2"
+                }
               }
             ]
           },
@@ -4572,7 +4742,10 @@
                   "<rom_stem>.0.mcr"
                 ],
                 "granularity": "per-game-file",
-                "role": "memory-card"
+                "role": "memory-card",
+                "slots": {
+                  "<rom_stem>.0.mcr": "1"
+                }
               }
             ]
           },
@@ -4584,7 +4757,10 @@
                   "mednafen_psx_libretro_shared.0.mcr"
                 ],
                 "granularity": "shared-file",
-                "role": "memory-card"
+                "role": "memory-card",
+                "slots": {
+                  "mednafen_psx_libretro_shared.0.mcr": "1"
+                }
               }
             ]
           }
@@ -5407,6 +5583,9 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "memory-card",
+                "slots": {
+                  "<rom_stem>.srm": "1"
+                },
                 "written_by_frontend": {
                   "memory": "save_ram",
                   "size": {
@@ -5426,6 +5605,9 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "memory-card",
+                "slots": {
+                  "<rom_stem>.srm": "1"
+                },
                 "written_by_frontend": {
                   "memory": "save_ram",
                   "size": {
@@ -5439,7 +5621,10 @@
                   "pcsx-card2.mcd"
                 ],
                 "granularity": "shared-card",
-                "role": "memory-card"
+                "role": "memory-card",
+                "slots": {
+                  "pcsx-card2.mcd": "2"
+                }
               }
             ]
           }

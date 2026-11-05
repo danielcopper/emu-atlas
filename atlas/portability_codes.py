@@ -34,7 +34,9 @@ CAVEAT_SAVE_ANSWER_UNRESOLVED: Final = "save-answer-unresolved"
 CAVEAT_ENTRY_LABEL_UNKNOWN: Final = "entry-label-unknown"
 # Both builds are confirmed and both records cover the pair, and one part still
 # answers unestablished: why is the ``reason``. ``data``: ``memory``, ``slot``
-# (absent for a memory a system has one of) and ``reason``. Where the reason is
+# (absent for a memory a system has one of), ``region`` (a word of
+# :data:`~atlas.save_formats.SAVE_REGIONS`, absent for a memory kept for
+# every region, #577 D21) and ``reason``. Where the reason is
 # that the part's layout differs by the cartridge's kind (#577 D15), the
 # caveat also states what holds for each kind, one word of
 # :data:`CARTRIDGE_STATEMENTS` each: ``cartridges`` maps each cartridge kind
@@ -123,7 +125,12 @@ record of its build."""
 BUILD_UNCONFIRMED_REASONS = (REASON_OTHER_BUILD, REASON_BUILD_UNREAD)
 
 PartUnestablishedReason = Literal[
-    "target-file-unnamed", "no-conversion-stated", "layout-differs-by-cartridge", "save-length-differs-by-game"
+    "target-file-unnamed",
+    "no-conversion-stated",
+    "layout-differs-by-cartridge",
+    "save-length-differs-by-game",
+    "region-not-in-content",
+    "slots-unestablished",
 ]
 REASON_TARGET_FILE_UNNAMED: PartUnestablishedReason = "target-file-unnamed"
 """The target's live mode keeps such a part, and its save answer names no file for it: a card that lists the file only
@@ -139,6 +146,12 @@ REASON_SAVE_LENGTH_DIFFERS_BY_GAME: PartUnestablishedReason = "save-length-diffe
 way, and atlas reads no game code to tell which games (#577 D19): the caveat's ``source_length`` and
 ``target_length`` name each side's way, and ``source_length_revision`` and ``target_length_revision`` the build whose
 list it is."""
+REASON_REGION_NOT_IN_CONTENT: PartUnestablishedReason = "region-not-in-content"
+"""The part is kept per region, and the content names no region in its header (a ``.dol`` or ``.elf``), so each
+emulator runs it in a fallback region of its own settings, which atlas does not read (#577 D22)."""
+REASON_SLOTS_UNESTABLISHED: PartUnestablishedReason = "slots-unestablished"
+"""The part is kept per slot, and a side's save answer does not establish which slots read the group that holds it
+(its ``slots`` is ``None``), so which of the other's slots it pairs with is not established (#577 D24)."""
 # Why a part with both builds confirmed is still unestablished, the vocabulary
 # of ``save-part-unestablished``'s ``reason``.
 PART_UNESTABLISHED_REASONS = (
@@ -146,4 +159,6 @@ PART_UNESTABLISHED_REASONS = (
     REASON_NO_CONVERSION_STATED,
     REASON_LAYOUT_DIFFERS_BY_CARTRIDGE,
     REASON_SAVE_LENGTH_DIFFERS_BY_GAME,
+    REASON_REGION_NOT_IN_CONTENT,
+    REASON_SLOTS_UNESTABLISHED,
 )

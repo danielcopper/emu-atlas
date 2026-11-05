@@ -68,7 +68,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -157,7 +158,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves",
@@ -166,7 +168,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -253,7 +256,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -343,7 +347,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves",
@@ -352,7 +357,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -556,7 +562,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -649,7 +656,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "unknown",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -802,7 +810,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -956,7 +965,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -1066,7 +1076,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -1159,7 +1170,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves",
@@ -1168,7 +1180,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -1323,7 +1336,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -1421,7 +1435,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/mame/cfg",
@@ -1430,7 +1445,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "settings",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/mame/cfg",
@@ -1439,14 +1455,16 @@
                 ],
                 "granularity": "shared-file",
                 "role": "settings",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/mame/diff",
                 "files": null,
                 "granularity": "per-game-files",
                 "role": "disk-diff",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -1559,7 +1577,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/fbneo",
@@ -1568,7 +1587,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/fbneo",
@@ -1577,7 +1597,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "high-score",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -1689,7 +1710,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -1801,7 +1823,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "high-score",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -1915,7 +1938,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves",
@@ -1924,7 +1948,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -2007,7 +2032,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -2111,7 +2137,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves",
@@ -2120,7 +2147,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -2223,7 +2251,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves",
@@ -2232,7 +2261,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -2334,7 +2364,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -2441,7 +2472,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -2617,7 +2649,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/mame2000/hi",
@@ -2626,7 +2659,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "high-score",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/mame2000/cfg",
@@ -2635,7 +2669,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "settings",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -2737,7 +2772,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -2854,7 +2890,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/mame2010/hi",
@@ -2863,7 +2900,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "high-score",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/mame2010/cfg",
@@ -2872,7 +2910,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "settings",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/mame2010/cfg",
@@ -2881,21 +2920,24 @@
                 ],
                 "granularity": "shared-file",
                 "role": "settings",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/mame2010/memcard",
                 "files": null,
                 "granularity": "shared-card",
                 "role": "memory-card",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/mame2010/diff",
                 "files": null,
                 "granularity": "per-game-files",
                 "role": "disk-diff",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/mame2010/comment",
@@ -2904,7 +2946,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "notes",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/mame2010/ini",
@@ -2913,14 +2956,16 @@
                 ],
                 "granularity": "shared-file",
                 "role": "settings",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/mame2010/ctrlr",
                 "files": null,
                 "granularity": "shared-file",
                 "role": "settings",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -3048,7 +3093,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/mame2003/hi",
@@ -3057,7 +3103,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "high-score",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/mame2003/cfg",
@@ -3066,21 +3113,24 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "settings",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/mame2003/memcard",
                 "files": null,
                 "granularity": "shared-card",
                 "role": "memory-card",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/mame2003/diff",
                 "files": null,
                 "granularity": "per-game-files",
                 "role": "disk-diff",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -3219,7 +3269,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/hi",
@@ -3228,7 +3279,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "high-score",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/cfg",
@@ -3237,21 +3289,24 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "settings",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/memcard",
                 "files": null,
                 "granularity": "shared-card",
                 "role": "memory-card",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/diff",
                 "files": null,
                 "granularity": "per-game-files",
                 "role": "disk-diff",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -3400,7 +3455,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves",
@@ -3409,7 +3465,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "high-score",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -3537,7 +3594,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -3638,7 +3696,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -3727,7 +3786,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -3812,7 +3872,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -3888,7 +3949,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -3966,7 +4028,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves",
@@ -3975,7 +4038,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves",
@@ -3984,7 +4048,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "memory-card",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves",
@@ -3993,7 +4058,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -4094,7 +4160,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -4182,7 +4249,8 @@
                 ],
                 "granularity": "shared-file",
                 "role": "high-score",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -4281,7 +4349,8 @@
                 ],
                 "granularity": "per-game-files",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/Doom (USA)",
@@ -4290,7 +4359,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "settings",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -4394,14 +4464,16 @@
                 ],
                 "granularity": "shared-file",
                 "role": "settings",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/baseq2/save",
                 "files": null,
                 "granularity": "per-game-files",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -4494,14 +4566,16 @@
                 ],
                 "granularity": "shared-file",
                 "role": "settings",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               },
               {
                 "dir": "/mnt/sd/retrodeck/roms/doom3/base/savegames",
                 "files": null,
                 "granularity": "per-game-files",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -4598,7 +4672,8 @@
                 ],
                 "granularity": "per-game-files",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -4691,7 +4766,8 @@
                 ],
                 "granularity": "per-game-files",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -4779,7 +4855,8 @@
                 ],
                 "granularity": "per-game-files",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -4874,7 +4951,8 @@
                 ],
                 "granularity": "per-game-files",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -4967,7 +5045,8 @@
                 ],
                 "granularity": "per-game-files",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -5065,7 +5144,8 @@
                 ],
                 "granularity": "per-game-files",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -5158,7 +5238,8 @@
                 ],
                 "granularity": "per-game-files",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -5272,7 +5353,8 @@
                     ],
                     "granularity": "per-game-files",
                     "role": "battery",
-                    "size_fixed": null
+                    "size_fixed": null,
+                    "slots": []
                   }
                 ]
               },
@@ -5391,7 +5473,8 @@
                 ],
                 "granularity": "shared-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves",
@@ -5400,7 +5483,8 @@
                 ],
                 "granularity": "shared-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -5606,7 +5690,8 @@
                 ],
                 "granularity": "per-game-files",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/id1",
@@ -5615,7 +5700,8 @@
                 ],
                 "granularity": "shared-file",
                 "role": "settings",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -5829,7 +5915,8 @@
                 ],
                 "granularity": "per-game-files",
                 "role": "disk-diff",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -6439,7 +6526,8 @@
                 "files": null,
                 "granularity": "per-game-files",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -6546,7 +6634,8 @@
                 ],
                 "granularity": "per-game-files",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -6683,7 +6772,10 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "memory-card",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": [
+                  "1"
+                ]
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves",
@@ -6692,7 +6784,10 @@
                 ],
                 "granularity": "shared-file",
                 "role": "memory-card",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": [
+                  "2"
+                ]
               }
             ]
           },
@@ -6799,6 +6894,212 @@
                   "swanstation_MemoryCards_Card2Type": "PerGameTitle"
                 },
                 "values": [
+                  "per-game-file"
+                ],
+                "caveats": []
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "swanstation-s-two-shared-cards-are-a-group-per-slot",
+      "rationale": "With both of SwanStation's slots on a shared card, the mode states two cards in one directory, and each is read by its own slot: the answer states one group per card, each naming the slot that reads it, so a client copying slot 1's card never takes slot 2's with it (#577 D23).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "swanstation_MemoryCards_Card1Type = \"Shared\"\nswanstation_MemoryCards_Card2Type = \"Shared\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/mnt/sd/retrodeck/roms/psx/Game (Europe).chd": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/swanstation_libretro.so": {
+            "library_name": "SwanStation",
+            "library_version": "1.0 4d309c0",
+            "options": {
+              "swanstation_MemoryCards_Card1Type": {
+                "default": "Libretro",
+                "values": [
+                  "Libretro",
+                  "Shared",
+                  "PerGame",
+                  "PerGameTitle",
+                  "None"
+                ]
+              },
+              "swanstation_MemoryCards_Card2Type": {
+                "default": "None",
+                "values": [
+                  "None",
+                  "Shared",
+                  "PerGame",
+                  "PerGameTitle"
+                ]
+              },
+              "swanstation_MemoryCards_UsePlaylistTitle": {
+                "default": "true",
+                "values": [
+                  "true",
+                  "false"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/psx/Game (Europe).chd",
+          "core_so": "swanstation_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "duckstation_shared_card_1.mcd",
+              "duckstation_shared_card_2.mcd"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "duckstation_shared_card_1.mcd"
+                ],
+                "granularity": "shared-file",
+                "role": "memory-card",
+                "size_fixed": true,
+                "slots": [
+                  "1"
+                ]
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "duckstation_shared_card_2.mcd"
+                ],
+                "granularity": "shared-file",
+                "role": "memory-card",
+                "size_fixed": true,
+                "slots": [
+                  "2"
+                ]
+              }
+            ]
+          },
+          "caveats": [],
+          "redirects": null,
+          "granularity": {
+            "value": "shared-file",
+            "mode": "card1-shared+card2-shared",
+            "readings": [
+              {
+                "key": "swanstation_MemoryCards_Card1Type",
+                "value": "Shared",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "swanstation_MemoryCards_Card2Type",
+                "value": "Shared",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "card1-libretro+card2-shared",
+                "options": {
+                  "swanstation_MemoryCards_Card1Type": "Libretro"
+                },
+                "values": [
+                  "per-game-file",
+                  "shared-file"
+                ],
+                "caveats": []
+              },
+              {
+                "mode": "card1-per-code+card2-shared",
+                "options": {
+                  "swanstation_MemoryCards_Card1Type": "PerGame"
+                },
+                "values": [
+                  "per-game-file",
+                  "shared-file"
+                ],
+                "caveats": []
+              },
+              {
+                "mode": "card1-per-title+card2-shared",
+                "options": {
+                  "swanstation_MemoryCards_Card1Type": "PerGameTitle"
+                },
+                "values": [
+                  "per-game-file",
+                  "shared-file"
+                ],
+                "caveats": []
+              },
+              {
+                "mode": "card1-none+card2-shared",
+                "options": {
+                  "swanstation_MemoryCards_Card1Type": "None"
+                },
+                "values": [
+                  "shared-file"
+                ],
+                "caveats": []
+              },
+              {
+                "mode": "card1-shared+card2-none",
+                "options": {
+                  "swanstation_MemoryCards_Card2Type": "None"
+                },
+                "values": [
+                  "shared-file"
+                ],
+                "caveats": []
+              },
+              {
+                "mode": "card1-shared+card2-per-code",
+                "options": {
+                  "swanstation_MemoryCards_Card2Type": "PerGame"
+                },
+                "values": [
+                  "shared-file",
+                  "per-game-file"
+                ],
+                "caveats": []
+              },
+              {
+                "mode": "card1-shared+card2-per-title",
+                "options": {
+                  "swanstation_MemoryCards_Card2Type": "PerGameTitle"
+                },
+                "values": [
+                  "shared-file",
                   "per-game-file"
                 ],
                 "caveats": []
@@ -8304,7 +8605,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -8821,6 +9123,209 @@
           ],
           "redirects": null,
           "granularity": null
+        }
+      }
+    },
+    {
+      "name": "beetle-psx-s-two-mednafen-cards-are-a-group-per-slot",
+      "rationale": "With Beetle PSX's Mednafen card method and its second card on, the mode states the content's two cards in one directory, and each is read by its own slot: the answer states one group per card, each naming the slot that reads it (#577 D23).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nglobal_core_options = \"true\"\nlibretro_directory = \"/app/cores\"\n",
+          "/mnt/sd/retrodeck/roms/psx/Game (Europe).cue": "rom",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg": "beetle_psx_use_mednafen_memcard0_method = \"mednafen\"\nbeetle_psx_enable_memcard1 = \"enabled\"\nbeetle_psx_shared_memory_cards = \"disabled\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/mnt/sd/retrodeck/bios",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mednafen_psx_libretro.so": {
+            "library_name": "Beetle PSX",
+            "library_version": "0.9.44.1 d6383bf",
+            "options": {
+              "beetle_psx_use_mednafen_memcard0_method": {
+                "default": "libretro",
+                "values": [
+                  "libretro",
+                  "mednafen"
+                ]
+              },
+              "beetle_psx_enable_memcard1": {
+                "default": "enabled",
+                "values": [
+                  "enabled",
+                  "disabled"
+                ]
+              },
+              "beetle_psx_shared_memory_cards": {
+                "default": "disabled",
+                "values": [
+                  "enabled",
+                  "disabled"
+                ]
+              },
+              "beetle_psx_memcard_left_index": {
+                "default": "0",
+                "values": [
+                  "0",
+                  "1",
+                  "2",
+                  "3",
+                  "4",
+                  "5",
+                  "6",
+                  "7"
+                ]
+              },
+              "beetle_psx_memcard_right_index": {
+                "default": "1",
+                "values": [
+                  "0",
+                  "1",
+                  "2",
+                  "3",
+                  "4",
+                  "5",
+                  "6",
+                  "7"
+                ]
+              }
+            }
+          }
+        },
+        "savefile_query": {
+          "content_path": "/mnt/sd/retrodeck/roms/psx/Game (Europe).cue",
+          "core_so": "mednafen_psx_libretro.so"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "savefile_location": {
+          "dir": "/mnt/sd/retrodeck/saves",
+          "root_kind": "savefile_directory",
+          "needs": [],
+          "fallback_dir": null,
+          "physical_dir": null,
+          "file_set": {
+            "state": "declared",
+            "files": [
+              "Game (Europe).0.mcr",
+              "Game (Europe).1.mcr"
+            ],
+            "complete": false,
+            "groups": [
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Game (Europe).0.mcr"
+                ],
+                "granularity": "per-game-files",
+                "role": "memory-card",
+                "size_fixed": true,
+                "slots": [
+                  "1"
+                ]
+              },
+              {
+                "dir": "/mnt/sd/retrodeck/saves",
+                "files": [
+                  "Game (Europe).1.mcr"
+                ],
+                "granularity": "per-game-files",
+                "role": "memory-card",
+                "size_fixed": true,
+                "slots": [
+                  "2"
+                ]
+              }
+            ]
+          },
+          "caveats": [],
+          "redirects": null,
+          "granularity": {
+            "value": "per-game-files",
+            "mode": "mcr+second-card",
+            "readings": [
+              {
+                "key": "beetle_psx_use_mednafen_memcard0_method",
+                "value": "mednafen",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "beetle_psx_enable_memcard1",
+                "value": "enabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "beetle_psx_shared_memory_cards",
+                "value": "disabled",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "beetle_psx_memcard_left_index",
+                "value": "0",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              },
+              {
+                "key": "beetle_psx_memcard_right_index",
+                "value": "1",
+                "options_file": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch-core-options.cfg"
+              }
+            ],
+            "alternatives": [
+              {
+                "mode": "srm+second-card",
+                "options": {
+                  "beetle_psx_use_mednafen_memcard0_method": "libretro",
+                  "beetle_psx_enable_memcard1": "enabled",
+                  "beetle_psx_shared_memory_cards": "disabled"
+                },
+                "values": [
+                  "per-game-file"
+                ],
+                "caveats": []
+              },
+              {
+                "mode": "mcr-only",
+                "options": {
+                  "beetle_psx_use_mednafen_memcard0_method": "mednafen",
+                  "beetle_psx_enable_memcard1": "disabled",
+                  "beetle_psx_shared_memory_cards": "disabled"
+                },
+                "values": [
+                  "per-game-file"
+                ],
+                "caveats": []
+              },
+              {
+                "mode": "mcr+second-card-shared",
+                "options": {
+                  "beetle_psx_use_mednafen_memcard0_method": "mednafen",
+                  "beetle_psx_enable_memcard1": "enabled",
+                  "beetle_psx_shared_memory_cards": "enabled"
+                },
+                "values": [
+                  "shared-file"
+                ],
+                "caveats": []
+              }
+            ]
+          }
         }
       }
     },
@@ -9473,7 +9978,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "disk-diff",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves",
@@ -9482,7 +9988,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "disk-diff",
-                "size_fixed": false
+                "size_fixed": false,
+                "slots": []
               }
             ]
           },
@@ -9678,7 +10185,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -9854,7 +10362,8 @@
                 ],
                 "granularity": "shared-file",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -10739,7 +11248,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -10908,7 +11418,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -11247,7 +11758,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "disk-diff",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves",
@@ -11256,7 +11768,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "disk-diff",
-                "size_fixed": false
+                "size_fixed": false,
+                "slots": []
               }
             ]
           },
@@ -11781,7 +12294,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -12140,7 +12654,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -12325,7 +12840,8 @@
                 "files": null,
                 "granularity": "per-game-directory",
                 "role": "battery",
-                "size_fixed": false
+                "size_fixed": false,
+                "slots": []
               }
             ]
           },
@@ -12533,7 +13049,8 @@
                 "files": null,
                 "granularity": "per-game-directory",
                 "role": "battery",
-                "size_fixed": false
+                "size_fixed": false,
+                "slots": []
               }
             ]
           },
@@ -12754,7 +13271,8 @@
                 ],
                 "granularity": "per-game-directory",
                 "role": "battery",
-                "size_fixed": false
+                "size_fixed": false,
+                "slots": []
               }
             ]
           },
@@ -12963,7 +13481,8 @@
                 "files": null,
                 "granularity": "per-game-directory",
                 "role": "battery",
-                "size_fixed": false
+                "size_fixed": false,
+                "slots": []
               }
             ]
           },
@@ -13167,7 +13686,8 @@
                 "files": null,
                 "granularity": "per-game-directory",
                 "role": "battery",
-                "size_fixed": false
+                "size_fixed": false,
+                "slots": []
               }
             ]
           },
@@ -13364,7 +13884,8 @@
                 "files": null,
                 "granularity": "per-game-directory",
                 "role": "battery",
-                "size_fixed": false
+                "size_fixed": false,
+                "slots": []
               }
             ]
           },
@@ -13578,7 +14099,8 @@
                 ],
                 "granularity": "shared-card",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -14308,7 +14830,8 @@
                 ],
                 "granularity": "per-game-files",
                 "role": "disk-diff",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves",
@@ -14318,7 +14841,8 @@
                 ],
                 "granularity": "per-game-files",
                 "role": "disk-diff",
-                "size_fixed": false
+                "size_fixed": false,
+                "slots": []
               }
             ]
           },
@@ -14683,7 +15207,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -14860,7 +15385,8 @@
                 ],
                 "granularity": "shared-file",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -15040,7 +15566,8 @@
                 "files": null,
                 "granularity": "per-game-directory",
                 "role": "battery",
-                "size_fixed": false
+                "size_fixed": false,
+                "slots": []
               }
             ]
           },
@@ -15533,7 +16060,8 @@
                 "files": null,
                 "granularity": "per-game-directory",
                 "role": "battery",
-                "size_fixed": false
+                "size_fixed": false,
+                "slots": []
               }
             ]
           },
@@ -16462,7 +16990,8 @@
                 "files": null,
                 "granularity": "per-game-directory",
                 "role": "battery",
-                "size_fixed": false
+                "size_fixed": false,
+                "slots": []
               }
             ]
           },
@@ -16671,7 +17200,8 @@
                 "files": null,
                 "granularity": "per-game-directory",
                 "role": "battery",
-                "size_fixed": false
+                "size_fixed": false,
+                "slots": []
               }
             ]
           },
@@ -16879,7 +17409,8 @@
                 "files": null,
                 "granularity": "per-game-directory",
                 "role": "battery",
-                "size_fixed": false
+                "size_fixed": false,
+                "slots": []
               }
             ]
           },
@@ -17088,7 +17619,8 @@
                 "files": null,
                 "granularity": "per-game-directory",
                 "role": "battery",
-                "size_fixed": false
+                "size_fixed": false,
+                "slots": []
               }
             ]
           },
@@ -17297,7 +17829,8 @@
                 "files": null,
                 "granularity": "per-game-directory",
                 "role": "battery",
-                "size_fixed": false
+                "size_fixed": false,
+                "slots": []
               }
             ]
           },
@@ -17501,7 +18034,8 @@
                 "files": null,
                 "granularity": "per-game-directory",
                 "role": "battery",
-                "size_fixed": false
+                "size_fixed": false,
+                "slots": []
               }
             ]
           },
@@ -17704,7 +18238,8 @@
                 "files": null,
                 "granularity": "per-game-directory",
                 "role": "battery",
-                "size_fixed": false
+                "size_fixed": false,
+                "slots": []
               }
             ]
           },
@@ -18054,7 +18589,8 @@
                 "files": null,
                 "granularity": "per-game-directory",
                 "role": "battery",
-                "size_fixed": false
+                "size_fixed": false,
+                "slots": []
               }
             ]
           },
@@ -18257,7 +18793,8 @@
                 "files": null,
                 "granularity": "per-game-directory",
                 "role": "battery",
-                "size_fixed": false
+                "size_fixed": false,
+                "slots": []
               }
             ]
           },
@@ -19183,7 +19720,8 @@
                 "files": null,
                 "granularity": "per-game-directory",
                 "role": "battery",
-                "size_fixed": false
+                "size_fixed": false,
+                "slots": []
               }
             ]
           },
@@ -19697,7 +20235,8 @@
                 "files": null,
                 "granularity": "per-game-directory",
                 "role": "battery",
-                "size_fixed": false
+                "size_fixed": false,
+                "slots": []
               }
             ]
           },
@@ -19904,7 +20443,8 @@
                 "files": null,
                 "granularity": "per-game-directory",
                 "role": "battery",
-                "size_fixed": false
+                "size_fixed": false,
+                "slots": []
               }
             ]
           },
@@ -20707,7 +21247,8 @@
                 "files": null,
                 "granularity": "per-game-directory",
                 "role": "battery",
-                "size_fixed": false
+                "size_fixed": false,
+                "slots": []
               }
             ]
           },
@@ -21848,7 +22389,8 @@
                 "files": null,
                 "granularity": "per-game-directory",
                 "role": "battery",
-                "size_fixed": false
+                "size_fixed": false,
+                "slots": []
               }
             ]
           },
@@ -22052,7 +22594,8 @@
                 "files": null,
                 "granularity": "per-game-directory",
                 "role": "battery",
-                "size_fixed": false
+                "size_fixed": false,
+                "slots": []
               }
             ]
           },
@@ -22347,7 +22890,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": false
+                "size_fixed": false,
+                "slots": []
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves",
@@ -22356,7 +22900,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": false
+                "size_fixed": false,
+                "slots": []
               }
             ]
           },
@@ -22453,7 +22998,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": false
+                "size_fixed": false,
+                "slots": []
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves",
@@ -22462,7 +23008,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": false
+                "size_fixed": false,
+                "slots": []
               }
             ]
           },
@@ -22558,7 +23105,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves",
@@ -22567,7 +23115,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -22678,7 +23227,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -22798,7 +23348,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": false
+                "size_fixed": false,
+                "slots": []
               }
             ]
           },
@@ -22906,7 +23457,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/mame/cfg",
@@ -22915,14 +23467,16 @@
                 ],
                 "granularity": "shared-file",
                 "role": "settings",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves/mame/diff",
                 "files": null,
                 "granularity": "per-game-files",
                 "role": "disk-diff",
-                "size_fixed": null
+                "size_fixed": null,
+                "slots": []
               }
             ]
           },
@@ -23079,7 +23633,8 @@
                 ],
                 "granularity": "shared-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -23312,7 +23867,8 @@
                 ],
                 "granularity": "shared-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -23545,7 +24101,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves",
@@ -23554,7 +24111,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },
@@ -23738,7 +24296,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               },
               {
                 "dir": "/mnt/sd/retrodeck/saves",
@@ -23747,7 +24306,8 @@
                 ],
                 "granularity": "per-game-file",
                 "role": "battery",
-                "size_fixed": true
+                "size_fixed": true,
+                "slots": []
               }
             ]
           },

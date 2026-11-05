@@ -167,9 +167,19 @@ AGGREGATE_ANSWER_FIELDS = {"installation", "answer"}
 # and the memory a part holds.
 KNOWN_PORTABILITY_VERDICTS = ["same-files", "same-data", "convertible", "unestablished", "not-readable"]
 KNOWN_SAVE_MOVES = ["directory", "name", "granularity"]
-KNOWN_SAVE_MEMORIES = {"memory-card", "internal-backup-ram", "cartridge-backup-ram", "cartridge-ram", "cartridge-clock"}
+KNOWN_SAVE_MEMORIES = {
+    "memory-card",
+    "internal-backup-ram",
+    "cartridge-backup-ram",
+    "cartridge-ram",
+    "cartridge-clock",
+    "internal-storage",
+}
+# The regions a part is kept apart for (#577 D21), mirrored from
+# atlas.save_formats.SAVE_REGIONS.
+KNOWN_SAVE_REGIONS = {"USA", "EUR", "JAP"}
 SAVE_PORTABILITY_FIELDS = {"verdict", "source", "target", "parts", "caveats"}
-SAVE_PART_FIELDS = {"memory", "slot", "verdict", "source_group", "target_group", "moves", "conversion"}
+SAVE_PART_FIELDS = {"memory", "slot", "region", "verdict", "source_group", "target_group", "moves", "conversion"}
 # The launchability verdicts — the vocabulary expected.launchable.verdict draws
 # from, mirrored from atlas.installations.LAUNCH_VERDICTS.
 KNOWN_LAUNCH_VERDICTS = {
@@ -293,7 +303,7 @@ PATCH_CONTINUATIONS = 9
 # that the tree is undivided.
 KNOWN_KEYINGS = {"game-id", "serial", "title-id", "rom-name", "pack", "title"}
 FILE_SET_FIELDS = {"state", "files", "complete", "groups"}
-FILE_GROUP_FIELDS = {"dir", "files", "granularity", "role", "size_fixed"}
+FILE_GROUP_FIELDS = {"dir", "files", "granularity", "role", "size_fixed", "slots"}
 # The byte a fixed-size save may be padded with at its end
 # (size-fixed-except-trailing-fill's data["fill"]).
 KNOWN_SIZE_FILLS = {"0xff", "0x00"}
@@ -2058,6 +2068,17 @@ def _validate_file_set(name: str, file_set: Any) -> None:
     _validate_file_groups(name, file_set)
 
 
+def _validate_group_slots(name: str, slots: Any) -> None:
+    """A group's slots: a list of distinct words, empty where the emulator keeps no slots (#577 D23), or null where
+    which slots read the group is not established (#577 D24)."""
+    if slots is not None and (
+        not isinstance(slots, list)
+        or not all(isinstance(slot, str) and slot for slot in slots)
+        or len(set(slots)) != len(slots)
+    ):
+        fail(f"{name}: file group slots must be a list of distinct non-empty strings, or null")
+
+
 def _validate_one_file_group(name: str, group: Any) -> None:
     """One group's own shape — its directory, its names, and its two words."""
     _require_exact(name, group, FILE_GROUP_FIELDS, "file_set.groups[]")
@@ -2077,6 +2098,7 @@ def _validate_one_file_group(name: str, group: Any) -> None:
         fail(f"{name}: file group granularity must be one of {sorted(KNOWN_GRANULARITIES)}")
     if group["role"] not in KNOWN_ROLES:
         fail(f"{name}: file group role must be one of {sorted(KNOWN_ROLES)}")
+    _validate_group_slots(name, group["slots"])
     if group["size_fixed"] is not None and not isinstance(group["size_fixed"], bool):
         # null is "not established", never a third spelling of false.
         fail(f"{name}: file group size_fixed must be true, false or null")
@@ -3988,6 +4010,8 @@ def _validate_save_part(name: str, part: Any) -> None:
         fail(f"{name}: a part's memory must be one of {sorted(KNOWN_SAVE_MEMORIES)}")
     if part["slot"] is not None and (not isinstance(part["slot"], str) or not part["slot"]):
         fail(f"{name}: a part's slot must be null or a non-empty string")
+    if part["region"] is not None and part["region"] not in KNOWN_SAVE_REGIONS:
+        fail(f"{name}: a part's region must be null or one of {sorted(KNOWN_SAVE_REGIONS)}")
     if part["verdict"] not in KNOWN_PORTABILITY_VERDICTS:
         fail(f"{name}: a part's verdict must be one of {KNOWN_PORTABILITY_VERDICTS}")
     _validate_one_file_group(name, part["source_group"])

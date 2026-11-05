@@ -23,6 +23,7 @@ The method and the evidence are in ``docs/research/save-portability.md``.
 from __future__ import annotations
 
 import json
+import os
 import re
 from dataclasses import dataclass
 from types import MappingProxyType
@@ -38,6 +39,7 @@ SaveMemory = Literal[
     "cartridge-backup-ram",
     "cartridge-ram",
     "cartridge-clock",
+    "internal-storage",
 ]
 MEMORY_MEMORY_CARD: SaveMemory = "memory-card"
 """A memory card in one of the console's card slots, which ``slot`` names."""
@@ -51,6 +53,9 @@ FRAM or flash on a DS game card."""
 MEMORY_CARTRIDGE_CLOCK: SaveMemory = "cartridge-clock"
 """The game cartridge's real-time clock. Only a cartridge of a kind in :data:`CLOCK_CARTRIDGE_KINDS` has one; for
 every other kind a clock part holds no game data, so nothing of the game is lost with it (#577 D16)."""
+MEMORY_INTERNAL_STORAGE: SaveMemory = "internal-storage"
+"""The console's own file storage a game keeps its save in as files, such as a title's data directory in the Wii's
+NAND."""
 # What one part of a save holds, the vocabulary of a part's ``memory``. It
 # grows with the systems the records cover, and only with words a record
 # states.
@@ -60,7 +65,21 @@ SAVE_MEMORIES = (
     MEMORY_CARTRIDGE_BACKUP_RAM,
     MEMORY_CARTRIDGE_RAM,
     MEMORY_CARTRIDGE_CLOCK,
+    MEMORY_INTERNAL_STORAGE,
 )
+
+SaveRegion = Literal["USA", "EUR", "JAP"]
+SAVE_REGION_USA: SaveRegion = "USA"
+"""The memory an emulator keeps for games of the North American region, such as Dolphin's ``GC/USA/Card A``."""
+SAVE_REGION_EUR: SaveRegion = "EUR"
+"""The memory an emulator keeps for games of the European region, such as Dolphin's ``GC/EUR/Card A``."""
+SAVE_REGION_JAP: SaveRegion = "JAP"
+"""The memory an emulator keeps for games of the Japanese region, such as Dolphin's ``GC/JAP/Card A``."""
+# The regions an emulator keeps a memory apart for (#577 D21), the vocabulary
+# of a part's ``region`` and of the ``<region>`` hole a rule's names spell,
+# which matches these words alone. It grows only with regions a record names.
+SAVE_REGIONS = (SAVE_REGION_USA, SAVE_REGION_EUR, SAVE_REGION_JAP)
+_REGION_HOLE = "<region>"
 
 CartridgeKind = Literal[
     "mbc2", "rom-ram", "mmm01", "mbc3-timer", "mbc3", "mbc5-rumble", "mbc6", "mbc7", "tpp1", "pocket-camera", "tama5", "huc3", "huc1"
@@ -231,7 +250,13 @@ class PartRule:
     name. ``modes`` is a pattern over the answer's live mode: the rule speaks
     only where the mode matches it, and everywhere when it is ``None``. A
     ``folder`` rule matches a group whose names are not stated and whose
-    directory carries the name instead — PCSX2's folder card.
+    directory carries the name instead — PCSX2's folder card — by the
+    directory's trailing segments, as many as the name spells (Dolphin's
+    ``<region>/Card A``). A ``<region>`` hole matches only a word of
+    :data:`SAVE_REGIONS`, and the word it matched is the part's region
+    (#577 D21). Where the save answer states the slots that read a group, a
+    rule with a ``slot`` claims it only where its slot is one of them
+    (#577 D23).
 
     ``kinds`` states, for a cartridge kind (:data:`CARTRIDGE_KINDS`) whose part
     this emulator keeps differently, the format it keeps it in — or ``None``
@@ -276,15 +301,27 @@ class PartRule:
 
     def specificity(self, name: str, readings: Mapping[str, str]) -> int | None:
         """How closely *name* matches this rule — the literal characters matched — or ``None`` where it does not."""
+        claim = self.claim(name, readings)
+        return None if claim is None else claim[0]
+
+    def claim(self, name: str, readings: Mapping[str, str]) -> tuple[int, str | None] | None:
+        """How closely *name* matches this rule and the region its ``<region>`` hole matched, or ``None``.
+
+        A folder rule's *name* is the group's whole directory, matched by its
+        trailing segments.
+        """
         stated = readings.get(self.reading) if self.reading is not None else None
         if stated is not None:
             wanted = stated.rsplit("/", 1)[-1]
-            return len(wanted) if name == wanted else None
-        best: int | None = None
+            given = name.rstrip("/").rsplit("/", 1)[-1] if self.folder else name
+            return (len(wanted), None) if given == wanted else None
+        best: tuple[int, str | None] | None = None
         for template in self.names:
-            if _template_pattern(template).fullmatch(name) is not None:
+            found = _template_match(template, name, tail=self.folder)
+            if found is not None:
                 literal = len(_HOLE.sub("", template))
-                best = literal if best is None else max(best, literal)
+                if best is None or literal > best[0]:
+                    best = (literal, found.groupdict().get("region"))
         return best
 
 
@@ -335,6 +372,24 @@ class Mirrors:
 
 
 @dataclass(frozen=True, slots=True)
+class RegionlessContent:
+    """Content whose header names no region, so the emulator runs it in a fallback region of its own (#577 D22).
+
+    A file whose extension, lowercased, is one of ``extensions`` boots without
+    a region; which memory of a per-region part it then uses is the emulator's
+    fallback region, which atlas does not read, so such a part is not
+    established. The citation says how the emulator decides it.
+    """
+
+    extensions: tuple[str, ...]
+    citation: str
+
+    def covers(self, content_path: str | None) -> bool:
+        """Whether *content_path* is content of this kind."""
+        return content_path is not None and os.path.splitext(content_path)[1].lower() in self.extensions
+
+
+@dataclass(frozen=True, slots=True)
 class SystemFormats:
     """One emulator's part rules for one system, the directories that hold no part of it, and the kinds it never runs."""
 
@@ -342,6 +397,8 @@ class SystemFormats:
     ignore: tuple[IgnoredGroup, ...] = ()
     not_run: tuple[NotRun, ...] = ()
     mirrors: tuple[Mirrors, ...] = ()
+    regionless: RegionlessContent | None = None
+    """The content this emulator runs in a fallback region, where the system keeps a memory per region."""
 
     def mirrors_for(self, kind: str) -> Mirrors | None:
         """The statement of how this emulator handles a mirror write for *kind*, or ``None`` where none says."""
@@ -400,8 +457,23 @@ class SaveFormats:
 
 
 def _template_pattern(template: str) -> re.Pattern[str]:
-    """*template* as a pattern: each hole matches whatever filled it, the hole's own spelling included."""
-    return re.compile(".+".join(re.escape(part) for part in _HOLE.split(template)))
+    """*template* as a pattern: each hole matches whatever filled it, the hole's own spelling included — but for
+    ``<region>``, which matches a word of :data:`SAVE_REGIONS` alone and captures it."""
+    parts = _HOLE.split(template)
+    holes = _HOLE.findall(template)
+    pattern = re.escape(parts[0])
+    for hole, part in zip(holes, parts[1:]):
+        hole_pattern = f"(?P<region>{'|'.join(SAVE_REGIONS)})" if hole == _REGION_HOLE else ".+"
+        pattern += hole_pattern + re.escape(part)
+    return re.compile(pattern)
+
+
+def _template_match(template: str, name: str, *, tail: bool) -> re.Match[str] | None:
+    """*name* against *template*: whole, or by its trailing path segments where *tail*."""
+    pattern = _template_pattern(template)
+    if not tail:
+        return pattern.fullmatch(name)
+    return re.search(rf"(?:^|/)(?:{pattern.pattern})\Z", name.rstrip("/"))
 
 
 def _expect_str(value: Any, where: str) -> str:
@@ -473,9 +545,7 @@ def _part(where: str, entry: Any, *, formats: Mapping[str, str], revision: str) 
             raise ValueError(f"{where}: a null format needs kinds that name a format")
     elif entry["format"] not in formats:
         raise ValueError(f"{where}: format {entry['format']!r} is not one the table states")
-    names = entry["names"]
-    if not isinstance(names, list) or not names:
-        raise ValueError(f"{where}: names must be a non-empty list, got {names!r}")
+    names = _names(where, entry["names"])
     citation = _expect_str(entry["citation"], f"{where}.citation")
     if revision not in citation:
         raise ValueError(f"{where}: the citation does not name the revision {revision!r} it was read at")
@@ -494,7 +564,7 @@ def _part(where: str, entry: Any, *, formats: Mapping[str, str], revision: str) 
         memory=entry["memory"],
         slot=slot,
         format=entry["format"],
-        names=tuple(_expect_str(name, f"{where}.names") for name in names),
+        names=names,
         citation=citation,
         modes=None if modes is None else re.compile(_expect_str(modes, f"{where}.modes")),
         reading=None if entry.get("reading") is None else _expect_str(entry["reading"], f"{where}.reading"),
@@ -504,6 +574,16 @@ def _part(where: str, entry: Any, *, formats: Mapping[str, str], revision: str) 
         unread=unread,
         length=_length(f"{where}.length", entry.get("length"), revision=revision),
     )
+
+
+def _names(where: str, names: Any) -> tuple[str, ...]:
+    """A rule's name templates: a non-empty list of strings, each spelling the ``<region>`` hole once at most."""
+    if not isinstance(names, list) or not names:
+        raise ValueError(f"{where}: names must be a non-empty list, got {names!r}")
+    stated = tuple(_expect_str(name, f"{where}.names") for name in names)
+    if any(name.count(_REGION_HOLE) > 1 for name in stated):
+        raise ValueError(f"{where}: a name spells the {_REGION_HOLE} hole once at most, got {names!r}")
+    return stated
 
 
 def _length(where: str, entry: Any, *, revision: str) -> SaveLength | None:
@@ -558,6 +638,23 @@ def _mirrors(where: str, entry: Any) -> Mirrors:
     )
 
 
+def _regionless(where: str, entry: Any, *, revision: str) -> RegionlessContent | None:
+    if entry is None:
+        return None
+    entry = _exact(entry, {"extensions", "citation"}, set(), where)
+    extensions = entry["extensions"]
+    if (
+        not isinstance(extensions, list)
+        or not extensions
+        or any(not isinstance(ext, str) or not ext.startswith(".") or ext != ext.lower() for ext in extensions)
+    ):
+        raise ValueError(f"{where}: extensions must be a non-empty list of lowercase '.ext' strings, got {extensions!r}")
+    citation = _expect_str(entry["citation"], f"{where}.citation")
+    if revision not in citation:
+        raise ValueError(f"{where}: the citation does not name the revision {revision!r} it was read at")
+    return RegionlessContent(extensions=tuple(extensions), citation=citation)
+
+
 def _ignored(where: str, entry: Any) -> IgnoredGroup:
     entry = _exact(entry, {"citation"}, {"dir_suffix", "names"}, where)
     if ("dir_suffix" in entry) == ("names" in entry):
@@ -573,7 +670,7 @@ def _ignored(where: str, entry: Any) -> IgnoredGroup:
 
 
 def _system(where: str, entry: Any, *, formats: Mapping[str, str], revision: str) -> SystemFormats:
-    entry = _exact(entry, {"parts"}, {"ignore", "not_run", "mirrors"}, where)
+    entry = _exact(entry, {"parts"}, {"ignore", "not_run", "mirrors", "regionless"}, where)
     parts = entry["parts"]
     if not isinstance(parts, list) or not parts:
         raise ValueError(f"{where}: parts must be a non-empty list, got {parts!r}")
@@ -584,6 +681,7 @@ def _system(where: str, entry: Any, *, formats: Mapping[str, str], revision: str
         ignore=tuple(_ignored(f"{where}.ignore[{i}]", item) for i, item in enumerate(entry.get("ignore", []))),
         not_run=tuple(_not_run(f"{where}.not_run[{i}]", item) for i, item in enumerate(entry.get("not_run", []))),
         mirrors=tuple(_mirrors(f"{where}.mirrors[{i}]", item) for i, item in enumerate(entry.get("mirrors", []))),
+        regionless=_regionless(f"{where}.regionless", entry.get("regionless"), revision=revision),
     )
 
 

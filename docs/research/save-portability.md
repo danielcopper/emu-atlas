@@ -9,9 +9,13 @@ machine states that, so every verdict rests on a read of both emulators' sources
 
 **Parts, not pairs.** A save has parts: a memory card in each slot, the console's backup RAM, a backup cartridge. Each
 part is answered on its own (#577 D2), named by the memory it holds (`SAVE_MEMORIES`) and its slot (D6), beside the file
-group each entry's save answer states for it — narrowed to the files that are this part, so a group that holds two
-slots' cards reads as two parts. The pair's summary is the most severe part (D9), in the order `not-readable`,
-`unestablished`, `convertible`, `same-data`, `same-files`.
+group each entry's save answer states for it. Each group names the slots of the console that read it, so a part is one
+slot's group, and a file two slots are set to is a part of each slot. Where an emulator keeps a memory apart per region
+— Dolphin's `GC/<region>/Card A` and `MemoryCardA.<region>.raw` — each region is a part of its own, named by its
+`region` (`SAVE_REGIONS`), and pairs with the target's memory of the same slot and region (D21): a game runs in one
+region on both sides. A rule's `<region>` hole matches a word of `SAVE_REGIONS` alone, and a folder rule matches a
+directory by its trailing segments, as many as its name spells. The pair's summary is the most severe part (D9), in the
+order `not-readable`, `unestablished`, `convertible`, `same-data`, `same-files`.
 
 **Formats per emulator, not facts per pair.** A record labels the file groups of one emulator's own save answer, mode by
 mode, with the format the source pins for each part. Two parts are the same data exactly where their records name the
@@ -22,10 +26,13 @@ table of every pair.
 and `appendconfig`, and the live mode each one read (`granularity.mode`) selects the record's rules. Nothing here reads
 an option itself: Kronos's Beetle-saves switch, LRPS2's card mode, SwanStation's twenty slot combinations and
 DuckStation's card types all arrive through the save answer. A record finds a file of the answer by the name its card
-spells, a hole matching whatever filled it — or, where a slot's file is an option's value (PCEE2's slots, PCSX2's
-`Slot1_Filename`, DuckStation's shared `Card1Path`), by that option's reading in the answer. Where two rules match one
-name, the one with more literal characters claims it (Kronos's `<stem>-ext512K.ram` beside `<stem>.ram`); where two
-slots open one card file, the file is both slots' part.
+spells, a hole matching whatever filled it, and a rule bound to a slot claims a group only for a slot the answer says
+reads it (D23): the save answer states each group's slots from the path the emulator resolves for each slot, so a card a
+setting moves or renames (PCEE2's slots, PCSX2's `Slot1_Filename`, DuckStation's shared `Card1Path`) is its slot's part
+under any name. Where two rules match one name for one slot, the one with more literal characters claims it (Kronos's
+`<stem>-ext512K.ram` beside `<stem>.ram`). Where a save answer cannot establish which slots read a group (its `slots` is
+null: RPCS3's virtual memory cards, PCEE2's card folder under a PCSX2 ini), a part kept per slot in it is
+`unestablished`, with `save-part-unestablished` (`reason` `slots-unestablished`) (D24).
 
 **A part the target does not name.** Where the target's live mode keeps no such part, the part is `not-readable` (D8);
 where its mode keeps one and its answer names no file for it — a card that lists the file only as an observation
@@ -211,6 +218,49 @@ directory and DeSmuME's save directory. Every other pair sizes a game's save in 
 with `save-length-differs-by-game` until the game code is read. NooDS, its standalone build, DeSmuME's standalone build
 and SkyEmu have no record yet, so their pairs say `save-format-unrecorded`.
 
+## Evidence — GameCube, Wii
+
+Dolphin, its libretro core and PrimeHack, a fork of Dolphin, keep the GameCube cards and the Wii NAND alike: the card
+code is the same in all three builds but for style and one guard Dolphin adds against a block index past a save's end
+(`GCMemcardDirectory.cpp:556-561` at f84df020; `GCMemcard.h`, `GCMemcardDirectory.cpp`, `GCMemcardRaw.cpp` and
+`GCIFile.cpp` compared at f84df020, fd1aca3a and 81bfb96), and so is the NAND path. Each record has four card rules — a
+GCI folder or a raw card in slot A or B, by the live mode `folder`, `card`, `agp` or `none` per slot — and one Wii rule.
+A card is its slot's part by the slots its group names, as above (D23), so a raw card Dolphin.ini moves or renames
+(`MemcardAPath`, `MemcardBPath`) is read by the slot whose key names it under any name, also where that name is the
+other slot's default: the running disc's region takes the place of the name's region word, or goes before its extension
+(`GetMemcardPath`, `MainSettings.cpp:776-836` at f84df020). A raw rule therefore reads only the region word off the name
+(`<card>.<region>.<ext>`). The save answer cuts from a configured card's name the region codes its build cuts — `USA`,
+`JAP`, `EUR` and `DEV` in Dolphin (`MainSettings.cpp:805-808` at f84df020) and the Flathub PrimeHack (`:807-810` at
+53f53e0), `USA`, `JAP` and `EUR` in RetroDECK's PrimeHack (`:664-666` at 81bfb96) and the core (`:697-699` at fd1aca3a),
+never `JPN` — so the card it names is the one Dolphin opens.
+
+| emulator               | pin                              | GameCube card                                                                                                                                                                                                                                                                                                         | Wii NAND                                                                                                                                                                                    |
+| ---------------------- | -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Dolphin (standalone)   | Flathub build of 2609 (f84df020) | GCI folder: each save a `.gci` of its 0x40-byte directory entry and its 0x2000-byte blocks, read whole at load and written back alike (`GCMemcardDirectory.cpp:64-123`, `:180-259`, `:626-723`, `GCIFile.cpp:13-67`); raw card: read whole at the file's size and flushed whole (`GCMemcardRaw.cpp:38-82`, `:94-162`) | `title/<hi>/<lo>/data` below the NAND root, one host file per NAND file (`NandPaths.cpp:63-72`, `HostBackend/FS.cpp:32-52`); an unlisted file gets read and write for everyone (`:234-278`) |
+| Dolphin (libretro)     | `fd1aca3a`                       | the same, below the core's `User` tree (`GCMemcardDirectory.cpp:65-124`, `:181-260`, `:621-718`, `GCMemcardRaw.cpp:38-83`, `:95-163`)                                                                                                                                                                                 | the same (`NandPaths.cpp:63-72`, `HostBackend/FS.cpp:33-53`, `:236-280`)                                                                                                                    |
+| PrimeHack (standalone) | `master-230724.27` (81bfb96)     | the same (`GCMemcardDirectory.cpp:65-124`, `:181-260`, `:621-718`, `GCMemcardRaw.cpp:38-83`, `:95-163`)                                                                                                                                                                                                               | the same (`NandPaths.cpp:49-58`, `HostBackend/FS.cpp:32-50`, `:238-283`)                                                                                                                    |
+
+**Raw card and GCI folder.** Dolphin's memory-card manager opens a raw card and exports its saves as `.gci` files
+(`GCMemcardManager.cpp:331-350`, `:407-501` at f84df020), and imports `.gci` files into an open raw card (`:503-575`,
+`:577-619`). The copy-protected saves (PSO and F-Zero GX's) are re-signed to the card they land on both ways: a GCI
+folder re-signs them at load (`GCMemcardDirectory.cpp:110-114`), an import into a raw card at import
+(`GCMemcard.cpp:713-784`, `:757-758`). So the conversion holds for every game, and no rule a client applies itself
+states it.
+
+What follows for the pairs: between any two of the three, a GCI folder carries over to the other's GCI folder of the
+same slot and region, and a raw card to the other's raw card, in its own user tree (`same-data`, `directory`); a raw
+card and a GCI folder convert into each other (`convertible`); a slot the target keeps nothing in does not carry over. A
+Wii title's data directory carries over to the other's NAND as it lies. Triforce (standalone) has no record, so its
+pairs say `save-format-unrecorded`.
+
+**Content with no region (D22).** A `.dol` or `.elf` — the extension compared lowercased — that does not open as a disc
+image boots as an executable whose region is Unknown, and Dolphin then runs it in `[Core] FallbackRegion`, by default
+the region of the system's locale (`Boot.cpp:243-267`, `ConfigManager.cpp:382-387`, `:489-490`,
+`MainSettings.cpp:280-281`, `DefaultLocale.cpp:188-192` at f84df020; the core and PrimeHack alike). atlas reads neither
+setting, and two emulators may hold different ones, so where the question is asked with such a content path each card
+part is `unestablished`, with `save-part-unestablished` (`reason` `region-not-in-content`) and each side's citation; a
+record states it per system (`regionless`). The Wii NAND keeps no region, so its part is unaffected.
+
 ## Known limits
 
 - **Kronos's cartridge on a declared answer.** With the Beetle-saves switch on, Kronos names a 4 Mbit cartridge at
@@ -238,8 +288,8 @@ and SkyEmu have no record yet, so their pairs say `save-format-unrecorded`.
   for MBC2 only, Gambatte, TGB Dual and DoubleCherryGB keep it at its window offset, Gearboy and VBA-M drop it for MBC2
   (and Gearboy keeps it past a 2 KiB RAM's end). Every MBC2 cartridge is that small, so each record states its `mirrors`
   handling and `mbc2` is `unestablished` between two that differ (D18). A 2 KiB RAM on another mapper is told only by
-  the header's RAM size byte (0x149), which the issue that reads the cartridge's kind reads too; until then it is the
-  one stated exception to D15 among these limits: the non-folding cores for it (Gambatte, TGB Dual, DoubleCherryGB,
+  the header's RAM size byte (0x149), which the issue that reads the cartridge's kind reads too; until then it is one of
+  the two stated exceptions to D15 among these limits: the non-folding cores for it (Gambatte, TGB Dual, DoubleCherryGB,
   Gearboy, VBA-M, and mGBA, which keeps a 2 KiB RAM in an 8 KiB image written at `address & 0x1FFF`, `gb/mbc.c:293-296`
   and `gb/memory.c:386`) and the folding ones are answered alike for it, and no game is known to write through such a
   mirror.
@@ -255,5 +305,30 @@ and SkyEmu have no record yet, so their pairs say `save-format-unrecorded`.
   differs between the melonDS builds for a few game codes and is decided another way by DeSmuME than by any melonDS
   build, and atlas reads no game code (D19). Reading it from the launched file, as the issue that reads the Game Boy
   cartridge's kind does for its header, would let a pair whose lengths agree for that game carry its plain verdict.
-- **Coverage.** The records cover psx, ps2, saturn, saturnjp, gb, gbc and nds. Every other pair answers `unestablished`
-  with `save-format-unrecorded` until its records land: the GameCube and Wii next.
+- **Dolphin's moved GCI folders and its GBA adapter.** A GCI folder Dolphin.ini moves (`GCIFolderAPath`,
+  `GCIFolderBPath`) is a directory no rule names, and a GBA cartridge adapter (`agp`) keeps the cartridge's save beside
+  the cartridge, which no record states, so those pairs say `save-format-unrecorded`. RetroDECK's shipped Dolphin.ini
+  and PrimeHack's leave the cards where the defaults put them. A NAND Dolphin.ini moves (`NANDRootPath`, which
+  RetroDECK's sets) is still read, since the Wii rule names the tail `title/<save_id>/data`.
+- **Content Dolphin runs in its fallback region, unnamed.** Without a content path atlas cannot tell a `.dol` or `.elf`
+  from a disc, so the card parts answer as for a disc with its region in its header (D22). Nor does it read a playlist's
+  first entry here, which Dolphin boots by its own extension (`Boot.cpp:217-228` at f84df020), so a `.m3u` whose first
+  entry is a `.dol` or `.elf` is answered as a disc too.
+- **An extracted disc.** A disc extracted to a directory boots from its `sys/main.dol`, which Dolphin opens as a disc
+  (`DirectoryBlobReader`, `Blob.cpp:245`, `DirectoryBlob.cpp:256-259` at f84df020), with the region its header states.
+  atlas compares the extension alone, so such a content path answers its card parts `unestablished` with
+  `region-not-in-content`: no verdict is wrong, but the reason names a cause that does not hold for it.
+- **A card of another size.** A raw card smaller than the default carries its free block count in its name, after the
+  region, and the GCI folder's card shrinks with it (`MainSettings.cpp:779-790` at f84df020; `EXI.cpp:117-119` at
+  81bfb96); the save answer does not read `MemoryCardSize` yet, so such a card is answered by the default size's name
+  (D22). Dolphin's own per-game settings set that size for a few game families with no user change: a
+  `Data/Sys/GameSettings` file's `[Core] MemoryCardSize` is a game layer of the configuration (`ConfigManager.cpp:286`,
+  `GameConfigLoader.cpp:109`) and is read where the card is mounted (`EXI.cpp:124-126` at f84df020). For a raw card on
+  those games this is the other stated exception to D15: the card is named otherwise than the answer says until the save
+  answer reads the setting and the game (D22).
+- **Coverage.** The records cover psx, ps2, saturn, saturnjp, gb, gbc, nds, gc and wii. Every other pair answers
+  `unestablished` with `save-format-unrecorded` until its records land.
+
+Reading Dolphin's fallback region, its card size and the region spelling of a configured GCI folder, so the limits on
+content Dolphin runs in its fallback region and on a card of another size become exact and a configured GCI folder can
+be recorded, is #777.

@@ -117,6 +117,7 @@ def _group_contract(group: FileGroup) -> dict[str, Any]:
         "granularity": group.granularity,
         "role": group.role,
         "size_fixed": group.size_fixed,
+        "slots": None if group.slots is None else list(group.slots),
     }
 
 
@@ -1008,7 +1009,9 @@ def save_portability_contract(answer: SavePortabilityAnswer) -> dict[str, Any]:
     where a label names no entry. Each part names the memory it holds and its
     ``slot``, and carries both entries' file groups in the form their save
     answers serialize a group, narrowed to the files that are this part —
-    ``target_group`` is ``null`` where the target's answer states none.
+    ``target_group`` is ``null`` where the target's answer states none — and
+    ``region``, the region the memory is kept apart for, ``null`` where it is
+    kept for every region.
     ``moves`` lists what differs on a ``same-data`` part and is empty on every
     other; ``conversion`` is the rule a ``convertible`` part's source pins, and
     ``null`` wherever no plain rule is stated.
@@ -1021,6 +1024,7 @@ def save_portability_contract(answer: SavePortabilityAnswer) -> dict[str, Any]:
             {
                 "memory": part.memory,
                 "slot": part.slot,
+                "region": part.region,
                 "verdict": part.verdict,
                 "source_group": _group_contract(part.source_group),
                 "target_group": None if part.target_group is None else _group_contract(part.target_group),

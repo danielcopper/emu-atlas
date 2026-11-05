@@ -150,7 +150,15 @@ hole: where the read behind it fails, the rule selects a different mode that sta
   grows with it: one name per member.
 - `<memory_card_file>` — a memory card a slot opens by name, picked from the card folder's own listing by an option or
   by the core's default for the slot (PCEE2). One value per card in use, so two slots on one file fill it once; where
-  the folder cannot be listed the rule selects a mode that names the folder without file names.
+  the folder cannot be listed the rule selects a mode that names the folder without file names. The rule says which
+  slots read each value, and the answer's group for it carries them.
+
+A group whose files the console reads by slot carries `slots`: an object mapping each name of `files` and `observe` to
+the slot that reads it (`"<rom_stem>.srm": "1"`, `"Mcd002.ps2": "2"`), every name once (#577 D23). A group holding two
+slots' files reaches the answer as one group per slot, each naming its `slots`; a group without the key states none. An
+`unnamed` group has no names to map, so where its slots depend on what the card's rule reads, the rule states them:
+PCEE2's folder that cannot be listed is read by the slots switched on, and its folder under a PCSX2 ini states its slots
+as not established (`null`, #577 D24), since the ini's multitap entries may add cards atlas does not read.
 
 A group may also carry `observe`: candidates wider than the declared defaults, probed on the machine because they exist
 only when configured (Flycast's slot-2 VMUs beside the four port-1 cards). Since issue #89 an **observation gate** can
@@ -1877,27 +1885,30 @@ and the evidence behind every record are in `docs/research/save-portability.md`.
   (`commit`, `release` or `channel`) and the `revision` — and, per system, its `parts`. A system whose files are exactly
   another's says `same_as` instead of repeating them.
 - **A part rule** states the `memory` it holds (closed: `SAVE_MEMORIES`), its `slot`, its `format`, the `names` the save
-  card spells for it (holes match whatever filled them), optionally the `modes` it speaks for (a pattern over the save
+  card spells for it (holes match whatever filled them, but `<region>`, which matches a word of `SAVE_REGIONS` alone,
+  once per name at most, and names the part's region), optionally the `modes` it speaks for (a pattern over the save
   answer's live mode), a `reading` whose value names the file where the answer states one, and `folder` for a card kept
-  as a directory, and `frontend` for a file RetroArch writes for the core through a memory id — the files RetroArch's
-  `save_file_compression` turns into RZIP streams, whose citation `retroarch.compressed` states once, and that RetroArch
-  loads byte for byte into the core's buffer, which `retroarch.loads_raw` cites. Its `citation` names the revision it
-  was read at, and the loader refuses one that does not. Where the part is kept differently for some kinds of cartridge
-  (closed: `CARTRIDGE_KINDS`), `kinds` maps each such kind to its format, or to `null` where the emulator runs the
-  cartridge and keeps no such part; `format` is then the format for every other kind, and `null` where the part exists
-  for the named kinds alone. A clock part names only kinds in `CLOCK_CARTRIDGE_KINDS`. `ignore` sets aside what of the
-  save answer is no part of a game's save on the system — a directory (`dir_suffix`) or files by name (`names`), exactly
-  one of the two — with its citation, which the answer states among its sources. `unread` names, with a citation saying
-  why, the kinds the emulator runs whose layout for the part no read establishes; the answer judges them unestablished.
-  `not_run` names the cartridge kinds the emulator does not run at all, each list with its citation: as the source it
-  has no save of them to carry, as the target it reads none. `mirrors` states, per list of kinds with its citation, how
-  the emulator keeps a write through a mirror of a small RAM (`folds`, `stores-unfolded` or `drops`); two records that
-  differ leave those kinds unestablished. `length` states, with its citation, what decides how long the emulator keeps
-  the part per game: `rule` (closed: `SAVE_LENGTH_RULES` — `rom-list` for a melonDS build's ROM list, `written-extent`
-  for DeSmuME's growth as far as the game writes) and, for `rom-list` alone and then required, the `revision` whose list
-  it is, which the citation must name; two lengths whose rule or revision differ leave the part unestablished, since
-  atlas reads no game code to tell which games they size apart. On a system whose records state a length, every rule
-  states one.
+  as a directory — matched by the directory's trailing segments, as many as the name spells — and `frontend` for a file
+  RetroArch writes for the core through a memory id — the files RetroArch's `save_file_compression` turns into RZIP
+  streams, whose citation `retroarch.compressed` states once, and that RetroArch loads byte for byte into the core's
+  buffer, which `retroarch.loads_raw` cites. Its `citation` names the revision it was read at, and the loader refuses
+  one that does not. Where the part is kept differently for some kinds of cartridge (closed: `CARTRIDGE_KINDS`), `kinds`
+  maps each such kind to its format, or to `null` where the emulator runs the cartridge and keeps no such part; `format`
+  is then the format for every other kind, and `null` where the part exists for the named kinds alone. A clock part
+  names only kinds in `CLOCK_CARTRIDGE_KINDS`. `ignore` sets aside what of the save answer is no part of a game's save
+  on the system — a directory (`dir_suffix`) or files by name (`names`), exactly one of the two — with its citation,
+  which the answer states among its sources. `unread` names, with a citation saying why, the kinds the emulator runs
+  whose layout for the part no read establishes; the answer judges them unestablished. `not_run` names the cartridge
+  kinds the emulator does not run at all, each list with its citation: as the source it has no save of them to carry, as
+  the target it reads none. `mirrors` states, per list of kinds with its citation, how the emulator keeps a write
+  through a mirror of a small RAM (`folds`, `stores-unfolded` or `drops`); two records that differ leave those kinds
+  unestablished. `regionless` names, with its citation, the content `extensions` (lowercase, with their dot) the
+  emulator runs in a fallback region of its own, which atlas does not read: asked with such a content path, a part kept
+  per region is unestablished. `length` states, with its citation, what decides how long the emulator keeps the part per
+  game: `rule` (closed: `SAVE_LENGTH_RULES` — `rom-list` for a melonDS build's ROM list, `written-extent` for DeSmuME's
+  growth as far as the game writes) and, for `rom-list` alone and then required, the `revision` whose list it is, which
+  the citation must name; two lengths whose rule or revision differ leave the part unestablished, since atlas reads no
+  game code to tell which games they size apart. On a system whose records state a length, every rule states one.
 
 `tests/test_save_formats.py` holds each core's pins to the build `tests/data/core_registrations.json` captured — or, for
 a core whose registration was never captured, to the `verified_core` `save_memory.json` pins — and each standalone

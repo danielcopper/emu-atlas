@@ -60,6 +60,8 @@ from .portability_codes import (
     REASON_LAYOUT_DIFFERS_BY_CARTRIDGE,
     REASON_NO_CONVERSION_STATED,
     REASON_OTHER_BUILD,
+    REASON_REGION_NOT_IN_CONTENT,
+    REASON_SLOTS_UNESTABLISHED,
     REASON_SAVE_LENGTH_DIFFERS_BY_GAME,
     REASON_TARGET_FILE_UNNAMED,
     SIDE_SOURCE,
@@ -71,6 +73,7 @@ from .save_formats import (
     CONVERSION_RULES,
     MEMORY_CARTRIDGE_CLOCK,
     SAVE_MEMORIES,
+    SAVE_REGIONS,
     EmulatorFormats,
     PartRule,
     SaveFormats,
@@ -138,10 +141,15 @@ class SavePart:
     other verdict."""
     conversion: Conversion | None = None
     """On a convertible verdict whose conversion a source pins as a plain rule, that rule; ``None`` everywhere else."""
+    region: str | None = None
+    """The region the emulators keep this memory apart for, one of :data:`~atlas.save_formats.SAVE_REGIONS` (Dolphin's
+    ``GC/USA/Card A`` and ``MemoryCardA.USA.raw``), and ``None`` where they keep one for every region (#577 D21)."""
 
     def __post_init__(self) -> None:
         if self.memory not in SAVE_MEMORIES:
             raise ValueError(f"SavePart: memory must be one of {SAVE_MEMORIES}, got {self.memory!r}")
+        if self.region is not None and self.region not in SAVE_REGIONS:
+            raise ValueError(f"SavePart: region must be None or one of {SAVE_REGIONS}, got {self.region!r}")
         if self.verdict not in PORTABILITY_VERDICTS:
             raise ValueError(f"SavePart: verdict must be one of {PORTABILITY_VERDICTS}, got {self.verdict!r}")
         if any(move not in SAVE_MOVES for move in self.moves):
@@ -175,10 +183,11 @@ class PortabilityOutcome[EntryT: PortabilityEntry]:
 
 @dataclass(frozen=True, slots=True)
 class _Labelled:
-    """One part of one side's save: what holds it and the narrowed group the answer states for it."""
+    """One part of one side's save: what holds it, the narrowed group the answer states for it, and its region."""
 
     rule: PartRule
     group: FileGroup
+    region: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -217,18 +226,32 @@ def _readings(placement: SavefilePlacement) -> dict[str, str]:
 
 
 def _claims(
-    rules: tuple[PartRule, ...], name: str, readings: Mapping[str, str], *, folder: bool
-) -> tuple[PartRule, ...]:
-    """The rules that claim *name*: every closest match, so two slots on one card file are both its parts."""
+    rules: tuple[PartRule, ...],
+    name: str,
+    readings: Mapping[str, str],
+    *,
+    folder: bool,
+    slots: tuple[str, ...] | None = (),
+) -> tuple[tuple[PartRule, str | None], ...]:
+    """The rules that claim *name*, each with the region it read: every closest match, so two slots on one card file
+    are both its parts. Where the save answer states the *slots* that read the file, a slot's rule claims it only for
+    one of them (#577 D23), whatever the name spells; where it leaves them unestablished, every slot's rule may, and
+    the part is judged unestablished (#577 D24)."""
     scored = [
-        (score, rule)
+        (claim[0], rule, claim[1])
         for rule in rules
-        if rule.folder == folder and (score := rule.specificity(name, readings)) is not None
+        if rule.folder == folder
+        and (not slots or rule.slot is None or rule.slot in slots)
+        and (claim := rule.claim(name, readings)) is not None
     ]
     if not scored:
         return ()
-    best = max(score for score, _ in scored)
-    return tuple(rule for score, rule in scored if score == best)
+    # The closest match per slot: a file two slots read is a part of each,
+    # whichever of their rules spells it more literally.
+    best: dict[str | None, int] = {}
+    for score, rule, _ in scored:
+        best[rule.slot] = max(score, best.get(rule.slot, score))
+    return tuple((rule, region) for score, rule, region in scored if score == best[rule.slot])
 
 
 def _group_parts(
@@ -236,17 +259,20 @@ def _group_parts(
 ) -> tuple[tuple[_Labelled, ...], bool]:
     """The parts one group holds among *names*, and whether a name in it is one no rule claims."""
     if group.files is None:
-        claimed = _claims(rules, group.dir.rstrip("/").rsplit("/", 1)[-1], readings, folder=True)
-        return tuple(_Labelled(rule, group) for rule in claimed), not claimed
-    by_rule: dict[PartRule, list[str]] = {}
+        claimed = _claims(rules, group.dir, readings, folder=True, slots=group.slots)
+        return tuple(_Labelled(rule, group, region) for rule, region in claimed), not claimed
+    by_rule: dict[tuple[PartRule, str | None], list[str]] = {}
     unmatched = False
     for name in names:
-        claimed = _claims(rules, name, readings, folder=False)
+        claimed = _claims(rules, name, readings, folder=False, slots=group.slots)
         unmatched = unmatched or not claimed
-        for rule in claimed:
-            by_rule.setdefault(rule, []).append(name)
+        for labelled in claimed:
+            by_rule.setdefault(labelled, []).append(name)
     return (
-        tuple(_Labelled(rule, dataclasses.replace(group, files=tuple(names))) for rule, names in by_rule.items()),
+        tuple(
+            _Labelled(rule, dataclasses.replace(group, files=tuple(names)), region)
+            for (rule, region), names in by_rule.items()
+        ),
         unmatched,
     )
 
@@ -670,6 +696,8 @@ def _part_unestablished(part: _Labelled, judgement: _Judgement) -> Caveat:
     slot = part.rule.slot
     if slot is not None:
         data["slot"] = slot
+    if part.region is not None:
+        data["region"] = part.region
     data["reason"] = reason
     if reason == REASON_LAYOUT_DIFFERS_BY_CARTRIDGE:
         data["cartridges"] = dict(judgement.cartridges)
@@ -685,21 +713,60 @@ def _part_unestablished(part: _Labelled, judgement: _Judgement) -> Caveat:
             data["target_length_revision"] = read.revision
     return Caveat(
         CAVEAT_SAVE_PART_UNESTABLISHED,
-        f"whether the target reads the source's {part.rule.memory}{f' {slot}' if slot else ''} is not established "
+        f"whether the target reads the source's {part.rule.memory}{f' {slot}' if slot else ''}"
+        f"{f' ({part.region})' if part.region else ''} is not established "
         f"({reason})",
         data,
     )
 
 
+def _regionless(part: _Labelled, sides: tuple[_Side, _Side], content_path: str | None) -> tuple[str, ...]:
+    """Each side's citation saying it runs *content_path* in a fallback region, where the part is kept per region."""
+    if part.region is None:
+        return ()
+    return tuple(
+        side.record.regionless.citation
+        for side in sides
+        if side.record is not None
+        and side.record.regionless is not None
+        and side.record.regionless.covers(content_path)
+    )
+
+
+def _slots_unestablished(part: _Labelled, twin: _Labelled | None) -> bool:
+    """Is this part kept per slot, and does either side's group leave its slots unestablished (#577 D24)?"""
+    return part.rule.slot is not None and (
+        part.group.slots is None or (twin is not None and twin.group.slots is None)
+    )
+
+
 def _part(
-    part: _Labelled, source: _Side, target: _Side, table: SaveFormats
+    part: _Labelled, source: _Side, target: _Side, table: SaveFormats, content_path: str | None = None
 ) -> tuple[SavePart, tuple[str, ...], Caveat | None]:
     """One source part against the target, with the citations its verdict rests on and the caveat it raises."""
+    # A memory kept per region pairs with the target's for the same region
+    # (#577 D21): one game runs in one region on both sides.
     twin = next(
-        (t for t in target.parts if (t.rule.memory, t.rule.slot) == (part.rule.memory, part.rule.slot)),
+        (
+            t
+            for t in target.parts
+            if (t.rule.memory, t.rule.slot, t.region) == (part.rule.memory, part.rule.slot, part.region)
+        ),
         None,
     )
-    if source.confirmed and target.confirmed and target.record is not None:
+    fallback = _regionless(part, (source, target), content_path) if twin is not None else ()
+    settled = source.confirmed and target.confirmed and target.record is not None
+    if settled and _slots_unestablished(part, twin):
+        # Which slot reads the group is not established on one side, so which
+        # of the other's slots this part pairs with is not either (#577 D24).
+        judgement = _Judgement(PORTABILITY_UNESTABLISHED, unestablished=REASON_SLOTS_UNESTABLISHED)
+    elif settled and fallback:
+        # Content with no region in its header runs in each emulator's
+        # fallback region, so which region's memory it uses is not read
+        # here (#577 D22); a slot the target keeps nothing in is lost
+        # whatever the region, and is judged as ever.
+        judgement = _Judgement(PORTABILITY_UNESTABLISHED, unestablished=REASON_REGION_NOT_IN_CONTENT, cited=fallback)
+    elif settled:
         judgement = _judged(part, twin, source=source, target=target, table=table)
     else:
         # The build caveat or the unrecorded one already says why.
@@ -714,6 +781,7 @@ def _part(
             source_group=part.group,
             target_group=twin.group if twin is not None else None,
             moves=judgement.moves,
+            region=part.region,
         ),
         tuple(c for c in cited if c),
         raised,
@@ -753,6 +821,7 @@ def portability_answer[EntryT: PortabilityEntry](
     token: Callable[[EntryT], str | None],
     caveats: tuple[Caveat, ...] = (),
     table: SaveFormats | None = None,
+    content_path: str | None = None,
 ) -> PortabilityOutcome[EntryT]:
     """Whether the entry labelled *target* reads what the one labelled *source* wrote.
 
@@ -761,7 +830,8 @@ def portability_answer[EntryT: PortabilityEntry](
     ``library_version``, a standalone emulator's deploy record — or ``None``
     where nothing names it. *token* is the card token a standalone entry's
     command identifies on this arrangement. *caveats* are the installation's own, which every
-    answer on it carries.
+    answer on it carries. *content_path* is the content both save questions were asked with,
+    which decides whether a part kept per region rests on a fallback region (#577 D22).
     """
     table = save_formats() if table is None else table
     # The first entry a label names, as the launch command takes it.
@@ -790,7 +860,7 @@ def portability_answer[EntryT: PortabilityEntry](
         _side(SIDE_TARGET, target_entry, target_placement, system=system, table=table,
               running=lambda: running(target_entry), token=lambda: token(target_entry)),
     )
-    judged = tuple(_part(part, sides[0], sides[1], table) for part in sides[0].parts)
+    judged = tuple(_part(part, sides[0], sides[1], table, content_path) for part in sides[0].parts)
     parts = tuple(part for part, _, _ in judged)
     side_caveats = (*sides[0].caveats, *sides[1].caveats, *(c for _, _, c in judged if c is not None))
     if not parts and not side_caveats:
