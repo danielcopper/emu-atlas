@@ -172,6 +172,15 @@ class TestTheLeadingBytes:
     def test_an_sfb_is_no_executable(self, tmp_path):
         assert not read(tmp_path, b".SFB\x00\x01\x00\x00").executable
 
+    def test_eight_bytes_of_rpcs3sav_are_a_savestate(self, tmp_path):
+        """``make_savestate_reader`` compares the first u64 against RPCS3SAV (savestate_utils.cpp:189)."""
+        facts = read(tmp_path, b"RPCS3SAV" + b"\x00" * 8)
+        assert (facts.magic, facts.savestate) == ("RPCS", True)
+
+    @pytest.mark.parametrize("data", [b"RPCS3SAX\x00", b"RPCS3SA", b"rpcs3sav"])
+    def test_anything_else_is_no_savestate(self, tmp_path, data):
+        assert not read(tmp_path, data).savestate
+
 
 class TestTheFactsAreConsistent:
     def test_a_category_beside_another_magic_is_refused(self):
@@ -181,6 +190,10 @@ class TestTheFactsAreConsistent:
     def test_a_category_the_loader_does_not_keep_is_refused(self):
         with pytest.raises(ValueError, match="PARAM.SFO the loader keeps"):
             ps3_file.Ps3FileFacts(ps3_file.MAGIC_PSF, None, "XX")
+
+    def test_a_savestate_beside_another_magic_is_refused(self):
+        with pytest.raises(ValueError, match="a savestate opens with"):
+            ps3_file.Ps3FileFacts(".SFB", savestate=True)
 
     def test_more_than_four_leading_bytes_are_refused(self):
         with pytest.raises(ValueError, match="at most 4 bytes"):
@@ -265,6 +278,8 @@ class TestTheFixtureModelsTheAnswer:
             ({"/roms/other": {"magic": ".SFB"}}, "no file is declared there"),
             ({SFO: {"category": "HG"}}, "expected an object with magic"),
             ({SFO: {"magic": ".SFB", "category": "HG"}}, "PARAM.SFO the loader keeps"),
+            ({SFO: {"magic": "RPCS", "savestate": "yes"}}, "savestate must be true or false"),
+            ({SFO: {"magic": ".SFB", "savestate": True}}, "a savestate opens with"),
             ({SFO: {"magic": "Ā"}}, "one byte per character"),
             ({ISO: {"magic": "", "iso": {"regions": -1, "watermark": None}}}, "the u32 the header holds"),
             ({ISO: {"magic": "", "iso": {"regions": 1}}}, "regions and watermark, and optionally blocks"),

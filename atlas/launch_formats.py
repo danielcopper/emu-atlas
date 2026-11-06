@@ -1,15 +1,14 @@
-"""Install-first formats — the launchability question's world knowledge (issue #36).
+"""Install-first formats and standalone loader cards — the launchability question's world knowledge (#36, #66, #776).
 
-A launchability 'no' has more than one meaning, and the accept-list can only
-state one of them: the frontend will not scan this file. For some files the
-honest continuation is "because it is an installer" — a PSN ``.pkg`` is the
-distribution form of the content itself, and the emulator has to install it
-before anything can launch. That fact is written nowhere on the machine, so
-it lives here: marked, versioned, cited, keyed by the atlas system id and the
-exact extension token ES-DE would derive. The resolver consults it only where
-the extension is already outside the machine's own accept-list — a read is
-never overridden by a table. Each record names the emulators that install the
-format (issue #717), so the verdict can name them as data rather than prose.
+Some files are the distribution form of the content itself — a PSN ``.pkg``
+— and an emulator has to install them before anything can launch. That fact
+is written nowhere on the machine, so it lives here: marked, versioned,
+cited, keyed by the atlas system id and the exact extension token ES-DE would
+derive. The resolver consults it before any entry is asked, whatever the
+system's accept-list says (issue #776). Each record names the emulators that
+install the format (issue #717), so the verdict can name them as data rather
+than prose. The cards record what a standalone emulator's own loader reads:
+files by their extension, and directories by the names inside them.
 """
 
 from __future__ import annotations
@@ -22,7 +21,7 @@ from ._data import packaged_text
 
 _ROM = "%ROM%"
 
-FORMATS_SCHEMA = 4
+FORMATS_SCHEMA = 5
 
 
 @dataclass(frozen=True, slots=True)
@@ -66,6 +65,11 @@ class StandaloneLaunchCard:
     builds the emulator's save card pins, so the stamp that holds a pin
     against the deployed binary keeps its one home there, and ``None`` where
     the card pins none.
+
+    ``directories`` is what the loader does with a directory it is handed
+    (issue #776 D5): the names inside it the loader recognises a game by, in
+    the order it looks for them — empty where it starts no directory at all —
+    and the citation that reads it at the card's build.
     """
 
     token: str
@@ -76,6 +80,7 @@ class StandaloneLaunchCard:
     content_checked: bool = False
     build_dependent: tuple[tuple[str, str], ...] = ()
     build: str | None = None
+    directories: "DirectoryStatement | None" = None
 
     def takes(self, extension: str) -> bool:
         return extension.lower() in self.accepts
@@ -92,6 +97,20 @@ class StandaloneLaunchCard:
         """The citation naming the builds that disagree on *extension*, or ``None`` where they agree."""
         folded = extension.lower()
         return next((note for token, note in self.build_dependent if token == folded), None)
+
+
+@dataclass(frozen=True, slots=True)
+class DirectoryStatement:
+    """What one standalone loader does with a directory: the names it recognises one by, and the citation.
+
+    ``recognises`` are names of entries inside the directory, compared
+    exactly, in the order the loader tests them; the first one present is
+    what the loader starts the directory by. Empty is a statement too: the
+    loader starts no directory, whatever it holds.
+    """
+
+    recognises: tuple[str, ...]
+    source: str
 
 
 def _expect_str(value: Any, where: str) -> str:
@@ -172,7 +191,7 @@ def load_standalone_launch(text: str | None = None) -> tuple[StandaloneLaunchCar
     return tuple(_launch_card(token, entry) for token, entry in emulators.items())
 
 
-_CARD_KEYS = frozenset({"accepts", "archives", "source"})
+_CARD_KEYS = frozenset({"accepts", "archives", "source", "directories"})
 _CARD_OPTIONAL_KEYS = frozenset({"arguments", "content_checked", "build_dependent", "build"})
 
 
@@ -180,7 +199,7 @@ def _launch_card(token: str, entry: Any) -> StandaloneLaunchCard:
     where = f"standalone launch card {token!r}"
     if not isinstance(entry, dict) or not _CARD_KEYS <= set(entry) <= _CARD_KEYS | _CARD_OPTIONAL_KEYS:
         raise ValueError(
-            f"{where}: a card names 'accepts', 'archives' and 'source', "
+            f"{where}: a card names 'accepts', 'archives', 'directories' and 'source', "
             "and may also name 'arguments', 'content_checked', 'build_dependent' and 'build'"
         )
     accepts = entry["accepts"]
@@ -203,7 +222,22 @@ def _launch_card(token: str, entry: Any) -> StandaloneLaunchCard:
         content_checked=content_checked,
         build_dependent=build_dependent,
         build=_build(entry["build"], where) if "build" in entry else None,
+        directories=_directories(entry["directories"], where),
     )
+
+
+def _directories(value: Any, where: str) -> DirectoryStatement:
+    """A card's directory statement: the names it recognises a directory by, possibly none, and the citation."""
+    if not isinstance(value, dict) or set(value) != {"recognises", "source"}:
+        raise ValueError(f"{where}: directories names exactly 'recognises' and 'source'")
+    names = value["recognises"]
+    if (
+        not isinstance(names, list)
+        or not all(isinstance(name, str) and name and "/" not in name for name in names)
+        or len(set(names)) != len(names)
+    ):
+        raise ValueError(f"{where}: directories.recognises must be a list of distinct entry names, possibly empty")
+    return DirectoryStatement(tuple(names), _expect_str(value["source"], f"{where}: directories.source"))
 
 
 def _card_extension(value: Any, where: str) -> str:

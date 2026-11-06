@@ -120,12 +120,12 @@ class TestTheStandaloneLaunchCards:
     def test_an_uppercase_accept_token_fails_the_load(self):
         # The match lowercases the file's token, so an uppercase card token
         # could never be hit — refused rather than recorded dead.
-        table = _card_table({"accepts": [".3DS"], "archives": False, "source": "?"})
+        table = _card_table({**CARD, "accepts": [".3DS"], "source": "?"})
         with pytest.raises(ValueError, match="lowercase"):
             load_standalone_launch(table)
 
     def test_archives_must_be_a_boolean(self):
-        table = _card_table({"accepts": [".3ds"], "archives": "no", "source": "?"})
+        table = _card_table({**CARD, "accepts": [".3ds"], "archives": "no", "source": "?"})
         with pytest.raises(ValueError, match="boolean"):
             load_standalone_launch(table)
 
@@ -140,8 +140,57 @@ class TestTheStandaloneLaunchCards:
             load_standalone_launch(table)
 
 
-CARD = {"accepts": [".iso"], "archives": False, "source": "[V] cited"}
+CARD = {
+    "accepts": [".iso"],
+    "archives": False,
+    "directories": {"recognises": [], "source": "[V] cited"},
+    "source": "[V] cited",
+}
 DOLPHIN_ARGUMENTS = ("-b", "-e", "%ROM%")
+
+
+class TestTheDirectoryStatement:
+    """Issue #776 D5: every card says whether its loader starts a directory, and by what it recognises one."""
+
+    def test_a_card_without_its_directory_statement_fails(self):
+        table = _card_table({key: value for key, value in CARD.items() if key != "directories"})
+        with pytest.raises(ValueError, match="'directories'"):
+            load_standalone_launch(table)
+
+    @pytest.mark.parametrize(
+        ("statement", "message"),
+        [
+            ({"recognises": []}, "exactly 'recognises' and 'source'"),
+            ({"recognises": "EBOOT.PBP", "source": "c"}, "distinct entry names"),
+            ({"recognises": ["a/b"], "source": "c"}, "distinct entry names"),
+            ({"recognises": ["X", "X"], "source": "c"}, "distinct entry names"),
+            ({"recognises": [], "source": ""}, "non-empty string"),
+        ],
+    )
+    def test_a_malformed_statement_fails(self, statement, message):
+        table = _card_table({**CARD, "directories": statement})
+        with pytest.raises(ValueError, match=message):
+            load_standalone_launch(table)
+
+    def test_the_names_load_in_their_order(self):
+        (card,) = load_standalone_launch(
+            _card_table({**CARD, "directories": {"recognises": ["EBOOT.PBP", "PSP_GAME"], "source": "c"}})
+        )
+        assert card.directories is not None
+        assert card.directories.recognises == ("EBOOT.PBP", "PSP_GAME")
+
+    @pytest.mark.parametrize("token", ["AZAHAR", "DOLPHIN", "DUCKSTATION", "PCSX2", "PRIMEHACK"])
+    def test_five_loaders_start_no_directory(self, token):
+        card = lookup_standalone_launch(token)
+        assert card is not None
+        assert card.directories is not None
+        assert card.directories.recognises == ()
+
+    def test_ppsspp_starts_a_directory_by_its_eboot_or_its_disc_folder(self):
+        card = lookup_standalone_launch("PPSSPP")
+        assert card is not None
+        assert card.directories is not None
+        assert card.directories.recognises == ("EBOOT.PBP", "PSP_GAME")
 
 
 class TestTheDolphinAndPrimeHackCards:

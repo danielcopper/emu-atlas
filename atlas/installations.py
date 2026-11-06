@@ -24,6 +24,7 @@ from __future__ import annotations
 import functools
 import json
 import os
+import posixpath
 import re
 import shlex
 import tomllib
@@ -169,7 +170,20 @@ from .launch_command import (
     LauncherScript,
     LauncherStep,
     TooLarge,
+    rom_file,
     take_apart,
+)
+from .launch_codes import (
+    CAVEAT_ENTRY_DIRECTORY_HOLDS,
+    CAVEAT_ENTRY_DIRECTORY_UNREAD,
+    CAVEAT_FRONTEND_NAME_UNSCANNED,
+    DIRECTORY_UNREAD_CONTENT_OVERRIDE,
+    DIRECTORY_UNREAD_CORE,
+    DIRECTORY_UNREAD_OWN_LOADER,
+    SCANNED_KIND_DIRECTORY,
+    SCANNED_KIND_FILE,
+    UNSCANNED_DIRECTORY_WITHOUT_TOKEN,
+    UNSCANNED_TOKEN_NOT_LISTED,
 )
 from .launch_environment import (
     SOURCE_PATHS,
@@ -19688,52 +19702,59 @@ class SystemPlatformsAnswer:
     """
 
 
-# The launchability verdicts (issue #36) — five claims that never collapse.
-# "not-accepted" is a read of the machine: the frontend's accept-list for the
-# system does not carry this file's extension, so ES-DE never scans it and
-# nothing here will launch it. "needs-installation" is that same 'no' with its
-# reason from world knowledge: the format is real content for the platform,
-# and an installation step has to run before anything can launch (a PSN .pkg).
-# It is the one verdict that names the emulators that install the file
-# (issue #717), because it is the one whose remedy is an emulator's.
-# "unknown" is a statement about the look, never about the file: the system is
-# not one this catalogue declares, or the catalogue could not be read — a
-# client that treated it as either of the other two would be told something
-# nobody checked. Each constant spells its code.
+# The launchability verdicts (issues #36, #776) — five claims that never
+# collapse, and none of them about what the frontend's scan lists (#776 D1):
+# three are about the emulator that would run, one about the platform's
+# format, one about the look. "launchable" is an entry reading
+# that took the file: the entry's emulator, read through its loader card, its
+# own boot or open of the file, or — for a libretro entry — the core's claims,
+# which RetroArch hands the file past without checking. "entry-not-accepted" is
+# that entry's established refusal: a standalone whose recorded loader does not
+# read the format or starts no directory, RetroArch refusing a directory as
+# content, a block-extract core handed an archive it does not claim, and a row
+# whose command hands RetroArch a core file this host cannot load, which reads
+# nothing at all (#446). The last is established from the command rather than
+# from a loader, and it is the one where nothing about the FORMAT was weighed —
+# its own caveat (``core-file-foreign``) says so. Its remedies are to unpack the
+# container or to select an entry that takes it — ``alternatives`` names the
+# ones established to. "unestablished" is an entry reading that ended without
+# a take or a refusal (#776 D3, D9): an emulator whose loader atlas has not read
+# (a standalone without a card), a card whose builds disagree, a boot or an open
+# that stops short, a directory a core opens through its own loader, a file the
+# libretro core does not claim (D10) — never an archive, whose contents alone are
+# unread (D11).
+# "needs-installation" is a 'no' with its reason from world knowledge: the
+# format is real content for the platform, and an installation step has to run
+# before anything can launch (a PSN .pkg). It is the one verdict that names the
+# emulators that install the file (issue #717), because it is the one whose
+# remedy is an emulator's. "unknown" is a statement about the look, never about
+# the file: the system is not one this catalogue declares or runs, or the
+# catalogue could not be read — a client that treated it as any of the others
+# would be told something nobody checked. Each constant spells its code.
 VERDICT_LAUNCHABLE = "launchable"
-VERDICT_NOT_ACCEPTED = "not-accepted"
-# The accept-list is declared per system — the union over every entry — and
-# the command per emulator, so the list can say yes while the entry that
-# actually runs loads nothing (issue #66). This verdict is that split, stated
-# only where the running entry's refusal is ESTABLISHED: a standalone whose
-# recorded loader does not read the format, a block-extract core handed an
-# archive it does not claim, and a row whose command hands RetroArch a core
-# file this host cannot load, which reads nothing at all (#446). The third is
-# established from the command rather than from a loader, and it is the one
-# where nothing about the FORMAT was weighed — its own caveat
-# (``core-file-foreign``) says so, where the other two put their reason in
-# ``sources``. The remedies differ from not-accepted's, which is why the two
-# never collapse: unpack the container, or select an entry that takes it —
-# ``alternatives`` names the ones established to.
 VERDICT_ENTRY_NOT_ACCEPTED = "entry-not-accepted"
+VERDICT_UNESTABLISHED = "unestablished"
 VERDICT_NEEDS_INSTALLATION = "needs-installation"
 VERDICT_UNKNOWN = "unknown"
 
 LAUNCH_VERDICTS = (
     VERDICT_LAUNCHABLE,
-    VERDICT_NOT_ACCEPTED,
     VERDICT_ENTRY_NOT_ACCEPTED,
+    VERDICT_UNESTABLISHED,
     VERDICT_NEEDS_INSTALLATION,
     VERDICT_UNKNOWN,
 )
-# The two verdicts that name the entry that would run.
-_ENTRY_VERDICTS = (VERDICT_LAUNCHABLE, VERDICT_ENTRY_NOT_ACCEPTED)
+# The three verdicts that name the entry that would run, and the two that may
+# state what its reading established it boots.
+_ENTRY_VERDICTS = (VERDICT_LAUNCHABLE, VERDICT_ENTRY_NOT_ACCEPTED, VERDICT_UNESTABLISHED)
+_BOOT_VERDICTS = (VERDICT_LAUNCHABLE, VERDICT_UNESTABLISHED)
 
 # The per-entry half of a launchability answer, three statements apart. For a
 # libretro entry the extension list is a CLAIM, not a gate: RetroArch checks
 # nothing on a direct load and hands the file to the core, so a file outside
-# the claims is attempted, never refused — stated, because a client deciding
-# what to bake should know the claim is absent. Archives are the exception
+# the claims is attempted, never refused — and whether the core reads it is
+# something nobody established, so it answers unestablished with the claim's
+# absence stated (#776 D10). Archives are the exception
 # that runs through RetroArch's own hands: a container the core does not
 # claim is opened and searched for a file matching the claims
 # (task_content.c:1325-1358 @ a79435a) — what is inside is something atlas
@@ -19806,43 +19827,49 @@ class Boot:
 
 @dataclass(frozen=True, slots=True)
 class LaunchabilityAnswer:
-    """Whether one file launches as one system's content here — and why not, when not.
+    """Whether the emulator that would run starts one path as one system's content here — and why not, when not.
 
-    ``extension`` is the token ES-DE would derive from the file
-    (:func:`atlas.esde.esde_extension` — from the last dot, case preserved),
-    stated on every verdict so a 'no' shows the exact string that missed.
-    ``accepted`` is the system's declared list verbatim, empty where nothing
-    was read. ``entry`` is the launch entry that would run — the frontend's
-    own selection hierarchy applied, per-game override first — stated on the
-    two verdicts where one exists: ``launchable``, and ``entry-not-accepted``,
-    where the entry *is* the finding. ``alternatives`` travels with the
-    latter alone: the labels of the declared entries established to take the
-    file, which is one of the two remedies that verdict leaves open.
-    ``installers`` travels with ``needs-installation`` alone, whose remedy it
-    is, and is ``None`` on every other verdict. ``boots`` travels with
-    ``launchable`` alone, and only where atlas read the judged entry's own
-    boot of the file. ``opens`` travels with the two verdicts that name an
-    entry, and only where atlas read what that entry's emulator opens through
-    the file (issue #716) — on ``entry-not-accepted`` it lists what the
-    emulator got to before it stopped, and the file it stopped at.
+    The question is the emulator's, never whether ES-DE's scan lists the path
+    (#776 D1): the entry that would run — the frontend's own selection
+    hierarchy applied, per-game override first — is judged on what it is
+    handed. ``entry`` is that entry, stated on the three verdicts about it:
+    ``launchable``, ``entry-not-accepted``, where the entry *is* the finding,
+    and ``unestablished``, where its reading ended without either.
+    ``alternatives`` travels with ``entry-not-accepted`` alone: the labels of
+    the declared entries established to take the path, which is one of the
+    two remedies that verdict leaves open. ``installers`` travels with
+    ``needs-installation`` alone, whose remedy it is, and is ``None`` on every
+    other verdict. ``boots`` travels with ``launchable`` and ``unestablished``,
+    and only where atlas read the judged entry's own boot of the path.
+    ``opens`` travels with the three verdicts that name an entry, and only
+    where atlas read what that entry's emulator opens through the file (issue
+    #716) — on ``entry-not-accepted`` it lists what the emulator got to before
+    it stopped, and the file it stopped at.
+
+    ``extension`` and ``accepted`` are stated on every verdict: the token
+    ES-DE derives from the path and the system's accept-list. The list is the
+    frontend's side and is never weighed in the verdict; where ES-DE's scan
+    would not list the path under its name, ``frontend-name-unscanned`` among
+    the caveats names every token that would make it (D2, D4).
     """
 
     verdict: str
-    """Whether this file launches as this system's content here, and why not when not —
+    """Whether the emulator that would run starts this path as this system's content here, and why not when not —
     one of :data:`LAUNCH_VERDICTS`, which never collapse into one another.
     """
     extension: str
-    """The token ES-DE would derive from the file, from the last dot with case preserved
-    — stated on every verdict, so a no shows the exact string that missed.
+    """The token ES-DE derives from the path, from the last dot with case preserved — the name ES-DE's scan
+    compares against ``accepted``, stated on every verdict.
     """
     accepted: tuple[str, ...] = ()
-    """The system's declared accept-list verbatim, and empty where nothing was read."""
+    """The system's declared accept-list verbatim — what ES-DE's scan lists, never what decides the verdict — and
+    empty where nothing was read."""
     entry: EmulatorEntry | None = None
-    """The launch entry that would run, the frontend's own selection hierarchy applied —
-    stated on the two verdicts where one exists, and ``None`` on the others.
+    """The launch entry that would run, the frontend's own selection hierarchy applied — stated on the three verdicts
+    about it, and ``None`` on the others.
     """
     alternatives: tuple[str, ...] = ()
-    """The labels of the declared entries established to take this file — one of the two
+    """The labels of the declared entries established to take this path — one of the two
     remedies the entry-not-accepted verdict leaves open, and empty on every other.
     """
     installers: tuple[Installer, ...] | None = None
@@ -19851,11 +19878,12 @@ class LaunchabilityAnswer:
     installs it, and ``None`` on every other.
     """
     boots: Boot | None = None
-    """What the judged entry boots from this file — on a launchable verdict whose entry atlas read the emulator's own
-    boot for, and ``None`` everywhere else, including every entry whose emulator's boot atlas does not read.
+    """What the judged entry boots from this path — on a launchable or an unestablished verdict whose entry atlas read
+    the emulator's own boot for, and ``None`` everywhere else, including every entry whose emulator's boot atlas does
+    not read.
     """
     opens: tuple[Opened, ...] | None = None
-    """The files the judged entry's emulator opens through this file, in the order it opens them — on the two
+    """The files the judged entry's emulator opens through this file, in the order it opens them — on the three
     verdicts that name an entry, where atlas reads that emulator's open of the file, and ``None`` everywhere else,
     including every entry whose emulator's open atlas does not read and a file atlas could not read.
     """
@@ -19873,12 +19901,15 @@ class LaunchabilityAnswer:
             raise ValueError(
                 "LaunchabilityAnswer: installers stand exactly where the verdict is needs-installation"
             )
-        # What an entry boots is a statement about a launch that happens: a
-        # verdict that launches nothing, or names no entry, has nothing to boot.
-        if self.boots is not None and (self.verdict != VERDICT_LAUNCHABLE or self.entry is None):
-            raise ValueError("LaunchabilityAnswer: boots stand only on a launchable verdict about an entry")
-        # What an emulator opens is a statement about an entry: both verdicts
-        # that name one may carry it, a refusal included, and no other.
+        # What an entry boots is a statement about a launch that may happen: a
+        # refusal launches nothing, and a verdict naming no entry has nothing to
+        # boot; an unestablished reading keeps what it did establish (#776 D9).
+        if self.boots is not None and (self.verdict not in _BOOT_VERDICTS or self.entry is None):
+            raise ValueError(
+                "LaunchabilityAnswer: boots stand only on a launchable or unestablished verdict about an entry"
+            )
+        # What an emulator opens is a statement about an entry: every verdict
+        # that names one may carry it, a refusal included, and no other.
         if self.opens is not None and (self.verdict not in _ENTRY_VERDICTS or self.entry is None):
             raise ValueError("LaunchabilityAnswer: opens stand only on a verdict about an entry")
 
@@ -21970,61 +22001,291 @@ class _EntryCoreReader:
 # say why, what it boots where atlas read the emulator's own boot, and what it
 # opens where atlas read the emulator's own open.
 _Stance = tuple[str, tuple[str, ...], tuple[Caveat, ...], Boot | None, tuple[Opened, ...] | None]
-# The reading of an entry's own boot of the file, or None where atlas reads
-# none for that entry and its loader card decides.
-type _BootReader = Callable[[EmulatorEntry], rpcs3_boot.BootReading | None]
+
+
+class _BootReader(Protocol):
+    """The reading of an entry's own boot of the file, or None where atlas reads none for that entry and its loader
+    card decides — and, for a directory the boot is handed, which file inside it the boot would take."""
+
+    def __call__(self, entry: EmulatorEntry) -> rpcs3_boot.BootReading | None: ...
+
+    def takes(self, entry: EmulatorEntry) -> "Callable[[str], bool] | None": ...
+
+
 # The reading of what an entry's emulator opens through the file, or None
 # where atlas reads none for that entry.
 type _OpensReader = Callable[[EmulatorEntry], disc_opens.OpensReading | None]
 
 
+# What the entry that runs is handed for a content path: the target kinds.
+_TARGET_FILE = "file"
+_TARGET_DIRECTORY = "directory"
+_TARGET_UNKNOWN = "unknown"
+
+
+@dataclass(frozen=True, slots=True)
+class _LaunchTarget:
+    """What the entry's emulator is handed for one content path, and what ES-DE's scan meets there (#776).
+
+    ``path`` is what ``%ROM%`` names (:func:`atlas.launch_command.rom_file`):
+    the path itself, or the file of its own name inside a directory ES-DE
+    takes as a file. ``kind`` says whether that is a file, a directory or
+    neither can be told, and ``extension`` is its token, from the last dot
+    with case preserved — what an entry reading weighs. ``names`` and
+    ``files`` are a directory's entries and those of them that are regular
+    files, ``None`` where it is no directory — a directory whose listing
+    cannot be told is no target at all, since ``%ROM%`` is built from it.
+    ``scanned`` is the kind of the content path itself, the one ES-DE's scan
+    meets, ``None`` where it cannot be told.
+    """
+
+    path: str
+    kind: str
+    extension: str
+    names: tuple[str, ...] | None = None
+    files: tuple[str, ...] | None = None
+    scanned: str | None = None
+
+
+def _launch_target(content_path: str, view: CommandView) -> _LaunchTarget:
+    """The target an entry is judged on: what ``%ROM%`` names for *content_path*, read through the frontend's view."""
+    own = view.is_directory(content_path)
+    scanned = SCANNED_KIND_DIRECTORY if own == PROBE_HIT else SCANNED_KIND_FILE
+    if own == PROBE_UNKNOWN:
+        scanned = None
+    handed = rom_file(content_path, view)
+    if handed is None:
+        return _LaunchTarget(content_path, _TARGET_UNKNOWN, esde_extension(content_path), scanned=scanned)
+    kind = view.is_directory(handed)
+    if kind == PROBE_UNKNOWN:
+        return _LaunchTarget(handed, _TARGET_UNKNOWN, esde_extension(handed), scanned=scanned)
+    if kind != PROBE_HIT:
+        return _LaunchTarget(handed, _TARGET_FILE, esde_extension(handed), scanned=scanned)
+    names = view.listing(handed)
+    files = (
+        None
+        if names is None
+        else tuple(name for name in sorted(names) if view.regular_file(f"{handed}/{name}") == PROBE_HIT)
+    )
+    return _LaunchTarget(
+        handed, _TARGET_DIRECTORY, esde_extension(handed), names=names, files=files, scanned=scanned
+    )
+
+
 def _entry_reading(
     entry: EmulatorEntry,
     *,
-    extension: str,
+    target: _LaunchTarget,
     core_info_for: "Callable[[EmulatorEntry], CoreInfo | None]",
     boot_reader: _BootReader | None = None,
     opens_reader: _OpensReader | None = None,
 ) -> _Stance:
-    """One entry's stance on one file: accepts, refuses, or unestablished — and what it boots where that is read.
+    """One entry's stance on what it is handed: accepts, refuses, or unestablished — and what it boots or opens.
 
-    The two kinds of entry that launch something split along the boundary rule
-    (issue #66). A libretro entry's claims are read live off the installed
-    core, and they are claims: RetroArch checks nothing on a direct load, so a
-    file outside them is attempted with a statement, never refused — except an
-    archive, which runs through RetroArch's own hands (extracted and searched
-    by the claims, or handed raw to a ``block_extract`` core that never claimed
-    it, which is the one libretro refusal the claims can establish). A
-    standalone entry opens the file itself: its recorded loader decides, and
-    an emulator without a card is an entry nobody read.
+    The question is the emulator's alone (#776 D1): what the entry is handed
+    for the path (*target*, what ``%ROM%`` names), judged the way the entry's
+    emulator judges it, never by whether the frontend's scan lists the path.
+
+    The two kinds of entry that launch something split along the boundary
+    rule (issue #66). A libretro entry's claims are read live off the
+    installed core, and they are claims: RetroArch checks nothing on a direct
+    load, so a file outside them is attempted, never refused, and answers
+    unestablished with the claim's absence stated (#776 D10) — except an archive, which runs through RetroArch's own hands, and a
+    directory, which RetroArch does not read as content (:func:`_libretro_directory_reading`).
+    A standalone entry opens the file itself: its recorded loader decides,
+    files by their extension and directories by its card's directory
+    statement, and an emulator without a card is an entry nobody read.
 
     The third kind reads nothing at all, and that is a refusal rather than an
     unestablished reading: no loader was asked and no claim was weighed
     because the launch loads nothing, which is established from the command
-    itself. So the accept-list can say yes while this entry takes no file of
-    any format — the split :data:`VERDICT_ENTRY_NOT_ACCEPTED` exists for — and
-    the reason is stated under the entry's own code rather than under one of
-    the three format words, none of which was read.
+    itself — its own code (``core-file-foreign``) rather than a format word.
 
     A standalone entry whose emulator's own boot atlas reads is judged by that
-    reading instead of a card (*boot_reader*, issue #618): it reads the file
-    itself rather than its extension, and where it boots it states what. An
-    entry of either kind whose emulator's open of the file atlas reads
-    (*opens_reader*, issue #716) is judged by that reading instead of its
-    claims or its card, and states what it opens.
+    reading instead of a card (*boot_reader*, issue #618), which follows a
+    directory itself. An entry of either kind whose emulator's open of a file
+    atlas reads (*opens_reader*, issue #716) is judged by that reading instead
+    of its claims or its card, and states what it opens.
     """
     foreign = _foreign_core_of(entry.kind, entry.command) if entry.kind != KIND_LIBRETRO else None
     if foreign is not None:
         return (*_foreign_core_entry_reading(entry, foreign), None, None)
-    opened = opens_reader(entry) if opens_reader is not None else None
+    opened = opens_reader(entry) if opens_reader is not None and target.kind == _TARGET_FILE else None
     if opened is not None:
-        return _opens_stance(entry, opened, extension=extension, core_info_for=core_info_for)
+        return _opens_stance(entry, opened, extension=target.extension, core_info_for=core_info_for)
+    booted = _boot_route(entry, target, boot_reader) if boot_reader is not None else None
+    if booted is not None:
+        return booted
+    if target.kind == _TARGET_UNKNOWN:
+        return (*_target_unknown_reading(entry, target), None, None)
     if entry.kind == KIND_LIBRETRO:
-        return (*_libretro_entry_reading(entry, extension=extension, info=core_info_for(entry)), None, None)
-    reading = boot_reader(entry) if boot_reader is not None else None
-    if reading is not None:
-        return _boot_stance(reading)
-    return (*_standalone_entry_reading(entry, extension=extension), None, None)
+        info = core_info_for(entry)
+        if target.kind == _TARGET_DIRECTORY:
+            return (*_libretro_directory_reading(entry, target, info), None, None)
+        return (*_libretro_entry_reading(entry, extension=target.extension, info=info), None, None)
+    if target.kind == _TARGET_DIRECTORY:
+        return (*_standalone_directory_reading(entry, target), None, None)
+    return (*_standalone_entry_reading(entry, extension=target.extension), None, None)
+
+
+def _target_unknown_reading(
+    entry: EmulatorEntry, target: _LaunchTarget
+) -> tuple[str, tuple[str, ...], tuple[Caveat, ...]]:
+    """Neither a file nor a directory can be told at the path the entry would be handed, so nothing is weighed."""
+    return (
+        _ENTRY_UNESTABLISHED,
+        (),
+        (
+            Caveat(
+                CAVEAT_LAUNCH_PATH_UNESTABLISHED,
+                f"what {entry.label!r} would be handed at {target.path} cannot be told — the frontend's view of "
+                "that path is not established, so whether the entry takes it is not either",
+                {"path": target.path},
+            ),
+        ),
+    )
+
+
+# RetroArch at a79435a and a directory handed to it as content: a core that
+# takes its content as bytes has it read into memory, and a directory yields
+# none, so the load ends 'could not read content file'; a core that takes it
+# by path gets the path, and its own loader decides.
+_RETROARCH_DIRECTORY_SOURCE = (
+    "RetroArch reads the content of a core that does not take it by path into memory "
+    "(content_file_load, tasks/task_content.c:1465-1481 @ a79435a): the file is opened and read through "
+    "the file stream (:1096-1137; libretro-common/streams/file_stream.c:1270-1323), a directory yields no "
+    "bytes, and the load ends 'Could not read content file'"
+)
+
+
+def _libretro_directory_reading(
+    entry: EmulatorEntry, target: _LaunchTarget, info: CoreInfo | None
+) -> tuple[str, tuple[str, ...], tuple[Caveat, ...]]:
+    """A directory handed to a libretro entry: RetroArch's own load, read at its pin (#776 D5)."""
+    holds = _directory_holds(entry, target, _claimed_by(info))
+    if info is None or info.need_fullpath is None:
+        return _ENTRY_UNESTABLISHED, (), (_directory_unread(entry, target, DIRECTORY_UNREAD_CORE), *holds)
+    if info.need_fullpath:
+        return _ENTRY_UNESTABLISHED, (), (_directory_unread(entry, target, DIRECTORY_UNREAD_OWN_LOADER), *holds)
+    # path_get_extension: the name after its last dot, which is what a content
+    # override is looked up by (task_content.c:1374-1400).
+    name = posixpath.basename(target.path)
+    if "." in name and name.rsplit(".", 1)[1]:
+        return (
+            _ENTRY_UNESTABLISHED,
+            (),
+            (_directory_unread(entry, target, DIRECTORY_UNREAD_CONTENT_OVERRIDE), *holds),
+        )
+    return (
+        _ENTRY_REFUSES,
+        (f"entry {entry.label!r}: {_RETROARCH_DIRECTORY_SOURCE}",),
+        (_no_directory(entry, target, "RetroArch reads its content into memory, and a directory holds none"), *holds),
+    )
+
+
+def _standalone_directory_reading(
+    entry: EmulatorEntry, target: _LaunchTarget
+) -> tuple[str, tuple[str, ...], tuple[Caveat, ...]]:
+    """A directory handed to a standalone entry: its loader card's directory statement decides (#776 D5)."""
+    card = _covering_card(entry)
+    if card is None or card.directories is None:
+        return _standalone_entry_reading(entry, extension=target.extension)
+    holds = _directory_holds(entry, target, lambda path: card.takes(esde_extension(path)))
+    statement = card.directories
+    if not statement.recognises:
+        return (
+            _ENTRY_REFUSES,
+            (f"entry {entry.label!r}: its own loader starts no directory — {statement.source}",),
+            (_no_directory(entry, target, "its own loader starts no directory"), *holds),
+        )
+    found = next((name for name in statement.recognises if name in (target.names or ())), None)
+    if found is None:
+        return (
+            _ENTRY_REFUSES,
+            (
+                f"entry {entry.label!r}: its own loader starts a directory only by "
+                f"{', '.join(statement.recognises)} inside it, and this one holds none — {statement.source}",
+            ),
+            (_no_directory(entry, target, f"it holds none of {', '.join(statement.recognises)}"), *holds),
+        )
+    unread = (
+        Caveat(
+            CAVEAT_ENTRY_FORMAT_CONTENT_UNREAD,
+            f"{entry.label!r} takes the directory by the {found} inside it, and its loader then reads the content, "
+            "which atlas does not — whether the content passes is not established",
+            {"entry": entry.label, "extension": target.extension},
+        ),
+    ) if card.content_checked else ()
+    return (
+        _ENTRY_ACCEPTS,
+        (f"entry {entry.label!r}: its own loader starts the directory by the {found} inside it — {statement.source}",),
+        (*unread, *holds),
+    )
+
+
+def _claimed_by(info: CoreInfo | None) -> "Callable[[str], bool]":
+    """Whether a file's extension is one the core claims — nothing is, where the core could not be read."""
+    claims = claimed_extensions(info) or frozenset()
+
+    def claimed(path: str) -> bool:
+        extension = esde_extension(path)
+        return extension.startswith(".") and extension[1:].lower() in claims
+
+    return claimed
+
+
+def _directory_holds(
+    entry: EmulatorEntry, target: _LaunchTarget, takes: "Callable[[str], bool]"
+) -> tuple[Caveat, ...]:
+    """The files in the directory the entry would take as files of their own, named where there is one (#776 D5).
+
+    *takes* answers for a file's path inside the directory.
+    """
+    taken = tuple(path for path in (f"{target.path}/{name}" for name in target.files or ()) if takes(path))
+    holds: tuple[Caveat, ...] = ()
+    if taken:
+        holds = (
+            Caveat(
+                CAVEAT_ENTRY_DIRECTORY_HOLDS,
+                f"{target.path} holds {len(taken)} file(s) {entry.label!r} would take as a file of its own: "
+                f"{', '.join(taken)}",
+                {"entry": entry.label, "path": target.path, "files": taken},
+            ),
+        )
+    return holds
+
+
+def _directory_unread(entry: EmulatorEntry, target: _LaunchTarget, reason: str) -> Caveat:
+    why = {
+        DIRECTORY_UNREAD_OWN_LOADER: "the core takes its content by path, so its own loader is handed the directory",
+        DIRECTORY_UNREAD_CONTENT_OVERRIDE: (
+            "the directory's name carries an extension, and a content override the core may register for it "
+            "decides how RetroArch hands it over"
+        ),
+        DIRECTORY_UNREAD_CORE: "the installed core's reading does not say how it takes its content",
+    }[reason]
+    return Caveat(
+        CAVEAT_ENTRY_DIRECTORY_UNREAD,
+        f"whether {entry.label!r} starts the directory {target.path} is not established — {why}, which atlas "
+        "has not read",
+        {"entry": entry.label, "path": target.path, "reason": reason},
+    )
+
+
+def _no_directory(entry: EmulatorEntry, target: _LaunchTarget, why: str) -> Caveat:
+    return Caveat(
+        rpcs3_boot.CAVEAT_ENTRY_TAKES_NO_DIRECTORY,
+        f"{entry.label!r} is handed {target.path}, a directory, and does not start it — {why}",
+        {"entry": entry.label, "path": target.path},
+    )
+
+
+def _covering_card(entry: EmulatorEntry) -> StandaloneLaunchCard | None:
+    """The loader card that answers for this entry's command, ``None`` where none does."""
+    card = lookup_standalone_launch(emulator_token(entry.command))
+    if card is None or not card.covers(_emulator_arguments(entry.command)):
+        return None
+    return card
 
 
 _BOOT_STANCES = {
@@ -22034,10 +22295,23 @@ _BOOT_STANCES = {
 }
 
 
-def _boot_stance(reading: rpcs3_boot.BootReading) -> _Stance:
-    """A boot reading as an entry's stance — what boots stated where it does."""
+def _boot_route(entry: EmulatorEntry, target: _LaunchTarget, boot_reader: _BootReader) -> _Stance | None:
+    """The stance of an entry whose emulator's own boot atlas reads — ``None`` for every other entry.
+
+    A directory the boot is handed carries what it holds that the boot
+    would take as a file of its own (#776 D5).
+    """
+    reading = boot_reader(entry) if entry.kind != KIND_LIBRETRO else None
+    if reading is None:
+        return None
+    takes = boot_reader.takes(entry) if target.kind == _TARGET_DIRECTORY else None
+    return _boot_stance(reading, _directory_holds(entry, target, takes) if takes is not None else ())
+
+
+def _boot_stance(reading: rpcs3_boot.BootReading, holds: tuple[Caveat, ...] = ()) -> _Stance:
+    """A boot reading as an entry's stance — what boots stated where it does, and what a directory holds beside it."""
     boot = Boot(reading.file, reading.disc_root) if reading.file is not None else None
-    return _BOOT_STANCES[reading.outcome], reading.sources, reading.caveats, boot, None
+    return _BOOT_STANCES[reading.outcome], reading.sources, (*reading.caveats, *holds), boot, None
 
 
 _OPENS_STANCES = {
@@ -22139,6 +22413,8 @@ def _libretro_entry_reading(
                 ),
                 (),
             )
+        # Not D9's unestablished: RetroArch's extract-and-search is read, only the
+        # contents are not, so the take stands with that stated (#776 D11).
         return (
             _ENTRY_ACCEPTS,
             (),
@@ -22154,15 +22430,15 @@ def _libretro_entry_reading(
             ),
         )
     return (
-        _ENTRY_ACCEPTS,
+        _ENTRY_UNESTABLISHED,
         (),
         (
             Caveat(
                 CAVEAT_ENTRY_FORMAT_UNCLAIMED,
                 f"the installed core behind {entry.label!r} does not claim {extension!r} — "
                 "RetroArch checks nothing on a direct load and hands the file over, so the "
-                "core will attempt it and may fail; the claim's absence is stated, not a "
-                "refusal",
+                "core attempts it, and whether it reads it is not established; the claim's "
+                "absence is not a refusal",
                 {"entry": entry.label, "extension": extension},
             ),
         ),
@@ -22240,7 +22516,9 @@ def _taken_unread(card: StandaloneLaunchCard, label: str, extension: str) -> tup
     A loader that opens archives itself (issue #744) loads what it finds
     inside one, which is where the take is decided and which atlas does not
     read — the same statement RetroArch's archive hands earn a libretro
-    entry, made instead of the content statement rather than beside it.
+    entry, made instead of the content statement rather than beside it. The
+    take stands rather than going unestablished, because the loader's opening
+    of the archive is read and only its contents are not (#776 D11).
     """
     if card.archives and is_compressed_extension(extension):
         return (
@@ -22335,6 +22613,17 @@ class _EntryBootReader:
         if rpcs3_boot.shell_runs_rom(command):
             return rpcs3_boot.shell_reading(entry.label, self._content_path, self._view())
         return None
+
+    def takes(self, entry: EmulatorEntry) -> "Callable[[str], bool] | None":
+        """Which file the entry's RPCS3 would take as one of its own, for an entry handed the path — else ``None``.
+
+        The entry booting by serial is handed no path, and the shell runs
+        whatever it is handed, so neither names a file a directory holds.
+        """
+        if not rpcs3_boot.hands_path(entry.command):
+            return None
+        view = self._view()
+        return lambda path: rpcs3_boot.takes_file(entry.label, path, view, self._machine.read_ps3_file)
 
 
 # The arguments ES-DE's catalogues hand DuckStation's own build after its
@@ -22449,6 +22738,7 @@ def _launchability_verdict(
     *,
     system: str,
     extension: str,
+    target: _LaunchTarget,
     declaration: SystemDeclaration | None,
     entries: tuple[EmulatorEntry, ...],
     complete: bool,
@@ -22457,40 +22747,39 @@ def _launchability_verdict(
     boot_reader: _BootReader | None = None,
     opens_reader: _OpensReader | None = None,
 ) -> _Verdict:
-    """One (declaration, extension) pair's verdict — shared by every ES-DE-driven handle.
+    """One content path's verdict on one system — shared by every ES-DE-driven handle.
 
     Returns ``(verdict, entry, alternatives, installers, boots, opens, sources, own caveats)``.
-    Module-level for the reason :func:`_entries_from` is: the match is
-    ES-DE's, not an arrangement's, and two copies of it are how "launchable
-    here" and "launchable there" would silently mean different comparisons.
+    Module-level for the reason :func:`_entries_from` is: two copies of it are
+    how "launchable here" and "launchable there" would silently mean different
+    comparisons.
 
-    An accepted extension is judged one level further (issue #66): the entry
-    that would run gets :func:`_entry_reading`'s stance, and an established
-    refusal flips the verdict to ``entry-not-accepted`` — the accept-list is
-    the union over every entry, and the machine then does nothing at all. The
-    other declared entries are judged only then, because ``alternatives`` is
-    that verdict's remedy and nobody else's read. An entry whose emulator's
-    own boot atlas reads (*boot_reader*) is judged by that reading of the
-    file, and a ``launchable`` verdict then states what it boots; one whose
-    emulator's open atlas reads (*opens_reader*) states what it opens, on a
-    refusal as well.
+    The question is whether the emulator that would run starts the path, never
+    whether ES-DE's scan lists it (#776 D1). ES-DE decides which entry runs —
+    the one *label* names, or the frontend's first, chosen by
+    :func:`_chosen_entry` the way the launch command chooses it — and that
+    entry is judged on what it is handed (*target*, what ``%ROM%`` names) by
+    :func:`_entry_reading`: a take is ``launchable``, an established refusal
+    ``entry-not-accepted`` with the other entries established to take it as
+    ``alternatives``, and a reading that ends without either ``unestablished``
+    (D3, D9), keeping what it did establish it boots or opens. A format the
+    install-first record names — a file whose token is the record's, never a
+    directory by its name — is ``needs-installation`` before any entry is
+    asked, whatever the accept-list says: the record is about the platform's format, and the
+    emulators that install it are named with the entries that run them
+    (:func:`_installers`).
 
-    A ``needs-installation`` verdict names the emulators its record says
-    install the file, each with the system's entry that runs it
-    (:func:`_installers`). *label* plays no part in that: the remedy is to
-    install the file, whichever entry the caller would start it through.
+    Where ES-DE's scan would not list the path under its name, the answer says
+    so beside whatever verdict, with every token that would make ES-DE scan it
+    (:func:`_unscanned`, D2, D4) — never where the path lies (D6).
 
-    The entry judged is the one *label* names, or without one the entry that
-    would run — chosen by :func:`_chosen_entry`, the choice the launch command
-    makes, so the two questions can never judge different entries for one
-    label. On a system ES-DE loads, a label none of *entries* carries refuses
-    the verdict with that helper's ``launch-command-label-unknown``, whatever
-    the extension: the caller named an entry this system does not have, and a
-    verdict about another entry, or about none, would answer a question nobody
-    asked. A system no layer declares, or one ES-DE skips, is answered below
-    before any label is looked up; where a sealed read leaves an undeclared
-    system to the entries derived from the installed cores, the handle looks
-    the label up among those itself (:meth:`EmuDeck._derived_label_refusal`).
+    On a system ES-DE loads, a label none of *entries* carries refuses the
+    verdict with :func:`_chosen_entry`'s ``launch-command-label-unknown``: the
+    caller named an entry this system does not have. A system no layer
+    declares, or one ES-DE skips, is answered below before any label is looked
+    up; where a sealed read leaves an undeclared system to the entries derived
+    from the installed cores, the handle looks the label up among those itself
+    (:meth:`EmuDeck._derived_label_refusal`).
 
     The unknowns split three ways and only one earns ``system-unknown``: a
     catalogue read **completely** that declares no such system. An incomplete
@@ -22498,8 +22787,8 @@ def _launchability_verdict(
     sealed statement riding the answer is the whole claim. And a declaration
     ES-DE itself would refuse — no ``<extension>`` or no ``<command>`` — is a
     system the frontend runs without (loadConfig skips it,
-    SystemData.cpp:1109-1119 @ v3.4.1), stated as unknown with the reason
-    rather than matched against a list nothing consults.
+    SystemData.cpp:1109-1119 @ v3.4.1): no entry runs and there is no command
+    to judge (D7).
     """
     if declaration is None:
         if not complete:
@@ -22544,42 +22833,10 @@ def _launchability_verdict(
     entry = _chosen_entry(entries, label, system)
     if isinstance(entry, Caveat):
         return VERDICT_UNKNOWN, None, (), None, None, None, (), (entry,)
-    if extension in declaration.extensions:
-        match_source = (
-            f"accept-list match: the file yields {extension!r} (its name from the last dot, "
-            "case preserved — FileSystemUtil.cpp:630-645 @ v3.4.1) and the system's "
-            "<extension> list declares that exact token (the scan compares exactly, "
-            "SystemData.cpp:669)"
-        )
-        if entry is None:
-            return VERDICT_LAUNCHABLE, None, (), None, None, None, (match_source,), ()
-
-        def judged(candidate: EmulatorEntry) -> _Stance:
-            return _entry_reading(
-                candidate,
-                extension=extension,
-                core_info_for=core_info_for,
-                boot_reader=boot_reader,
-                opens_reader=opens_reader,
-            )
-
-        stance, entry_sources, entry_caveats, boots, opens = judged(entry)
-        if stance == _ENTRY_REFUSES:
-            alternatives = tuple(
-                other.label for other in entries if other is not entry and judged(other)[0] == _ENTRY_ACCEPTS
-            )
-            return (
-                VERDICT_ENTRY_NOT_ACCEPTED,
-                entry,
-                alternatives,
-                None,
-                None,
-                opens,
-                (match_source, *entry_sources),
-                entry_caveats,
-            )
-        return VERDICT_LAUNCHABLE, entry, (), None, boots, opens, (match_source, *entry_sources), entry_caveats
-    record = lookup_install_first(system, extension)
+    unscanned = _unscanned(system, declaration.extensions, target, extension)
+    # The record is about a file of the format: a directory is judged by what
+    # the emulator does with it, never by its name (D5).
+    record = lookup_install_first(system, target.extension) if target.kind == _TARGET_FILE else None
     if record is not None:
         return (
             VERDICT_NEEDS_INSTALLATION,
@@ -22588,24 +22845,81 @@ def _launchability_verdict(
             _installers(record.installers, entries),
             None,
             None,
-            (f"install-first format {extension!r} for {system}: {record.statement} — {record.source}",),
-            (),
+            (f"install-first format {target.extension!r} for {system}: {record.statement} — {record.source}",),
+            unscanned,
         )
-    return (
-        VERDICT_NOT_ACCEPTED,
-        None,
-        (),
-        None,
-        None,
-        None,
-        (
-            f"the file yields {extension!r} and the system's <extension> list "
-            f"({' '.join(declaration.extensions)}) carries no such token — the comparison is "
-            "exact and case-sensitive (SystemData.cpp:669 @ v3.4.1), so ES-DE never scans the "
-            "file and nothing here launches it",
-        ),
-        (),
-    )
+    if entry is None:
+        return VERDICT_UNESTABLISHED, None, (), None, None, None, (), unscanned
+
+    def judged(candidate: EmulatorEntry) -> _Stance:
+        return _entry_reading(
+            candidate,
+            target=target,
+            core_info_for=core_info_for,
+            boot_reader=boot_reader,
+            opens_reader=opens_reader,
+        )
+
+    stance, entry_sources, entry_caveats, boots, opens = judged(entry)
+    if stance == _ENTRY_REFUSES:
+        alternatives = tuple(
+            other.label for other in entries if other is not entry and judged(other)[0] == _ENTRY_ACCEPTS
+        )
+        return (
+            VERDICT_ENTRY_NOT_ACCEPTED,
+            entry,
+            alternatives,
+            None,
+            None,
+            opens,
+            entry_sources,
+            (*entry_caveats, *unscanned),
+        )
+    verdict = VERDICT_LAUNCHABLE if stance == _ENTRY_ACCEPTS else VERDICT_UNESTABLISHED
+    return verdict, entry, (), None, boots, opens, entry_sources, (*entry_caveats, *unscanned)
+
+
+def _unscanned(
+    system: str, accepted: tuple[str, ...], target: _LaunchTarget, extension: str
+) -> tuple[Caveat, ...]:
+    """Where ES-DE's scan would not list the content path under its name: how the frontend expects it named (#776 D2).
+
+    ES-DE lists a file whose extension — from the last dot, case preserved — is
+    a token of the system's accept-list, and a directory whose name ends in
+    such a token other than ``.``, which it then takes as one game
+    (populateFolder, es-app/src/SystemData.cpp:663-689 @ v3.4.1, :664-690 in
+    RetroDECK's fork at retrodeck-main-20260926-172324); a directory without one is
+    a folder it walks into. The caveat names every token that would make ES-DE
+    scan the path, in the order of the accept-list as read (D4), and nothing
+    about where the path lies (D6). Where the path's own kind cannot be told,
+    nothing is said.
+    """
+    scanned = target.scanned
+    miss = _scan_miss(accepted, scanned, extension) if scanned is not None else None
+    caveats: tuple[Caveat, ...] = ()
+    if scanned is not None and miss is not None:
+        names, reason = miss
+        what = "a file whose extension is" if scanned == SCANNED_KIND_FILE else "a directory whose name ends in"
+        caveats = (
+            Caveat(
+                CAVEAT_FRONTEND_NAME_UNSCANNED,
+                f"ES-DE's scan would not list this {scanned} under system {system!r} by its name: it lists "
+                f"{what} one of {' '.join(names)} (the accept-list, compared exactly — SystemData.cpp:663-689 @ "
+                "v3.4.1) — the verdict is the emulator's, and this is how the frontend expects the game named",
+                {"system": system, "kind": scanned, "extension": extension, "names": names, "reason": reason},
+            ),
+        )
+    return caveats
+
+
+def _scan_miss(accepted: tuple[str, ...], scanned: str, extension: str) -> tuple[tuple[str, ...], str] | None:
+    """The tokens that would make ES-DE scan the path, and why it does not — ``None`` where it does."""
+    if scanned == SCANNED_KIND_FILE:
+        return None if extension in accepted else (accepted, UNSCANNED_TOKEN_NOT_LISTED)
+    if extension != "." and extension in accepted:
+        return None
+    reason = UNSCANNED_DIRECTORY_WITHOUT_TOKEN if extension == "." else UNSCANNED_TOKEN_NOT_LISTED
+    return tuple(token for token in accepted if token != "."), reason
 
 
 def _installers(emulators: tuple[str, ...], entries: tuple[EmulatorEntry, ...]) -> tuple[Installer, ...]:
@@ -23240,46 +23554,53 @@ class _CatalogueQueries:
 
     @one_question
     def launchable(self, system: str, content_path: str, *, label: str | None = None) -> LaunchabilityAnswer:
-        """Whether *content_path* launches as *system* content here — and why not, when not.
+        """Whether the emulator that would run starts *content_path* as *system* content here — and why not, when not.
 
-        The positive half is a read: the frontend's own accept-list for the
-        system, matched the way ES-DE matches it (the file name's token from
-        its last dot, compared exactly and case-sensitively), with the entry
-        that would run resolved through the same selection hierarchy
-        :meth:`emulators_for` applies. The negative half is the interesting
-        one, and the ``verdict`` keeps its meanings apart:
+        The question is the emulator's, never whether ES-DE's scan lists the
+        path (#776 D1). ES-DE decides which entry runs — the selection
+        hierarchy :meth:`emulators_for` applies — and that entry is judged on
+        what ``%ROM%`` hands it, the way its emulator judges it: a libretro
+        core's claims, RetroArch's archive and directory handling, a standalone
+        loader card, or the emulator's own boot or open of the path. The
+        ``verdict`` keeps its meanings apart:
 
-        - ``not-accepted`` — no token in the accept-list equals this file's
-          extension, so ES-DE never scans it: pick another file, or another
-          form of the content.
+        - ``launchable`` — the entry's reading takes the path.
+        - ``entry-not-accepted`` — the entry is established not to start it;
+          ``alternatives`` names the declared entries established to.
+        - ``unestablished`` — the entry's reading ended without a take or a
+          refusal: an emulator whose loader atlas has not read, a card whose
+          builds disagree, a boot or an open that stops short, a directory a
+          core opens through its own loader, a file the libretro core does
+          not claim (D3, D9, D10); an archive whose contents alone are unread
+          stays ``launchable`` (D11). What the reading did establish
+          (``boots``, ``opens``) stays on the answer.
         - ``needs-installation`` — the format is real content for the platform
           and an installation step has to run before anything launches (a PSN
-          ``.pkg``): recorded world knowledge, cited in the sources.
-          ``installers`` names the emulators that install it, each with the
-          system's entry that runs it — empty where no emulator RetroDECK or
-          EmuDeck sets up installs it.
-        - ``unknown`` — the system is not one this catalogue declares, or the
-          catalogue could not be read: a statement about the look, never about
-          the file, and never collapsed into either 'no'.
+          ``.pkg``): recorded world knowledge, cited in the sources, answered
+          before any entry is asked. ``installers`` names the emulators that
+          install it, each with the system's entry that runs it — empty where
+          no emulator RetroDECK or EmuDeck sets up installs it.
+        - ``unknown`` — the system is not one this catalogue declares or runs,
+          or the catalogue could not be read: a statement about the look,
+          never about the path.
 
-        One boundary is stated on every ``launchable`` verdict rather than
-        silently crossed: the accept-list is declared per *system* and the
-        command per *emulator*, so a file the list accepts may still be one
-        the entry that runs cannot read (issue #66 tracks resolving that per
-        entry).
+        How the frontend expects the game named is stated beside the verdict:
+        where ES-DE's scan would not list the path under its name,
+        ``frontend-name-unscanned`` names every token that would make it, in
+        the accept-list's order (D2, D4), and says nothing about where the
+        path lies (D6).
 
         *label* names the entry to judge instead of the one that would run —
         a caller that starts the game through an entry of its own choice asks
         about that entry. It is chosen the way :meth:`launch_command` chooses
         it, and the verdict, ``entry`` and ``alternatives`` are then about the
-        named entry: ``alternatives`` names the other entries established to
-        take the file. On a system ES-DE loads, a label the system's entries
+        named entry. On a system ES-DE loads, a label the system's entries
         do not carry answers ``unknown`` with ``launch-command-label-unknown``,
         the refusal :meth:`launch_command` gives it. Where the entries are
         derived from the installed cores — a bare RetroArch's, and those of a
         system only the cores declare while EmuDeck's bundled layer is
-        sealed — a label none of them carries is refused the same way, beside
-        the unknown verdict that answer always states.
+        sealed — the verdict stays ``unknown`` (D8), and a label none of them
+        carries is refused the same way beside it.
         """
         answer, version = self._launchable_answer(system, content_path, label)
         return _launchable_with_caveats(
@@ -23408,10 +23729,10 @@ class _CatalogueQueries:
     def _launchable_answer(
         self, system: str, content_path: str, label: str | None
     ) -> tuple[LaunchabilityAnswer, str | None]:
-        # The accept-list lives in the catalogue this arrangement does not
-        # have, so the verdict is unknown for the same reason the entry list
-        # is empty — the refusal is the catalogue question's own, worn by
-        # this answer's shape. A label is looked up the way the launch command
+        # The entries live in the catalogue this arrangement does not have,
+        # so no entry runs and the verdict is unknown for the same reason the
+        # entry list is empty — the refusal is the catalogue question's own,
+        # worn by this answer's shape. A label is looked up the way the launch command
         # looks it up, so one no entry carries is refused here as there.
         answer, version = self._catalogue_answer(system, content_path=content_path)
         chosen = _chosen_entry(answer.entries, label, system)
@@ -24649,15 +24970,18 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
                 lookups.append(self._lookup())
             return lookups[0][1]
 
-        # RPCS3 runs inside this same sandbox, so the frontend's view is the
-        # emulator's, and its trees are the ones every bundled emulator reads.
+        # Every emulator runs inside this same sandbox, so the frontend's view
+        # is the emulator's, and RPCS3's trees are the ones every bundled
+        # emulator reads.
+        target = _launch_target(content_path, view())
         boot_reader = _EntryBootReader(
             self._machine, content_path, view, lambda _entry: _rpcs3_boot_dirs(self._machine, self._xdg_homes())
         )
-        opens_reader = _EntryOpensReader(self._machine, content_path, lambda _entry: self._xdg_homes(), core_reader)
+        opens_reader = _EntryOpensReader(self._machine, target.path, lambda _entry: self._xdg_homes(), core_reader)
         verdict, entry, alternatives, installers, boots, opens, sources, own = _launchability_verdict(
             system=system,
             extension=extension,
+            target=target,
             declaration=declaration,
             entries=entries,
             complete=True,
@@ -27085,7 +27409,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         alone rather than claiming the frontend knows no such system. An
         overlay-declared system answers fully — per ES-DE's merge semantics
         the overlay replaces a same-name bundled system entirely, so its
-        accept-list is exactly what the frontend uses. A label on a system
+        entries and accept-list are exactly what the frontend uses. A label on a system
         only the installed cores declare is looked up among the entries
         derived from them (:meth:`_derived_label_refusal`), where the launch
         command looks it up.
@@ -27125,6 +27449,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
 
         # The emulator runs on the host, as the frontend does, so the host's
         # view is its own; its trees are the ones the variant gate settles.
+        target = _launch_target(content_path, view())
         boot_reader = _EntryBootReader(
             self._machine,
             content_path,
@@ -27132,11 +27457,12 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             lambda entry: _rpcs3_boot_dirs(self._machine, self._launch_gate(entry.command).homes),
         )
         opens_reader = _EntryOpensReader(
-            self._machine, content_path, lambda entry: self._launch_gate(entry.command).homes, core_reader
+            self._machine, target.path, lambda entry: self._launch_gate(entry.command).homes, core_reader
         )
         verdict, entry, alternatives, installers, boots, opens, sources, own = _launchability_verdict(
             system=system,
             extension=extension,
+            target=target,
             declaration=declaration,
             entries=entries,
             complete=snapshot.complete,
@@ -28924,10 +29250,10 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
     def _launchable_answer(
         self, system: str, content_path: str, label: str | None
     ) -> tuple[LaunchabilityAnswer, str | None]:
-        # The derived entries do not change this refusal: the accept-list is
-        # catalogue knowledge, and no core's self-declaration states which
-        # files a frontend would scan — the verdict stays a statement about
-        # the look. A label is the one reason to enumerate them: the launch
+        # The derived entries do not change this refusal: with no frontend
+        # there is no entry that decides which core runs, and choosing one
+        # needs a rule of its own (#776 D8, issue #783) — the verdict stays a
+        # statement about the look. A label is the one reason to enumerate them: the launch
         # command looks a label up among the derived entries, so one none of
         # them carries is refused here as there.
         if label is None:
