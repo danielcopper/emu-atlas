@@ -382,12 +382,40 @@ def _base_rom_locations(**overrides) -> Vector:
     return _vector({"rom_locations": block}, installed=True, rom_locations_query={})
 
 
+def _projection(status: str = "known", **overrides) -> dict[str, Any]:
+    from scripts.validate_vectors import PLATFORM_SOURCES
+
+    found = {"esde": [{"key": "cps1", "relation": "exactMatch"}], "screenscraper": [{"key": "6", "relation": "exactMatch"}]}
+    sources = [
+        {"source": source, "status": "keys" if source in found else "none", "keys": found.get(source, [])}
+        for source in PLATFORM_SOURCES
+    ]
+    known = status == "known"
+    return {
+        "table_version": 1,
+        "pairs": [{"source": "screenscraper", "key": "6", "version": None, "status": status, "sources": sources if known else []}],
+        "intersection_status": "agreed" if known else "unknown",
+        "intersection": sources if known else [],
+        "conflict": [],
+        "caveats": [],
+        **overrides,
+    }
+
+
+def _with_exact_tag(tag: str) -> dict[str, Any]:
+    """The base projection with *tag* an exact ES-DE platform key of the intersection."""
+    projection = _projection()
+    for entry in projection["intersection"]:
+        if entry["source"] == "esde-platform":
+            entry.update(status="keys", keys=[{"key": tag, "relation": "exactMatch"}])
+    return projection
+
+
 def _base_platform_systems(**overrides) -> Vector:
     block = {
         "vocabulary": "screenscraper",
         "value": "6",
-        "platforms": [],
-        "systems": ["cps1"],
+        "translation": _projection(),
         "matches": [
             {"system": "cps1", "status": "declared", "platforms": ["arcade"], "tags_source": "catalogue"}
         ],
@@ -399,6 +427,19 @@ def _base_platform_systems(**overrides) -> Vector:
         installed=True,
         platform_systems_query={"vocabulary": "screenscraper", "value": "6"},
     )
+
+
+def _base_platform_ids(**overrides) -> Vector:
+    block = {
+        "system": "cps1",
+        "status": "declared",
+        "tags_source": "catalogue",
+        "platforms": ["arcade"],
+        "translation": _projection(),
+        "caveats": [],
+        **overrides,
+    }
+    return _vector({"platform_ids": block}, installed=True, platform_ids_query={"system": "cps1"})
 
 
 def _texture(**overrides) -> Vector:
@@ -538,6 +579,20 @@ def _base_aggregate(answers=None) -> Vector:
     )
 
 
+def _base_platform_systems_by_tag() -> Vector:
+    """A declared system the translation does not name, matched through an exact platform tag."""
+    return _base_platform_systems(
+        translation=_with_exact_tag("cps1"),
+        matches=[{"system": "cps1-hack", "status": "declared", "platforms": ["cps1"], "tags_source": "catalogue"}],
+    )
+
+
+def _base_platform_systems_source_unknown() -> Vector:
+    """A pair in a source the table does not include: unknown, stated with platform-source-unknown (#784 D31)."""
+    caveat = {"code": "platform-source-unknown", "data": {"source": "mobygames", "sources": "esde, romm"}}
+    return _base_platform_systems(translation=_projection("unknown"), matches=[], caveats=[caveat])
+
+
 BASES = {
     "plain": _base_plain,
     "placement": _base_placement,
@@ -548,6 +603,9 @@ BASES = {
     "systems": _base_systems,
     "rom_locations": _base_rom_locations,
     "platform_systems": _base_platform_systems,
+    "platform_systems_by_tag": _base_platform_systems_by_tag,
+    "platform_systems_source_unknown": _base_platform_systems_source_unknown,
+    "platform_ids": _base_platform_ids,
     "entry": _base_entry,
     "texture": _base_texture,
     "entry_texture": _base_entry_texture,
@@ -1421,23 +1479,32 @@ ROM_LOCATIONS_CASES = [
          "rom_locations_query and rom_locations expectation", id="pair-rom-locations"),
 ]
 
-# Issue #584: an id resolves through the per-system table or the crosswalk,
-# never both, or states platform-unmapped.
-UNMAPPED = {"code": "platform-unmapped", "data": {"vocabulary": "screenscraper", "value": "6"}}
+# Issue #785: the translation is asserted in its projection, and the answer
+# states platform-unmapped (or platform-source-unknown) exactly when its pair is unknown.
+UNMAPPED = {"code": "platform-unmapped", "data": {"source": "screenscraper", "key": "6"}}
 PLATFORM_SYSTEMS_CASES = [
-    case(_base_platform_systems(systems="cps1"),
-         "expected.systems_for_platform.systems must be a list", id="platform-systems-not-list"),
-    case(_base_platform_systems(platforms=["arcade"]),
-         "resolves platforms or systems, never both", id="platform-systems-and-platforms"),
-    case(_base_platform_systems(systems=["cps1", "cps2"]),
-         "names one system at most", id="platform-systems-two-systems"),
+    case(_base_platform_systems(translation=_projection(conflict=[{"source": "esde", "key": "gb", "version": None}])),
+         "conflict names pairs exactly when", id="platform-systems-conflict-without-status"),
     case(_base_platform_systems(caveats=[UNMAPPED]),
-         "or state platform-unmapped", id="platform-systems-and-unmapped"),
-    case(_base_platform_systems(systems=[], matches=[]),
-         "or state platform-unmapped", id="platform-systems-neither-nor-unmapped"),
-    case(_base_platform_systems(matches=[{"system": "cps2", "status": "declared", "platforms": ["arcade"],
-                                          "tags_source": "catalogue"}]),
-         "matches a system its systems field does not name", id="platform-systems-foreign-match"),
+         "platform-unmapped or platform-source-unknown exactly when its pair is unknown", id="platform-systems-known-and-unmapped"),
+    case(_base_platform_systems(translation=_projection("unknown")),
+         "platform-unmapped or platform-source-unknown exactly when its pair is unknown", id="platform-systems-unknown-not-unmapped"),
+    case(_base_platform_systems(translation=_projection("unknown"), caveats=[UNMAPPED]),
+         "matches nothing for an unknown pair", id="platform-systems-unknown-with-matches"),
+    case(_base_platform_systems(translation=_projection(intersection=[{"source": "esde", "status": "keys", "keys": [{"key": "cps1", "relation": "closeMatch"}]}])),
+         "relation one of", id="platform-systems-foreign-relation"),
+    case(_base_platform_systems(translation=_projection(intersection=[{"source": "mobygames", "status": "none", "keys": []}])),
+         "is not a source of the platform table", id="platform-systems-foreign-source"),
+    case(_base_platform_systems(translation=_projection(intersection=[{"source": "esde", "status": "none", "keys": []}])),
+         "must list every source of the table", id="platform-systems-missing-source"),
+    case(_base_platform_systems(matches=[{"system": "nes", "status": "declared", "platforms": ["nes"], "tags_source": "catalogue"}]),
+         "matches 'nes', which the translation does not name", id="platform-systems-match-the-translation-names-not"),
+    case(_base_platform_systems(translation=_with_exact_tag("cps1"), matches=[{"system": "cps1-hack", "status": "disabled", "platforms": ["cps1"], "tags_source": "catalogue"}]),
+         "matches 'cps1-hack', which the translation does not name", id="platform-systems-disabled-match-by-tag"),
+    case(_base_platform_ids(caveats=[{"code": "platform-unmapped", "data": {"source": "esde", "key": "cps1"}}]),
+         "platform-unmapped exactly when its translation is unknown", id="platform-ids-known-and-unmapped"),
+    case(_base_platform_ids(translation=_projection("unknown")),
+         "platform-unmapped exactly when its translation is unknown", id="platform-ids-unknown-not-unmapped"),
 ]
 
 AGGREGATE_CASES = [

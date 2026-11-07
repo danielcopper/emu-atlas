@@ -257,9 +257,9 @@ class EveryInstallation:
     def systems_for_platform(
         self, vocabulary: str, value: str
     ) -> tuple[InstallationAnswer[PlatformSystemsAnswer], ...]:
-        """Which of each installation's systems answer to a public platform id.
+        """Which of each installation's systems answer to a ``(source, key)`` pair.
 
-        The fan-out this question was made for: the same IGDB id lands on a
+        The fan-out this question was made for: the same RomM slug lands on a
         declared system here, a disabled one there and nothing at all on the
         third arrangement — and all three are true, each with its status.
         """
@@ -268,7 +268,7 @@ class EveryInstallation:
         )
 
     def platform_ids(self, system: str) -> tuple[InstallationAnswer[SystemPlatformsAnswer], ...]:
-        """Each installation's platform tags and public identities for *system*."""
+        """Each installation's platform tags for *system*, with every source's keys for it."""
         return self._ask(lambda installation: installation.platform_ids(system))
 
     def emulators_for(

@@ -8,12 +8,12 @@ which is what makes membership checkable rather than an opinion: a name that
 file does not declare is not an id, however plausible it looks.
 
 What this module deliberately does **not** do is translate. Translation lives
-in :mod:`atlas.platforms` and is split exactly along the boundary rule: which
-public identities a *platform* has is cited world knowledge (the crosswalk
-table), and which platform a *system* belongs to is read off the machine —
-every catalogue system carries a ``<platform>`` tag, and the resolvers read it
-live. What this file adds to that split is the snapshot column: the stated
-build's platform tags per system (``platforms``), the fallback for a system
+in :mod:`atlas.platforms` and is split exactly along the boundary rule: what
+another source calls a system is cited world knowledge (the platform table),
+and which systems an installation declares, and with which ``<platform>``
+tags, is read off the machine — the resolvers read it live. What this file
+adds to that split is the snapshot column: the stated build's platform tags
+per system (``platforms``), the fallback for a system
 whose tags cannot be read live — a sealed catalogue, a system this
 installation does not declare — always marked as vocabulary knowledge when
 used, never passed off as a read.

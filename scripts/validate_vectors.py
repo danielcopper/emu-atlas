@@ -228,9 +228,18 @@ LAUNCHER_STEP_ORDER = (
     "cloud-sync-upload",
     "saves-marker-removal",
 )
-# The platform vocabularies, statuses and tag sources mirror atlas.platforms /
-# atlas.installations — closed sets.
-KNOWN_PLATFORM_VOCABULARIES = {"igdb", "libretro", "screenscraper", "thegamesdb"}
+# The platform table's own columns, read off the packaged table (stdlib json,
+# no atlas import); the statuses, relations and tag sources mirror
+# atlas.platforms / atlas.installations — closed sets.
+PLATFORM_TABLE = REPO_ROOT / "atlas" / "data" / "platform_table.json"
+PLATFORM_SOURCES = list(json.loads(PLATFORM_TABLE.read_text(encoding="utf-8"))["sources"])
+# Why a pair answers unknown: a key its source lacks, or a source the table lacks (#784 D31).
+PLATFORM_UNKNOWN_PAIR_CODES = frozenset({"platform-unmapped", "platform-source-unknown"})
+# The columns a handle reads system names from (a match names one of their keys).
+PLATFORM_CATALOGUE_COLUMNS = frozenset({"esde", "retrodeck", "emudeck"})
+KNOWN_PLATFORM_RELATIONS = {"exactMatch", "broadMatch", "narrowMatch", "relatedMatch"}
+KNOWN_PLATFORM_PAIR_STATUSES = {"known", "unknown"}
+KNOWN_PLATFORM_INTERSECTION_STATUSES = {"agreed", "conflict", "unknown"}
 KNOWN_PLATFORM_STATUSES = {"declared", "disabled", "absent"}
 KNOWN_PLATFORM_TAG_SOURCES = {"catalogue", "vocabulary"}
 # The roots question (issue #612) is answered by two arrangements alone. Its
@@ -796,6 +805,8 @@ KNOWN_CAVEAT_CODES = {
     "entry-directory-holds",
     "frontend-name-unscanned",
     "platform-unmapped",
+    "platform-source-unknown",
+    "platform-source-version-differs",
     "platform-unknown",
     "platform-scraping-ignored",
     # An installation's health findings are caveats with their own stable
@@ -1091,11 +1102,9 @@ def _validate_platform_systems_query(name: str, query: Any) -> None:
             f"{name}: input.platform_systems_query must carry 'vocabulary' and 'value' plus "
             "optional 'installation'"
         )
-    if query["vocabulary"] not in KNOWN_PLATFORM_VOCABULARIES:
-        fail(
-            f"{name}: input.platform_systems_query.vocabulary must be one of "
-            f"{sorted(KNOWN_PLATFORM_VOCABULARIES)}"
-        )
+    # Any source may be asked: one the table does not hold answers unknown.
+    if not isinstance(query["vocabulary"], str) or not query["vocabulary"]:
+        fail(f"{name}: input.platform_systems_query.vocabulary must be a non-empty string")
     if not isinstance(query["value"], str) or not query["value"]:
         fail(f"{name}: input.platform_systems_query.value must be a non-empty string")
     _validate_handle_selector(name, "platform_systems_query", query)
@@ -3766,51 +3775,124 @@ def _validate_catalogue(name: str, catalogue: Any) -> None:
 
 
 def _validate_platform_systems(name: str, answer: Any) -> None:
-    """A forward platform answer: resolved platforms or system, matches with status and provenance."""
-    fields = {"vocabulary", "value", "platforms", "systems", "matches", "caveats"}
+    """A forward platform answer: the projected translation, matches with status and provenance."""
+    fields = {"vocabulary", "value", "translation", "matches", "caveats"}
     if not isinstance(answer, dict) or set(answer) != fields:
         fail(f"{name}: expected.systems_for_platform must carry exactly {sorted(fields)}")
-    if answer["vocabulary"] not in KNOWN_PLATFORM_VOCABULARIES:
-        fail(
-            f"{name}: expected.systems_for_platform.vocabulary must be one of "
-            f"{sorted(KNOWN_PLATFORM_VOCABULARIES)}"
-        )
+    if not isinstance(answer["vocabulary"], str) or not answer["vocabulary"]:
+        fail(f"{name}: expected.systems_for_platform.vocabulary must be a non-empty string")
     if not isinstance(answer["value"], str) or not answer["value"]:
         fail(f"{name}: expected.systems_for_platform.value must be a non-empty string")
-    for field in ("platforms", "systems"):
-        if not isinstance(answer[field], list) or not all(
-            isinstance(p, str) and p for p in answer[field]
-        ):
-            fail(f"{name}: expected.systems_for_platform.{field} must be a list of non-empty strings")
+    validate_translation_projection(f"{name}: expected.systems_for_platform.translation", answer["translation"])
     if not isinstance(answer["matches"], list):
         fail(f"{name}: expected.systems_for_platform.matches must be a list")
     for match in answer["matches"]:
         _validate_platform_match(name, match)
     _validate_caveats(name, answer["caveats"])
-    _validate_platform_resolution(name, answer)
-
-
-def _validate_platform_resolution(name: str, answer: dict[str, Any]) -> None:
-    """The id resolves one way or states platform-unmapped — and a named system bounds the matches.
-
-    The per-system table wins over the crosswalk, so ``systems`` and
-    ``platforms`` are never both filled; one id stands for one system, so
-    ``systems`` holds at most one; and a system named outright is the only
-    system that can match.
-    """
-    platforms, systems = answer["platforms"], answer["systems"]
-    if platforms and systems:
-        fail(f"{name}: expected.systems_for_platform resolves platforms or systems, never both")
-    if len(systems) > 1:
-        fail(f"{name}: expected.systems_for_platform.systems names one system at most")
-    unmapped = any(c["code"] == "platform-unmapped" for c in answer["caveats"])
-    if bool(platforms or systems) == unmapped:
+    unknown = answer["translation"]["pairs"][0]["status"] == "unknown"
+    unmapped = any(c["code"] in PLATFORM_UNKNOWN_PAIR_CODES for c in answer["caveats"])
+    if unknown != unmapped:
         fail(
-            f"{name}: expected.systems_for_platform must resolve platforms or a system, or state "
-            "platform-unmapped — exactly one of the two"
+            f"{name}: expected.systems_for_platform states platform-unmapped or platform-source-unknown exactly "
+            "when its pair is unknown"
         )
-    if systems and any(m["system"] not in systems for m in answer["matches"]):
-        fail(f"{name}: expected.systems_for_platform matches a system its systems field does not name")
+    if unknown and answer["matches"]:
+        fail(f"{name}: expected.systems_for_platform matches nothing for an unknown pair")
+    _validate_platform_match_reasons(name, answer)
+
+
+def _validate_platform_match_reasons(name: str, answer: dict[str, Any]) -> None:
+    """Each match is a system the translation names, or a declared system carrying an exact platform tag of it."""
+    intersection = answer["translation"]["intersection"]
+    named = {k["key"] for s in intersection if s["source"] in PLATFORM_CATALOGUE_COLUMNS for k in s["keys"]}
+    exact = {
+        k["key"] for s in intersection if s["source"] == "esde-platform" for k in s["keys"] if k["relation"] == "exactMatch"
+    }
+    for match in answer["matches"]:
+        if match["system"] in named:
+            continue
+        if match["status"] == "declared" and exact & set(match["platforms"]):
+            continue
+        fail(
+            f"{name}: expected.systems_for_platform matches {match['system']!r}, which the translation does not name "
+            "and which is no declared system carrying an exact platform tag of it"
+        )
+
+
+def _validate_projected_source(where: str, entry: Any) -> None:
+    if not isinstance(entry, dict) or set(entry) != {"source", "status", "keys"}:
+        fail(f"{where}: each entry carries exactly source, status and keys")
+    if entry["source"] not in PLATFORM_SOURCES:
+        fail(f"{where}: {entry['source']!r} is not a source of the platform table")
+    if entry["status"] not in {"keys", "none"} or (entry["status"] == "keys") != bool(entry["keys"]):
+        fail(f"{where}.{entry['source']}: status is 'keys' exactly when keys are listed, else 'none'")
+    for key in entry["keys"]:
+        if (
+            not isinstance(key, dict)
+            or set(key) != {"key", "relation"}
+            or not isinstance(key["key"], str)
+            or key["relation"] not in KNOWN_PLATFORM_RELATIONS
+        ):
+            fail(
+                f"{where}.{entry['source']}: each key is {{key, relation}}, relation one of "
+                f"{sorted(KNOWN_PLATFORM_RELATIONS)}"
+            )
+
+
+def _validate_projected_sources(where: str, sources: Any, *, every: bool) -> None:
+    """Per source its status and keys — every source of the table, in its order, when *every*."""
+    if not isinstance(sources, list):
+        fail(f"{where} must be a list of {{source, status, keys}}")
+    for entry in sources:
+        _validate_projected_source(where, entry)
+    if every and [entry["source"] for entry in sources] != PLATFORM_SOURCES:
+        fail(f"{where} must list every source of the table, in table order")
+
+
+def _validate_projected_pair(where: str, pair: Any) -> None:
+    fields = {"source", "key", "version", "status", "sources"}
+    if not isinstance(pair, dict) or set(pair) != fields:
+        fail(f"{where} must carry exactly {sorted(fields)}")
+    if not isinstance(pair["source"], str) or not isinstance(pair["key"], str):
+        fail(f"{where}: source and key are strings")
+    if pair["version"] is not None and not isinstance(pair["version"], str):
+        fail(f"{where}: version is a string or null")
+    if pair["status"] not in KNOWN_PLATFORM_PAIR_STATUSES:
+        fail(f"{where}: status must be one of {sorted(KNOWN_PLATFORM_PAIR_STATUSES)}")
+    known = pair["status"] == "known"
+    if not known and pair["sources"] != []:
+        fail(f"{where}: an unknown pair carries no sources")
+    if known:
+        _validate_projected_sources(f"{where}.sources", pair["sources"], every=True)
+
+
+def validate_translation_projection(where: str, projection: Any) -> None:
+    """A translation in the projection both vector families assert (vectors/README.md)."""
+    fields = {"table_version", "pairs", "intersection_status", "intersection", "conflict", "caveats"}
+    if not isinstance(projection, dict) or set(projection) != fields:
+        fail(f"{where} must carry exactly {sorted(fields)}")
+    if not isinstance(projection["table_version"], int) or projection["table_version"] < 1:
+        fail(f"{where}.table_version must be a positive integer")
+    if not isinstance(projection["pairs"], list) or not projection["pairs"]:
+        fail(f"{where}.pairs must be a non-empty list")
+    for index, pair in enumerate(projection["pairs"]):
+        _validate_projected_pair(f"{where}.pairs[{index}]", pair)
+    status = projection["intersection_status"]
+    if status not in KNOWN_PLATFORM_INTERSECTION_STATUSES:
+        fail(f"{where}.intersection_status must be one of {sorted(KNOWN_PLATFORM_INTERSECTION_STATUSES)}")
+    agreed = status == "agreed"
+    if not agreed and projection["intersection"] != []:
+        fail(f"{where}: the intersection lists sources exactly when it is agreed")
+    if agreed:
+        _validate_projected_sources(f"{where}.intersection", projection["intersection"], every=True)
+    conflict = projection["conflict"]
+    if not isinstance(conflict, list) or not all(
+        isinstance(p, dict) and set(p) == {"source", "key", "version"} for p in conflict
+    ):
+        fail(f"{where}.conflict must be a list of {{source, key, version}}")
+    if (status == "conflict") != bool(conflict):
+        fail(f"{where}: conflict names pairs exactly when the intersection is a conflict")
+    _validate_caveats(where, projection["caveats"])
 
 
 def _validate_platform_match(name: str, match: Any) -> None:
@@ -3830,8 +3912,8 @@ def _validate_platform_match(name: str, match: Any) -> None:
 
 
 def _validate_platform_ids(name: str, answer: Any) -> None:
-    """A reverse platform answer: the tags, their identities, and the qualifying status."""
-    fields = {"system", "status", "tags_source", "platforms", "identities", "caveats"}
+    """A reverse platform answer: the tags, the projected translation, and the qualifying status."""
+    fields = {"system", "status", "tags_source", "platforms", "translation", "caveats"}
     if not isinstance(answer, dict) or set(answer) != fields:
         fail(f"{name}: expected.platform_ids must carry exactly {sorted(fields)}")
     if not isinstance(answer["system"], str) or not answer["system"]:
@@ -3847,41 +3929,12 @@ def _validate_platform_ids(name: str, answer: Any) -> None:
         isinstance(p, str) and p for p in answer["platforms"]
     ):
         fail(f"{name}: expected.platform_ids.platforms must be a list of non-empty strings")
-    if not isinstance(answer["identities"], list):
-        fail(f"{name}: expected.platform_ids.identities must be a list")
-    for identity in answer["identities"]:
-        _validate_platform_identity(name, identity)
+    validate_translation_projection(f"{name}: expected.platform_ids.translation", answer["translation"])
     _validate_caveats(name, answer["caveats"])
-
-
-def _validate_igdb_identity(name: str, entry: Any) -> None:
-    if (
-        not isinstance(entry, dict)
-        or set(entry) != {"id", "slug", "name"}
-        or not isinstance(entry["id"], int)
-        or not isinstance(entry["slug"], str)
-        or not isinstance(entry["name"], str)
-    ):
-        fail(f"{name}: each igdb identity must be {{'id': int, 'slug': str, 'name': str}}")
-
-
-def _validate_platform_identity(name: str, identity: Any) -> None:
-    fields = {"platform", "igdb", "libretro", "screenscraper", "thegamesdb"}
-    if not isinstance(identity, dict) or set(identity) != fields:
-        fail(f"{name}: each platform identity must carry exactly {sorted(fields)}")
-    if not isinstance(identity["platform"], str) or not identity["platform"]:
-        fail(f"{name}: an identity's platform must be a non-empty string")
-    if not isinstance(identity["igdb"], list):
-        fail(f"{name}: an identity's igdb must be a list")
-    for entry in identity["igdb"]:
-        _validate_igdb_identity(name, entry)
-    if not isinstance(identity["libretro"], list) or not all(
-        isinstance(n, str) and n for n in identity["libretro"]
-    ):
-        fail(f"{name}: an identity's libretro must be a list of non-empty strings")
-    for key in ("screenscraper", "thegamesdb"):
-        if identity[key] is not None and not isinstance(identity[key], int):
-            fail(f"{name}: an identity's {key} must be an integer or null")
+    unknown = answer["translation"]["intersection_status"] == "unknown"
+    unmapped = any(c["code"] in PLATFORM_UNKNOWN_PAIR_CODES for c in answer["caveats"])
+    if unknown != unmapped:
+        fail(f"{name}: expected.platform_ids states platform-unmapped exactly when its translation is unknown")
 
 
 def _validate_launchable(name: str, answer: Any) -> None:
@@ -4468,12 +4521,50 @@ def validate_machines_vector(vector: dict[str, Any]) -> None:
     _validate_expected(name, vector.get("expected"), vector.get("input", {}))
 
 
+# The platform-table family (issue #785): pairs in, the projected translation
+# out. Data only — no machine — so a client can run it against its reading of
+# the vendored table (#784 D27). Its schema counts its own generations.
+PLATFORM_TABLE_SCHEMA = 1
+
+
+def _validate_pairs(name: str, pairs: Any) -> None:
+    if not isinstance(pairs, list) or not pairs:
+        fail(f"{name}: input.pairs must be a non-empty list")
+    for pair in pairs:
+        if (
+            not isinstance(pair, list)
+            or len(pair) not in (2, 3)
+            or not all(isinstance(part, str) and part for part in pair)
+        ):
+            fail(f"{name}: each input pair is [source, key] or [source, key, version], all non-empty strings")
+
+
+def validate_platform_table_vector(vector: dict[str, Any]) -> None:
+    name = vector["name"]
+    if not set(vector) <= {"name", "rationale", "input", "expected"} or not {"input", "expected"} <= set(vector):
+        fail(f"{name}: vector keys must be name/rationale/input/expected")
+    if "rationale" in vector and not isinstance(vector["rationale"], str):
+        fail(f"{name}: rationale must be a string when present")
+    inp = vector["input"]
+    if not isinstance(inp, dict) or set(inp) != {"pairs"}:
+        fail(f"{name}: input must carry exactly 'pairs'")
+    _validate_pairs(name, inp["pairs"])
+    validate_translation_projection(f"{name}: expected", vector["expected"])
+    asked = [[pair[0], pair[1].strip(), pair[2] if len(pair) == 3 else None] for pair in inp["pairs"]]
+    echoed = [[p["source"], p["key"], p["version"]] for p in vector["expected"]["pairs"]]
+    if asked != echoed:
+        fail(f"{name}: expected.pairs must echo the asked pairs in order")
+
+
 FAMILIES = {
-    "machines": ("machines", validate_machines_vector),
+    "machines": ("machines", validate_machines_vector, SCHEMA),
+    "platform-table": ("platform-table", validate_platform_table_vector, PLATFORM_TABLE_SCHEMA),
 }
 
 
-def validate_file(path: Path, family_name: str, validate_vector, seen_inputs: dict[str, str]) -> int:
+def validate_file(
+    path: Path, family_name: str, validate_vector, seen_inputs: dict[str, str], schema: int = SCHEMA
+) -> int:
     try:
         data = json.loads(path.read_text())
     except json.JSONDecodeError as exc:
@@ -4483,8 +4574,8 @@ def validate_file(path: Path, family_name: str, validate_vector, seen_inputs: di
             fail(f"missing top-level key {key!r}")
     if data["family"] != family_name:
         fail(f"family must be {family_name!r}, got {data['family']!r}")
-    if data["schema"] != SCHEMA:
-        fail(f"schema must be {SCHEMA}, got {data['schema']!r}")
+    if data["schema"] != schema:
+        fail(f"schema must be {schema}, got {data['schema']!r}")
     names: set[str] = set()
     for idx, vector in enumerate(data["vectors"]):
         name = vector.get("name")
@@ -4506,7 +4597,7 @@ def validate_file(path: Path, family_name: str, validate_vector, seen_inputs: di
 def main() -> None:
     total = 0
     file_count = 0
-    for directory, (family_name, validate_vector) in sorted(FAMILIES.items()):
+    for directory, (family_name, validate_vector, schema) in sorted(FAMILIES.items()):
         files = sorted((REPO_ROOT / "vectors" / directory).glob("*.json"))
         if not files:
             print(f"no vector files found under vectors/{directory}/")
@@ -4514,7 +4605,7 @@ def main() -> None:
         seen_inputs: dict[str, str] = {}
         for path in files:
             try:
-                total += validate_file(path, family_name, validate_vector, seen_inputs)
+                total += validate_file(path, family_name, validate_vector, seen_inputs, schema)
             except VectorError as exc:
                 print(f"{path.relative_to(REPO_ROOT)}: {exc}")
                 raise SystemExit(1) from None

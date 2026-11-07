@@ -52,7 +52,7 @@ from .contract import (
     systems_contract,
     texture_answer_contract,
 )
-from .platforms import KNOWN_PLATFORM_VOCABULARIES
+from .platforms import FOLDER_SOURCE
 from .detect import detect
 from .every_installation import EveryInstallation
 from .installations import EmuDeck, Installation, RetroDeck
@@ -312,21 +312,26 @@ def build_parser() -> argparse.ArgumentParser:
     for_platform = commands.add_parser(
         "systems-for-platform",
         parents=[common, selecting],
-        help="which systems here answer to a public platform id",
+        help="which systems here answer to a (source, key) pair of the platform table",
     )
+    # Not a closed choice: a source the table does not hold is a question with
+    # an answer (unknown, platform-source-unknown), as it is for the library. The help
+    # names examples rather than the list, so building the parser reads no table.
     for_platform.add_argument(
         "vocabulary",
-        choices=KNOWN_PLATFORM_VOCABULARIES,
-        help="the public vocabulary the id comes from",
+        help=(
+            "the source the key comes from — a column of the platform table, such as esde, "
+            f"romm or screenscraper, or '{FOLDER_SOURCE}' for a bare folder name"
+        ),
     )
     for_platform.add_argument(
-        "value", help="the id in that vocabulary, e.g. an IGDB slug or numeric id"
+        "value", help="the key in that source, e.g. a RomM slug or a ScreenScraper id"
     )
 
     platform_ids = commands.add_parser(
         "platform-ids",
         parents=[common, selecting],
-        help="a system's platform tags and their public identities",
+        help="a system's platform tags and every source's keys for it",
     )
     platform_ids.add_argument("system", help=_SYSTEM_ID_HELP)
 

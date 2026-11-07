@@ -27,6 +27,7 @@ from atlas import placement, retroarch_cfg
 from atlas.firmware import CORE_DECLARATION_STATES
 from atlas.machine import FixtureMachine
 from tests.corpus import caveat_blocks, expected_blocks
+from tests.platform_projection import with_projected_translation
 from scripts import validate_vectors
 from atlas.contract import (
     catalogue_contract,
@@ -167,14 +168,14 @@ def _roots(installs, query, name):
 
 def _systems_for_platform(installs, query, name):
     install = _select(installs, query.get("installation"), name)
-    return platform_systems_contract(
-        install.systems_for_platform(query["vocabulary"], query["value"])
+    return with_projected_translation(
+        platform_systems_contract(install.systems_for_platform(query["vocabulary"], query["value"]))
     )
 
 
 def _platform_ids(installs, query, name):
     install = _select(installs, query.get("installation"), name)
-    return system_platforms_contract(install.platform_ids(query["system"]))
+    return with_projected_translation(system_platforms_contract(install.platform_ids(query["system"])))
 
 
 def _launchable(installs, query, name):
@@ -416,7 +417,12 @@ class TestEveryCodeTheCorpusCanShowIsInTheCorpus:
     # tests/test_oddities.py::TestAModeWhosePrimaryGroupDeclaresNoFiles. The
     # sibling test below asserts the moment a vector covers either one, and a
     # human then removes its entry.
-    UNREACHABLE_BY_FIXTURE = {"marker-missing", "filenames-unverified"}
+    # 'platform-source-version-differs' rides a pair that states its source's
+    # version, and no handle question takes one in this cut (#785; the pair
+    # argument on every question is #786): the platform-table vectors and
+    # tests/test_platforms.py::TestTheLookup::test_a_stated_version_the_table_does_not_hold_is_a_caveat
+    # hold it.
+    UNREACHABLE_BY_FIXTURE = {"marker-missing", "filenames-unverified", "platform-source-version-differs"}
 
     def _exported_codes(self) -> set[str]:
         families = ("CAVEAT_", "HEALTH_ISSUE_", "UNRESOLVED_")

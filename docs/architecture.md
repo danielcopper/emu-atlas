@@ -1,8 +1,8 @@
 # Architecture — the map
 
-**Stand: 2026-08-20** — the platform crosswalk, the AppImage seam, the CLI and the launcher route. This document is
-updated with the surface: it describes what is there today, and a change to the API is expected to change it. The spec
-is `DESIGN.md` — that one says why. This one says what is where.
+**Stand: 2026-11-08** — the platform table, the AppImage seam, the CLI and the launcher route. This document is updated
+with the surface: it describes what is there today, and a change to the API is expected to change it. The spec is
+`DESIGN.md` — that one says why. This one says what is where.
 
 ## The layers
 
@@ -244,14 +244,14 @@ classDiagram
     }
     class PlatformSystemsAnswer {
         +vocabulary / value
-        +platforms: tuple
+        +translation: PlatformTranslation
         +matches: tuple~PlatformSystemMatch~
         +caveats: tuple~Caveat~
     }
     class SystemPlatformsAnswer {
         +system / status / tags_source
+        +translation: PlatformTranslation
         +platforms: tuple
-        +identities: tuple~PlatformIdentities~
         +caveats: tuple~Caveat~
     }
     class LaunchabilityAnswer {
@@ -309,7 +309,7 @@ classDiagram
 | porting the resolver                | the Tier-2 modules, as the reference for what each parser reads                                          |
 | reading a cfg / catalogue alone     | `from atlas.retroarch_cfg import …`, `from atlas.esde import parse_es_systems`                           |
 | validating your own system map      | `import atlas` — `from_esde_system`, `known_systems`                                                     |
-| arriving from a platform id         | the two platform questions on any handle; `from atlas.platforms import …` for the raw identity table     |
+| arriving from a platform id         | `atlas.translate(pairs)`, or the two platform questions on any handle for the machine half               |
 | checking packaged knowledge         | `from atlas.oddities import lookup_card`, `from atlas.textures import …`, `from atlas.evidence import …` |
 
 The rule behind the table: if a client acts on it, it is in `atlas`; if it exists so a port or a test can reproduce the

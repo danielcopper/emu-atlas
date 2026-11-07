@@ -15,11 +15,13 @@ equality.** Nothing here is a description of an answer — it is the answer.
 vectors/<family>/*.json
 ```
 
-One family today, `machines`. Every file carries a header and its vectors:
+Two families: `machines`, a whole machine as plain data with the answers atlas must give on it, and `platform-table`,
+pairs in and the platform table's translation out (see _The platform-table family_ below). Every file carries a header
+and its vectors:
 
 | key           | meaning                                                   |
 | ------------- | --------------------------------------------------------- |
-| `family`      | must match the directory (`machines`)                     |
+| `family`      | must match the directory (`machines`, `platform-table`)   |
 | `schema`      | the generation of the fixture grammar — **5** (see below) |
 | `spec`        | which document this file's guarantees come from           |
 | `description` | what this file covers                                     |
@@ -250,8 +252,8 @@ Each expectation is paired with the input key that asks it. Several may appear i
 | `soft_patch_query`       | `soft_patch_candidates`       | which patch files this content would be patched with        |
 | `catalogue_query`        | `catalogue`                   | which emulators can launch this system                      |
 | `systems_query`          | `systems`                     | which systems does the frontend declare                     |
-| `platform_systems_query` | `systems_for_platform`        | which systems here answer to a public platform id           |
-| `platform_ids_query`     | `platform_ids`                | which public platform ids belong to this system             |
+| `platform_systems_query` | `systems_for_platform`        | which systems here a (source, key) pair names               |
+| `platform_ids_query`     | `platform_ids`                | every source's keys for this system                         |
 | `launchable_query`       | `launchable`                  | does this file launch as this system's content, and why not |
 | `rom_location_query`     | `rom_location`                | where do this system's ROMs live                            |
 | `rom_locations_query`    | `rom_locations`               | where do the ROMs of every listed system live               |
@@ -305,10 +307,10 @@ records for that file can decide which entry comes first.
 `identify_query` states the content by at least one of `md5` and `sha1` (non-empty strings) and `size` (an integer); a
 `size` alone names no identity and is answered with a caveat rather than refused.
 
-`platform_systems_query` carries `vocabulary` and `value`: the vocabulary is one of `igdb`, `libretro`, `screenscraper`
-and `thegamesdb`, a closed set, so any other is refused; the value is the id in that vocabulary as a string, and a
-numeric id is written as its decimal string, never as a JSON number. `platform_ids_query` asks the reverse direction and
-carries `system` alone.
+`platform_systems_query` carries `vocabulary` and `value`: the vocabulary is a source of the platform table, or `folder`
+for a bare folder name — any other string is a legal question, answered `unknown` with `platform-source-unknown`; the
+value is that source's key as a string, and a numeric id is written as its decimal string, never as a JSON number.
+`platform_ids_query` asks the reverse direction and carries `system` alone.
 
 `cwd` — the working folder the launch will use, an absolute path — may ride only the questions whose answer can depend
 on it: `savefile_query`, `entry_savefile_query`, `savestate_query`, `entry_savestate_query`, `save_portability_query`,
@@ -356,16 +358,38 @@ installation — the marker, root, saves root, BIOS folder and companion config 
 `catalogue-invalid` on the answers that read the catalogue, while `content-tree-unwired` and the ROM root findings stay
 in `installations[].health` alone. They keep their own codes in both places — nothing wraps them.
 
+The two platform answers carry a `translation`, and it is asserted in the **projection** the platform-table family uses:
+the serialized translation with every key's `citations` and the `source_versions` list removed. Everything else stays —
+the table version, per pair its echo, status and every source's `{source, status, keys}` in table order, each key
+`{key, relation}`, the intersection status and its sources, the conflict pairs, the caveats. The citations are held by
+the loader, which refuses an uncited mapping; the pinned versions by the reference suite.
+
 Caveats are `{code, data}` with `data` a flat object of strings. The codes are a closed vocabulary; so are root kinds,
 granularities, file-set states, holes (`needs`), emulator kinds, declaration states, system sources, path kinds and
 firmware needs. `scripts/validate_vectors.py` carries all of them, and the reference suite checks that list against
 atlas's own exports in both directions.
+
+## The platform-table family
+
+`vectors/platform-table/*.json` (family `platform-table`, schema **1**, counted apart from the machines' schema) pins
+the packaged platform table itself, without a machine: a client that vendors the table runs these against its own
+reading of it (#784 D27), and a release that moved, added or dropped a mapping shows up here as a changed expectation. A
+vector is `{name, rationale?, input, expected}`:
+
+- `input` is `{"pairs": [[source, key] | [source, key, version], …]}` — the pairs `atlas.translate` is asked with, every
+  part a non-empty string;
+- `expected` is the projection above: `table_version`, `pairs` (each echoing the asked `source`, `key` — surrounding
+  whitespace stripped — and `version`, then `status` and, for a known pair, every source in table order with its status
+  `keys` or `none` and its keys as `{key, relation}`), `intersection_status` (`agreed`, `conflict`, `unknown`),
+  `intersection` (every source, exactly when agreed), `conflict` (the known pairs, exactly when there is one) and
+  `caveats`.
 
 ## Running them
 
 ```bash
 python scripts/validate_vectors.py     # shape: does every vector state a legal machine and a legal answer
 python -m pytest tests/test_machine_vectors.py    # conformance: does the resolver answer exactly this
+python -m pytest tests/test_platform_table_vectors.py    # the platform table, pairs in, projection out
 ```
 
 The validator ships beside the corpus and runs on a bare Python — no atlas import, no dependencies, and it finds the

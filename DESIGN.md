@@ -452,41 +452,51 @@ not a data set to re-ship — and each release publishes them as a versioned art
 
 ## Vocabulary
 
-**The canonical ids are ES-DE's system names**, packaged and cited (`atlas/data/system_ids.json`, read by
-`atlas.systems`). ES-DE's vocabulary is the canonical one because it is the vocabulary a frontend catalogue on the
-machine actually declares — the questions answer about names that exist there, not about names atlas invented — and the
-id set is pinned to the `es_systems.xml` of a stated build, so membership is checkable rather than an opinion. A test
-parses that build's file and asserts set-identity, which is what keeps the snapshot honest as the build moves.
+**The ids the questions about a system take are ES-DE's system names**, packaged and cited
+(`atlas/data/system_ids.json`, read by `atlas.systems`) — one column of the platform table below, not a canonical id of
+atlas's own, and the pair `("esde", name)` once every question takes a pair (#786). ES-DE's names are the ones the
+questions take because they are the vocabulary a frontend catalogue on the machine actually declares — the questions
+answer about names that exist there, not about names atlas invented — and the id set is pinned to the `es_systems.xml`
+of a stated build, so membership is checkable rather than an opinion. A test parses that build's file and asserts
+set-identity, which is what keeps the snapshot honest as the build moves.
 
-**atlas carries no foreign product's system vocabulary.** No library manager's system slugs as the ids its questions
-take — not as a table, not as a translator. Such a per-product naming dialect is world knowledge atlas cannot check
-against any machine: it is versioned by someone else, it changes without telling atlas, and shipping it would put the
-mapping two releases away from the client that depends on it, so a wrong entry would be atlas's bug to ship and the
-client's bug to suffer.
+_Settled (issue #784, cut #785):_ **one cited table maps the keys of every included source onto one another, and atlas
+adds no vocabulary of its own.** Its unit is a _row_: one system at the finest distinction any source makes — the common
+refinement of the sources' partitions, so ES-DE's `genesis`, `megadrive` and `megadrivejp` are three rows because ES-DE
+keeps them apart, while RomM's `genesis` slug and Batocera's `megadrive` key each cover all three. A key maps to a set
+of rows; two keys of one source for the same system (a renamed folder, a duplicate slug) are two keys on one row, and a
+key no other source names is a row of its own, so "no key in any other source" is an answer. Rows are internal to the
+loader: their working names appear in no answer, API, CLI output or vector.
 
-So a product's own system mapping belongs to whoever holds that vocabulary, and atlas gives them the target set to check
-it against: `known_systems()` and `from_esde_system(name)`. The worked example is Tender, whose ADR-0010 owns its
-RomM-slug normalization; validating its targets against `known_systems()` is what turns "this platform answers nothing"
-from a silent miss into a failing test on the side that can fix it. The failure being prevented is one specific one: an
-identifier no catalogue declares reaches a question, the question answers "no emulator for that system", and a
-vocabulary mistake has been read as a fact about the machine.
+A key covers each of its rows whole, unless a reviewed override says it covers only part of a row or overlaps it. The
+relation of one source's key to the asked one follows from the row sets and those overrides together, and is stated in
+the SKOS mapping names: `exactMatch` for the asked key itself and for a key covering the same systems whole,
+`broadMatch` when the other key wholly covers the asked one and more (its vocabulary is coarser there), `narrowMatch`
+when the asked key wholly covers the other (finer — several keys are a fact about that vocabulary, never uncertainty),
+and `relatedMatch` otherwise: an overlap, as a romset has with a system, or two parts of one system. Each relation is
+the inverse of the way back. A question takes `(source, key)` pairs; the answer gives, per pair and for the intersection
+of all pairs, every source's keys with relation and citation, or `none`; a pair the table does not hold is `unknown`,
+and pairs that share no system are a `conflict` naming them — atlas picks none. A bare folder name is the union of what
+every folder vocabulary means by it.
 
-_Settled (issue #68):_ **public platform identities are a different case**, and atlas carries them. Every catalogue
-system declares a `<platform>` tag — a live fact of the machine, ES-DE's own scraping vocabulary — and which public
-identities correspond to a platform (IGDB by numeric id, since slugs drift under a stable id; libretro's names; the
-ScreenScraper and TheGamesDB ids ES-DE's own scrapers map) is world knowledge exactly like a firmware hash: versioned,
-source-cited, regenerated from pinned upstreams (`atlas/data/platform_ids_crosswalk.json`, generator in `scripts/`). The
-split holds the boundary rule on both halves — which tags a system carries is always read, never tabled; what a platform
-id publicly _is_ lives nowhere on any machine and is packaged with provenance. What stays out is unchanged: per-product
-system slugs (RomM publishes its own `igdb_slug` per platform, so a client joins on the IGDB id and needs no RomM column
-here), and anything atlas would have to invent rather than cite.
+The sources are cited columns, each a pinned upstream with its licence and the owner's decision to ship it recorded in
+`atlas/data/SOURCES.md`: ES-DE's system names and platform ids, RetroDECK's and EmuDeck's catalogues, RomM's slugs and
+folder aliases, the libretro database names the cores' `.info` files declare, Batocera, KNULLI and ROCKNIX, and the
+IGDB, ScreenScraper and TheGamesDB ids. A server product's slugs are a source like any other — versioned and cited, no
+longer an excluded namespace. Identifiers come only from projects that already republish them under MIT or AGPL, never
+from the providers — the scraper ids from ES-DE's own scraper maps and RomM's ScreenScraper list (which adds the ids
+ES-DE's map lacks, such as Doom and the CPS boards), the IGDB ids and slugs from RomM's IGDB platform list — with their
+notices, and Wikidata (CC0) is a cross-check and a second citation, not the origin. `scripts/generate_platform_table.py`
+derives every mechanical join from the pins and names its rule on each mapping; the hand judgements sit in
+`atlas/data/platform_overrides.json`, each with a reason and anchored on a `(source, key)` pair, and the loader applies
+them, citing each by its anchors' own citations and whatever further evidence it states.
+`scripts/check_platform_table.py` is the release check: every key placed or excluded with a reason, every row classified
+by kind; the loader itself refuses an uncited mapping and a relation other than its key's row count implies.
 
-_Settled (issue #584):_ a public id can stand for one **system** whose tag it shares with others — ScreenScraper's CPS1
-id names `cps1`, which ES-DE tags `arcade` like every arcade system — and a platform-keyed row would hand it to all of
-them. Such ids sit in a second table keyed by system (`atlas/data/platform_ids_by_system.json`, same provenance rules,
-its own generator), and an id listed there wins over the crosswalk: the forward answer names the system in `systems` and
-leaves `platforms` empty, and the system is qualified by this machine like any tag match. A row may name only an atlas
-system id, so a system's `absent` match always has vocabulary tags to carry.
+Stability is promised for the sources' keys as they stand at the pinned versions and for the table version, nothing
+else: every answer states the table version and each source's pinned version, and a pair whose stated source version
+differs carries a caveat. The machine half of the platform question — which of the named systems this installation
+declares — stays read live (`systems_for_platform`, `platform_ids`).
 
 _Settled (item 20b):_ the firmware route speaks the same ids everywhere. The `systemname` map's values are ES-DE ids
 (map version 2, `atlas/firmware.py` — per-entry citations into the deployed `es_systems.xml` and the shipped `.info`

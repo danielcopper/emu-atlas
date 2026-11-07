@@ -66,7 +66,7 @@ from .installations import (
 )
 from .launch import Launcher
 from .launch_command import LaunchCommand, LauncherScript
-from .platforms import PlatformIdentities
+from .platforms import PlatformSourceKeys, PlatformTranslation
 from .placement import (
     Caveat,
     FileGroup,
@@ -882,22 +882,68 @@ def systems_contract(answer: SystemsAnswer) -> dict[str, Any]:
     }
 
 
-def platform_systems_contract(answer: PlatformSystemsAnswer) -> dict[str, Any]:
-    """The stable form of a forward platform answer — resolved platforms or system, matches, statuses.
+def _source_keys_contract(answers: Sequence[PlatformSourceKeys]) -> list[dict[str, Any]]:
+    return [
+        {
+            "source": a.source,
+            "status": a.status,
+            "keys": [
+                {"key": k.key, "relation": k.relation, "citations": list(k.citations)}
+                for k in a.keys
+            ],
+        }
+        for a in answers
+    ]
 
-    ``systems`` names the one system an id stands for alone (the per-system
-    table, which wins), ``platforms`` what the crosswalk resolved it to
-    otherwise — never both. Both empty means the id resolved to nothing and
-    the ``platform-unmapped`` caveat says so; an empty ``matches`` under
-    resolved platforms is the different statement that nothing on this
-    machine answers to a real platform. Every match carries its status and
-    where its tags came from — the two fields a consumer branches on.
+
+def platform_translation_contract(translation: PlatformTranslation) -> dict[str, Any]:
+    """The stable form of a platform translation — per pair, the intersection, the versions.
+
+    ``sources`` under each pair and ``intersection`` list every source in table
+    order, each with its status (``keys`` or ``none``) and its keys; every key
+    carries its relation to what was asked and its citations. An ``unknown``
+    pair carries no sources. ``conflict`` names the known pairs that share no
+    system. The table version and each source's pinned version ride along
+    (#784 D11).
+    """
+    return {
+        "table_version": translation.table_version,
+        "source_versions": [
+            {"source": v.source, "version": v.version} for v in translation.source_versions
+        ],
+        "pairs": [
+            {
+                "source": p.source,
+                "key": p.key,
+                "version": p.version,
+                "status": p.status,
+                "sources": _source_keys_contract(p.sources),
+            }
+            for p in translation.pairs
+        ],
+        "intersection_status": translation.intersection_status,
+        "intersection": _source_keys_contract(translation.intersection),
+        "conflict": [
+            {"source": p.source, "key": p.key, "version": p.version} for p in translation.conflict
+        ],
+        "caveats": _caveats_contract(translation.caveats),
+    }
+
+
+def platform_systems_contract(answer: PlatformSystemsAnswer) -> dict[str, Any]:
+    """The stable form of a forward platform answer — the translation, the matches, their statuses.
+
+    ``translation`` is the table's answer for the asked pair; ``matches`` is
+    this installation's half. An empty ``matches`` under a known pair is the
+    statement that nothing on this machine answers to a real system; an
+    unknown pair states the translation's own ``platform-unmapped`` or
+    ``platform-source-unknown``. Every match carries its status
+    and where its tags came from — the two fields a consumer branches on.
     """
     return {
         "vocabulary": answer.vocabulary,
         "value": answer.value,
-        "platforms": list(answer.platforms),
-        "systems": list(answer.systems),
+        "translation": platform_translation_contract(answer.translation),
         "matches": [
             {
                 "system": m.system,
@@ -911,32 +957,21 @@ def platform_systems_contract(answer: PlatformSystemsAnswer) -> dict[str, Any]:
     }
 
 
-def _platform_identities_contract(identities: PlatformIdentities) -> dict[str, Any]:
-    return {
-        "platform": identities.platform,
-        "igdb": [{"id": i.id, "slug": i.slug, "name": i.name} for i in identities.igdb],
-        "libretro": list(identities.libretro),
-        "screenscraper": identities.screenscraper,
-        "thegamesdb": identities.thegamesdb,
-    }
-
-
 def system_platforms_contract(answer: SystemPlatformsAnswer) -> dict[str, Any]:
-    """The stable form of a reverse platform answer — the tags and their identities.
+    """The stable form of a reverse platform answer — the tags and the table's translation.
 
-    ``identities`` carries one entry per tag the crosswalk knows; the tags it
-    does not know are stated by the ``platform-unknown`` / ``platform-scraping-ignored``
-    caveats, so tags, identities and caveats always add up. ``status`` and
-    ``tags_source`` qualify the whole answer: whether the system is here, and
-    whether its tags were read off the machine or taken from the vocabulary
-    snapshot.
+    ``translation`` is the table's answer for the system (by its catalogue
+    name, or by its exact platform tags); the tags that name no ES-DE platform id are stated by the ``platform-unknown`` /
+    ``platform-scraping-ignored`` caveats. ``status`` and ``tags_source``
+    qualify the whole answer: whether the system is here, and whether its tags
+    were read off the machine or taken from the vocabulary snapshot.
     """
     return {
         "system": answer.system,
         "status": answer.status,
         "tags_source": answer.tags_source,
         "platforms": list(answer.platforms),
-        "identities": [_platform_identities_contract(i) for i in answer.identities],
+        "translation": platform_translation_contract(answer.translation),
         "caveats": _caveats_contract(answer.caveats),
     }
 
