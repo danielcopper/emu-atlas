@@ -1584,6 +1584,9 @@ class TestTheDataRegistryReading:
         assert set(named) == set(atlas.ENUMERATED_DATA)
         assert named == {
             ("core-mode-unestablished", "reason"): "CORE_MODE_UNESTABLISHED_REASONS",
+            ("frontend-name-unscanned", "kind"): "SCANNED_KINDS",
+            ("frontend-name-unscanned", "reason"): "UNSCANNED_REASONS",
+            ("entry-directory-unread", "reason"): "DIRECTORY_UNREAD_REASONS",
             ("core-unqueryable", "reason"): "CORE_UNANSWERED_STATUSES",
             ("filenames-content-conditional", "files_established_for"): (
                 "FILES_ESTABLISHED_FOR_TOKENS"

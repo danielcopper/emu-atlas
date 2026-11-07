@@ -84,7 +84,8 @@ it.
 **`symlinks`** — link path → target (absolute, or relative to the link's directory). A target that is in no other list
 is a **dead** link, which is a state the corpus deliberately covers.
 
-**`cores`** — `.so` path → what probing it answers: `{"library_name": …}`, optionally `library_version` and `options`
+**`cores`** — `.so` path → what probing it answers: `{"library_name": …}`, optionally `library_version`,
+`valid_extensions`, the booleans `block_extract` and `need_fullpath`, and `options`
 (`{key: {"default": str|null, "values": [str, …]}}`). The distinction between a core with no `options` key and one whose
 `options` is `{}` is load-bearing: the first says nothing was captured, the second is evidence that the core registers
 none.
@@ -130,20 +131,22 @@ any test. A declared file with no entry here answers **missing**, which the firm
 `firmware-unreadable`, a read that did not happen, so a vector that forgot the key cannot pass a file off as no BIOS.
 
 **`ps3_files`** — the path of a file `files` declares → what RPCS3's boot reads of its bytes:
-`{"magic": …, "iso": …, "category": …}`, where `magic` is the file's first four bytes, one character per byte (latin-1)
-and fewer for a shorter file — `.SFB` for a valid `PS3_DISC.SFB`, `SCE\u0000` for a SELF, `\u007fELF` for an ELF,
-`\u0000PSF` for a PARAM.SFO; `iso` is `null`, or where the file holds `CD001` behind the first volume descriptor's type
-byte, `{"regions": …, "watermark": …, "blocks": …}` — the region count the first sector states (an unsigned 32-bit
-number), the 3k3y mark, `"encrypted"`, `"decrypted"` or `null`, and what the licence and executable blocks inside the
-image say: `"clear"`, `"encrypted"`, `"none"` where no block was read to judge, or `null` (and omitted) where the
-reading does not reach them — an image declaring one region, one whose region count is outside 1 to 127, or one whose
-ISO 9660 tree it does not follow; and `category` is what RPCS3's PARAM.SFO loader keeps for `CATEGORY`, which only a
-file opening with the PARAM.SFO magic can state and only as one of the loader's own categories — omitted or `""` where
-it keeps none, which is what RPCS3 reads from a file it refuses as a PARAM.SFO. `iso` and `category` may be omitted. It
-is modeled at the seam for the reason `ps2_bios_headers` is: the image header sits 32 KiB into a file no fixture should
-carry. The file must not be one declared `unreadable`, and a declared file with no entry here answers **unreadable**, so
-a vector that forgot the key cannot prove a boot nobody modeled; a path with no file at it — nothing, a directory, a
-dead link — answers missing, as it does for RPCS3.
+`{"magic": …, "iso": …, "category": …, "savestate": …}`, where `magic` is the file's first four bytes, one character per
+byte (latin-1) and fewer for a shorter file — `.SFB` for a valid `PS3_DISC.SFB`, `SCE\u0000` for a SELF, `\u007fELF` for
+an ELF, `\u0000PSF` for a PARAM.SFO; `iso` is `null`, or where the file holds `CD001` behind the first volume
+descriptor's type byte, `{"regions": …, "watermark": …, "blocks": …}` — the region count the first sector states (an
+unsigned 32-bit number), the 3k3y mark, `"encrypted"`, `"decrypted"` or `null`, and what the licence and executable
+blocks inside the image say: `"clear"`, `"encrypted"`, `"none"` where no block was read to judge, or `null` (and
+omitted) where the reading does not reach them — an image declaring one region, one whose region count is outside 1 to
+127, or one whose ISO 9660 tree it does not follow; and `category` is what RPCS3's PARAM.SFO loader keeps for
+`CATEGORY`, which only a file opening with the PARAM.SFO magic can state and only as one of the loader's own categories
+— omitted or `""` where it keeps none, which is what RPCS3 reads from a file it refuses as a PARAM.SFO; and `savestate`
+is `true` where the file's first eight bytes are `RPCS3SAV`, the bytes RPCS3 resumes an uncompressed `.SAVESTAT` by, and
+only beside the magic `RPCS`. `iso`, `category` and `savestate` may be omitted. It is modeled at the seam for the reason
+`ps2_bios_headers` is: the image header sits 32 KiB into a file no fixture should carry. The file must not be one
+declared `unreadable`, and a declared file with no entry here answers **unreadable**, so a vector that forgot the key
+cannot prove a boot nobody modeled; a path with no file at it — nothing, a directory, a dead link — answers missing, as
+it does for RPCS3.
 
 **`disc_identities`** — the path of a PlayStation disc image `files` declares (a `.cue`, `.bin`, `.img`, `.iso`, `.chd`
 or `.pbp`) → what reading its first data track yields:
@@ -285,8 +288,8 @@ with that table, and the answer's `hash_checked` says whether that comparison ra
 disc decides the region of a group the console region selects. An `inventory` query takes none, because it asks about no
 launch.
 
-`launchable_query` carries `system` and `content_path`, both required — a verdict without a file has no extension to
-judge, and one without a system has no accept-list to judge it by — and may name the entry to judge by its `label`, as
+`launchable_query` carries `system` and `content_path`, both required — a verdict without a path has nothing to hand the
+emulator, and one without a system has no entry to judge — and may name the entry to judge by its `label`, as
 `launch_command_query` names its entry; without one the entry that would run is judged.
 
 `savefile_query`, `savestate_query`, `screenshot_query`, `texture_query`, `mod_query` and `soft_patch_query` carry a

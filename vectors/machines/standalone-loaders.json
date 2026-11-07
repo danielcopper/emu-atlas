@@ -747,8 +747,176 @@
       }
     },
     {
+      "name": "dolphin-starts-no-directory-and-names-the-image-inside",
+      "rationale": "Dolphin takes a path by its extension and opens it as a disc or an executable file (Source/Core/Core/Boot/Boot.cpp:206-215, :246-270 at f84df020), so a directory is no game to it: the entry does not start it, and the image inside it the loader would take is named (#776 D5).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
+          "/mnt/sd/retrodeck/roms/systeminfo.txt": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>wii</name>\n    <path>%ROMPATH%/wii</path>\n    <extension>.bin .BIN .ciso .CISO .dff .DFF .dol .DOL .elf .ELF .gcm .GCM .gcz .GCZ .iso .ISO .json .JSON .m3u .M3U .rvz .RVZ .tgc .TGC .wad .WAD .wbfs .WBFS .wia .WIA .7z .7Z .zip .ZIP</extension>\n    <command label=\"Dolphin (Standalone)\">env QT_QPA_PLATFORM=xcb %EMULATOR_DOLPHIN% -b -e %ROM%</command>\n    <command label=\"Dolphin\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/dolphin_libretro.so %ROM%</command>\n    <command label=\"PrimeHack (Standalone)\">env QT_QPA_PLATFORM=xcb %EMULATOR_PRIMEHACK% -b -e %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"DOLPHIN\">\n        <rule type=\"staticpath\">\n            <entry>/app/retrodeck/components/dolphin/component_launcher.sh</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"PRIMEHACK\">\n        <rule type=\"staticpath\">\n            <entry>/app/retrodeck/components/primehack/component_launcher.sh</entry>\n        </rule>\n    </emulator>\n    <emulator name=\"RETROARCH\">\n        <rule type=\"staticpath\">\n            <entry>/app/retrodeck/components/retroarch/component_launcher.sh</entry>\n        </rule>\n    </emulator>\n    <core name=\"RETROARCH\">\n        <rule type=\"corepath\">\n            <entry>/var/config/retroarch/cores</entry>\n        </rule>\n    </core>\n</ruleList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/dolphin/component_launcher.sh": "#!/bin/bash\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/primehack/component_launcher.sh": "#!/bin/bash\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/component_launcher.sh": "#!/bin/bash\n",
+          "/mnt/sd/retrodeck/roms/wii/Game/Game.iso": "iso"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "launchable_query": {
+          "system": "wii",
+          "content_path": "/mnt/sd/retrodeck/roms/wii/Game"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "launchable": {
+          "verdict": "entry-not-accepted",
+          "extension": ".",
+          "accepted": [
+            ".bin",
+            ".BIN",
+            ".ciso",
+            ".CISO",
+            ".dff",
+            ".DFF",
+            ".dol",
+            ".DOL",
+            ".elf",
+            ".ELF",
+            ".gcm",
+            ".GCM",
+            ".gcz",
+            ".GCZ",
+            ".iso",
+            ".ISO",
+            ".json",
+            ".JSON",
+            ".m3u",
+            ".M3U",
+            ".rvz",
+            ".RVZ",
+            ".tgc",
+            ".TGC",
+            ".wad",
+            ".WAD",
+            ".wbfs",
+            ".WBFS",
+            ".wia",
+            ".WIA",
+            ".7z",
+            ".7Z",
+            ".zip",
+            ".ZIP"
+          ],
+          "entry": {
+            "system": "wii",
+            "label": "Dolphin (Standalone)",
+            "kind": "standalone",
+            "core_so": null,
+            "emulator": "DOLPHIN",
+            "declared_index": 0,
+            "selection": null,
+            "availability": "startable",
+            "launcher": {
+              "path": "/app/retrodeck/components/dolphin/component_launcher.sh",
+              "replacement_command": null,
+              "app_id": "net.retrodeck.retrodeck",
+              "rule": "staticpath",
+              "entry": "/app/retrodeck/components/dolphin/component_launcher.sh"
+            },
+            "core_path": null,
+            "caveats": []
+          },
+          "alternatives": [],
+          "installers": null,
+          "boots": null,
+          "opens": null,
+          "caveats": [
+            {
+              "code": "entry-takes-no-directory",
+              "data": {
+                "entry": "Dolphin (Standalone)",
+                "path": "/mnt/sd/retrodeck/roms/wii/Game"
+              }
+            },
+            {
+              "code": "entry-directory-holds",
+              "data": {
+                "entry": "Dolphin (Standalone)",
+                "path": "/mnt/sd/retrodeck/roms/wii/Game",
+                "files": [
+                  "/mnt/sd/retrodeck/roms/wii/Game/Game.iso"
+                ]
+              }
+            },
+            {
+              "code": "frontend-name-unscanned",
+              "data": {
+                "system": "wii",
+                "kind": "directory",
+                "extension": ".",
+                "names": [
+                  ".bin",
+                  ".BIN",
+                  ".ciso",
+                  ".CISO",
+                  ".dff",
+                  ".DFF",
+                  ".dol",
+                  ".DOL",
+                  ".elf",
+                  ".ELF",
+                  ".gcm",
+                  ".GCM",
+                  ".gcz",
+                  ".GCZ",
+                  ".iso",
+                  ".ISO",
+                  ".json",
+                  ".JSON",
+                  ".m3u",
+                  ".M3U",
+                  ".rvz",
+                  ".RVZ",
+                  ".tgc",
+                  ".TGC",
+                  ".wad",
+                  ".WAD",
+                  ".wbfs",
+                  ".WBFS",
+                  ".wia",
+                  ".WIA",
+                  ".7z",
+                  ".7Z",
+                  ".zip",
+                  ".ZIP"
+                ],
+                "reason": "directory-without-token"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
       "name": "primehack-a-bin-depends-on-the-build",
-      "rationale": "PrimeHack's disc set carries .bin at the build EmuDeck installs and not at the build RetroDECK ships, and the card serves both: neither a take nor a refusal holds everywhere, so the entry's reading is unestablished and the verdict stays on the accept-list with entry-format-build-dependent.",
+      "rationale": "PrimeHack's disc set carries .bin at the build EmuDeck installs and not at the build RetroDECK ships, and the card serves both: neither a take nor a refusal holds everywhere, so the verdict is unestablished with entry-format-build-dependent (#776 D9).",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -785,7 +953,7 @@
           }
         ],
         "launchable": {
-          "verdict": "launchable",
+          "verdict": "unestablished",
           "extension": ".bin",
           "accepted": [
             ".bin",
@@ -897,7 +1065,7 @@
           }
         ],
         "launchable": {
-          "verdict": "launchable",
+          "verdict": "unestablished",
           "extension": ".zip",
           "accepted": [
             ".ciso",
@@ -1393,6 +1561,154 @@
       }
     },
     {
+      "name": "pcsx2-a-lower-case-nrg-the-list-does-not-name-is-read",
+      "rationale": "The ps2 accept-list carries .ngr and .NRG but not .nrg, so ES-DE never lists Game.nrg. PCSX2's loader compares the extension without case and reads an .nrg as a flat image, so the entry takes the file: launchable, with the frontend's naming stated beside it rather than as the verdict (#776 D1, D2).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
+          "/mnt/sd/retrodeck/roms/systeminfo.txt": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>ps2</name>\n    <path>%ROMPATH%/ps2</path>\n    <extension>.bin .BIN .chd .CHD .ciso .CISO .cso .CSO .desktop .dump .DUMP .elf .ELF .gz .GZ .m3u .M3U .mdf .MDF .img .IMG .iso .ISO .isz .ISZ .ngr .NRG .zso .ZSO</extension>\n    <command label=\"PCSX2 (Standalone)\">%EMULATOR_PCSX2% -batch %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"PCSX2\">\n        <rule type=\"staticpath\">\n            <entry>/app/retrodeck/components/pcsx2/component_launcher.sh</entry>\n        </rule>\n    </emulator>\n</ruleList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/pcsx2/component_launcher.sh": "#!/bin/bash\n",
+          "/mnt/sd/retrodeck/roms/ps2/Game.nrg": {
+            "size": 1048576
+          }
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "launchable_query": {
+          "system": "ps2",
+          "content_path": "/mnt/sd/retrodeck/roms/ps2/Game.nrg"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "launchable": {
+          "verdict": "launchable",
+          "extension": ".nrg",
+          "accepted": [
+            ".bin",
+            ".BIN",
+            ".chd",
+            ".CHD",
+            ".ciso",
+            ".CISO",
+            ".cso",
+            ".CSO",
+            ".desktop",
+            ".dump",
+            ".DUMP",
+            ".elf",
+            ".ELF",
+            ".gz",
+            ".GZ",
+            ".m3u",
+            ".M3U",
+            ".mdf",
+            ".MDF",
+            ".img",
+            ".IMG",
+            ".iso",
+            ".ISO",
+            ".isz",
+            ".ISZ",
+            ".ngr",
+            ".NRG",
+            ".zso",
+            ".ZSO"
+          ],
+          "entry": {
+            "system": "ps2",
+            "label": "PCSX2 (Standalone)",
+            "kind": "standalone",
+            "core_so": null,
+            "emulator": "PCSX2",
+            "declared_index": 0,
+            "selection": null,
+            "availability": "startable",
+            "launcher": {
+              "path": "/app/retrodeck/components/pcsx2/component_launcher.sh",
+              "replacement_command": null,
+              "app_id": "net.retrodeck.retrodeck",
+              "rule": "staticpath",
+              "entry": "/app/retrodeck/components/pcsx2/component_launcher.sh"
+            },
+            "core_path": null,
+            "caveats": []
+          },
+          "alternatives": [],
+          "installers": null,
+          "boots": null,
+          "opens": null,
+          "caveats": [
+            {
+              "code": "entry-format-content-unread",
+              "data": {
+                "entry": "PCSX2 (Standalone)",
+                "extension": ".nrg"
+              }
+            },
+            {
+              "code": "frontend-name-unscanned",
+              "data": {
+                "system": "ps2",
+                "kind": "file",
+                "extension": ".nrg",
+                "names": [
+                  ".bin",
+                  ".BIN",
+                  ".chd",
+                  ".CHD",
+                  ".ciso",
+                  ".CISO",
+                  ".cso",
+                  ".CSO",
+                  ".desktop",
+                  ".dump",
+                  ".DUMP",
+                  ".elf",
+                  ".ELF",
+                  ".gz",
+                  ".GZ",
+                  ".m3u",
+                  ".M3U",
+                  ".mdf",
+                  ".MDF",
+                  ".img",
+                  ".IMG",
+                  ".iso",
+                  ".ISO",
+                  ".isz",
+                  ".ISZ",
+                  ".ngr",
+                  ".NRG",
+                  ".zso",
+                  ".ZSO"
+                ],
+                "reason": "token-not-listed"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
       "name": "pcsx2-an-upper-case-nrg-is-launchable-as-its-loader-folds-case",
       "rationale": "The list's .NRG is matched by the card's .nrg: PCSX2 compares extensions without case.",
       "input": {
@@ -1842,7 +2158,7 @@
           }
         ],
         "launchable": {
-          "verdict": "launchable",
+          "verdict": "unestablished",
           "extension": ".iso",
           "accepted": [
             ".bin",
@@ -1999,6 +2315,378 @@
               "data": {
                 "entry": "PPSSPP (Standalone)",
                 "extension": ".iso"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "ppsspp-a-folder-holding-an-eboot-starts-by-it",
+      "rationale": "PPSSPP takes a directory holding EBOOT.PBP as a game and boots that file (Core/Loaders.cpp:87-93, :283-291 at fa50bb19): the entry starts the folder, the source says by what, and the EBOOT.PBP is named as the file it would take on its own (#776 D5).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
+          "/mnt/sd/retrodeck/roms/systeminfo.txt": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psp</name>\n    <path>%ROMPATH%/psp</path>\n    <extension>.chd .CHD .cso .CSO .elf .ELF .iso .ISO .pbp .PBP .prx .PRX .7z .7Z .zip .ZIP</extension>\n    <command label=\"PPSSPP (Standalone)\">%EMULATOR_PPSSPP% %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"PPSSPP\">\n        <rule type=\"staticpath\">\n            <entry>/app/retrodeck/components/ppsspp/component_launcher.sh</entry>\n        </rule>\n    </emulator>\n</ruleList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/ppsspp/component_launcher.sh": "#!/bin/bash\n",
+          "/mnt/sd/retrodeck/roms/psp/Game/EBOOT.PBP": "pbp"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "launchable_query": {
+          "system": "psp",
+          "content_path": "/mnt/sd/retrodeck/roms/psp/Game"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "launchable": {
+          "verdict": "launchable",
+          "extension": ".",
+          "accepted": [
+            ".chd",
+            ".CHD",
+            ".cso",
+            ".CSO",
+            ".elf",
+            ".ELF",
+            ".iso",
+            ".ISO",
+            ".pbp",
+            ".PBP",
+            ".prx",
+            ".PRX",
+            ".7z",
+            ".7Z",
+            ".zip",
+            ".ZIP"
+          ],
+          "entry": {
+            "system": "psp",
+            "label": "PPSSPP (Standalone)",
+            "kind": "standalone",
+            "core_so": null,
+            "emulator": "PPSSPP",
+            "declared_index": 0,
+            "selection": null,
+            "availability": "startable",
+            "launcher": {
+              "path": "/app/retrodeck/components/ppsspp/component_launcher.sh",
+              "replacement_command": null,
+              "app_id": "net.retrodeck.retrodeck",
+              "rule": "staticpath",
+              "entry": "/app/retrodeck/components/ppsspp/component_launcher.sh"
+            },
+            "core_path": null,
+            "caveats": []
+          },
+          "alternatives": [],
+          "installers": null,
+          "boots": null,
+          "opens": null,
+          "caveats": [
+            {
+              "code": "entry-format-content-unread",
+              "data": {
+                "entry": "PPSSPP (Standalone)",
+                "extension": "."
+              }
+            },
+            {
+              "code": "entry-directory-holds",
+              "data": {
+                "entry": "PPSSPP (Standalone)",
+                "path": "/mnt/sd/retrodeck/roms/psp/Game",
+                "files": [
+                  "/mnt/sd/retrodeck/roms/psp/Game/EBOOT.PBP"
+                ]
+              }
+            },
+            {
+              "code": "frontend-name-unscanned",
+              "data": {
+                "system": "psp",
+                "kind": "directory",
+                "extension": ".",
+                "names": [
+                  ".chd",
+                  ".CHD",
+                  ".cso",
+                  ".CSO",
+                  ".elf",
+                  ".ELF",
+                  ".iso",
+                  ".ISO",
+                  ".pbp",
+                  ".PBP",
+                  ".prx",
+                  ".PRX",
+                  ".7z",
+                  ".7Z",
+                  ".zip",
+                  ".ZIP"
+                ],
+                "reason": "directory-without-token"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "ppsspp-a-folder-holding-neither-name-is-refused",
+      "rationale": "A directory with no EBOOT.PBP and no PSP_GAME inside is 'Just a directory.' to PPSSPP (Core/System.cpp:236 at fa50bb19), so the entry does not start it (#776 D5).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
+          "/mnt/sd/retrodeck/roms/systeminfo.txt": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psp</name>\n    <path>%ROMPATH%/psp</path>\n    <extension>.chd .CHD .cso .CSO .elf .ELF .iso .ISO .pbp .PBP .prx .PRX .7z .7Z .zip .ZIP</extension>\n    <command label=\"PPSSPP (Standalone)\">%EMULATOR_PPSSPP% %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"PPSSPP\">\n        <rule type=\"staticpath\">\n            <entry>/app/retrodeck/components/ppsspp/component_launcher.sh</entry>\n        </rule>\n    </emulator>\n</ruleList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/ppsspp/component_launcher.sh": "#!/bin/bash\n",
+          "/mnt/sd/retrodeck/roms/psp/Game/notes.txt": "n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "launchable_query": {
+          "system": "psp",
+          "content_path": "/mnt/sd/retrodeck/roms/psp/Game"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "launchable": {
+          "verdict": "entry-not-accepted",
+          "extension": ".",
+          "accepted": [
+            ".chd",
+            ".CHD",
+            ".cso",
+            ".CSO",
+            ".elf",
+            ".ELF",
+            ".iso",
+            ".ISO",
+            ".pbp",
+            ".PBP",
+            ".prx",
+            ".PRX",
+            ".7z",
+            ".7Z",
+            ".zip",
+            ".ZIP"
+          ],
+          "entry": {
+            "system": "psp",
+            "label": "PPSSPP (Standalone)",
+            "kind": "standalone",
+            "core_so": null,
+            "emulator": "PPSSPP",
+            "declared_index": 0,
+            "selection": null,
+            "availability": "startable",
+            "launcher": {
+              "path": "/app/retrodeck/components/ppsspp/component_launcher.sh",
+              "replacement_command": null,
+              "app_id": "net.retrodeck.retrodeck",
+              "rule": "staticpath",
+              "entry": "/app/retrodeck/components/ppsspp/component_launcher.sh"
+            },
+            "core_path": null,
+            "caveats": []
+          },
+          "alternatives": [],
+          "installers": null,
+          "boots": null,
+          "opens": null,
+          "caveats": [
+            {
+              "code": "entry-takes-no-directory",
+              "data": {
+                "entry": "PPSSPP (Standalone)",
+                "path": "/mnt/sd/retrodeck/roms/psp/Game"
+              }
+            },
+            {
+              "code": "frontend-name-unscanned",
+              "data": {
+                "system": "psp",
+                "kind": "directory",
+                "extension": ".",
+                "names": [
+                  ".chd",
+                  ".CHD",
+                  ".cso",
+                  ".CSO",
+                  ".elf",
+                  ".ELF",
+                  ".iso",
+                  ".ISO",
+                  ".pbp",
+                  ".PBP",
+                  ".prx",
+                  ".PRX",
+                  ".7z",
+                  ".7Z",
+                  ".zip",
+                  ".ZIP"
+                ],
+                "reason": "directory-without-token"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "ppsspp-a-folder-that-cannot-be-listed-is-not-established",
+      "rationale": "ES-DE builds %ROM% for a directory by looking inside it for a file of its own name (FileData.cpp:1027-1043 at v3.4.1), and this one cannot be listed, so what the entry would be handed cannot be told: unestablished, with launch-path-unestablished (#776 D9).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
+          "/mnt/sd/retrodeck/roms/systeminfo.txt": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>psp</name>\n    <path>%ROMPATH%/psp</path>\n    <extension>.chd .CHD .cso .CSO .elf .ELF .iso .ISO .pbp .PBP .prx .PRX .7z .7Z .zip .ZIP</extension>\n    <command label=\"PPSSPP (Standalone)\">%EMULATOR_PPSSPP% %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_find_rules.xml": "<?xml version=\"1.0\"?>\n<ruleList>\n    <emulator name=\"PPSSPP\">\n        <rule type=\"staticpath\">\n            <entry>/app/retrodeck/components/ppsspp/component_launcher.sh</entry>\n        </rule>\n    </emulator>\n</ruleList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/ppsspp/component_launcher.sh": "#!/bin/bash\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios",
+          "/mnt/sd/retrodeck/roms/psp/Game"
+        ],
+        "launchable_query": {
+          "system": "psp",
+          "content_path": "/mnt/sd/retrodeck/roms/psp/Game"
+        },
+        "unlistable": [
+          "/mnt/sd/retrodeck/roms/psp/Game"
+        ]
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "launchable": {
+          "verdict": "unestablished",
+          "extension": ".",
+          "accepted": [
+            ".chd",
+            ".CHD",
+            ".cso",
+            ".CSO",
+            ".elf",
+            ".ELF",
+            ".iso",
+            ".ISO",
+            ".pbp",
+            ".PBP",
+            ".prx",
+            ".PRX",
+            ".7z",
+            ".7Z",
+            ".zip",
+            ".ZIP"
+          ],
+          "entry": {
+            "system": "psp",
+            "label": "PPSSPP (Standalone)",
+            "kind": "standalone",
+            "core_so": null,
+            "emulator": "PPSSPP",
+            "declared_index": 0,
+            "selection": null,
+            "availability": "startable",
+            "launcher": {
+              "path": "/app/retrodeck/components/ppsspp/component_launcher.sh",
+              "replacement_command": null,
+              "app_id": "net.retrodeck.retrodeck",
+              "rule": "staticpath",
+              "entry": "/app/retrodeck/components/ppsspp/component_launcher.sh"
+            },
+            "core_path": null,
+            "caveats": []
+          },
+          "alternatives": [],
+          "installers": null,
+          "boots": null,
+          "opens": null,
+          "caveats": [
+            {
+              "code": "launch-path-unestablished",
+              "data": {
+                "path": "/mnt/sd/retrodeck/roms/psp/Game"
+              }
+            },
+            {
+              "code": "frontend-name-unscanned",
+              "data": {
+                "system": "psp",
+                "kind": "directory",
+                "extension": ".",
+                "names": [
+                  ".chd",
+                  ".CHD",
+                  ".cso",
+                  ".CSO",
+                  ".elf",
+                  ".ELF",
+                  ".iso",
+                  ".ISO",
+                  ".pbp",
+                  ".PBP",
+                  ".prx",
+                  ".PRX",
+                  ".7z",
+                  ".7Z",
+                  ".zip",
+                  ".ZIP"
+                ],
+                "reason": "directory-without-token"
               }
             }
           ]
@@ -2322,7 +3010,7 @@
           }
         ],
         "launchable": {
-          "verdict": "launchable",
+          "verdict": "unestablished",
           "extension": ".iso",
           "accepted": [
             ".chd",
@@ -2885,7 +3573,7 @@
           }
         ],
         "launchable": {
-          "verdict": "launchable",
+          "verdict": "unestablished",
           "extension": ".ccd",
           "accepted": [
             ".bin",
@@ -3140,7 +3828,7 @@
           }
         ],
         "launchable": {
-          "verdict": "launchable",
+          "verdict": "unestablished",
           "extension": ".chd",
           "accepted": [
             ".bin",

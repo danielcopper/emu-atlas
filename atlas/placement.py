@@ -71,6 +71,13 @@ from .find_rules import (
     SHELL_CONSTRUCTS,
 )
 from .machine import CORE_UNANSWERED_STATUSES
+from .launch_codes import (
+    CAVEAT_ENTRY_DIRECTORY_UNREAD,
+    CAVEAT_FRONTEND_NAME_UNSCANNED,
+    DIRECTORY_UNREAD_REASONS,
+    SCANNED_KINDS,
+    UNSCANNED_REASONS,
+)
 from .opens_codes import OPENS_EFFECTS, OPENS_FAILURE_CODES
 from .portability_codes import (
     BUILD_UNCONFIRMED_REASONS,
@@ -2259,6 +2266,11 @@ SearchReading = Literal["identified", "unrecognised", "unreadable"]
 ENUMERATED_DATA: "Mapping[tuple[str, str], tuple[str, ...]]" = MappingProxyType(
     {
         (CAVEAT_CORE_MODE_UNESTABLISHED, "reason"): CORE_MODE_UNESTABLISHED_REASONS,
+        # How ES-DE's scan meets a content path it would not list, and why
+        # (#776 D2), and why a directory's route is not followed to its end.
+        (CAVEAT_FRONTEND_NAME_UNSCANNED, "kind"): SCANNED_KINDS,
+        (CAVEAT_FRONTEND_NAME_UNSCANNED, "reason"): UNSCANNED_REASONS,
+        (CAVEAT_ENTRY_DIRECTORY_UNREAD, "reason"): DIRECTORY_UNREAD_REASONS,
         # The seam's own vocabulary, registered rather than restated: the words
         # a probe answers with are decided in atlas/machine.py, and a second
         # spelling here would be a place for the two to drift apart.

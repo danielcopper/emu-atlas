@@ -1254,14 +1254,13 @@ and for nothing else.
 
 ## `launch_formats.json` — formats that need an installation step before anything launches
 
-Read by `atlas.launch_formats`, behind the `needs-installation` verdict of the launchability question (issue #36). The
-accept-list read off the machine states only that the frontend will not scan a file — never why. For some files the why
-matters more than the no: a PSN `.pkg` is the distribution form of the content itself, RPCS3 has to install it into
-`dev_hdd0` before anything can launch, and for digital-only titles no other form exists — so "not accepted, pick another
+Read by `atlas.launch_formats`, behind the `needs-installation` verdict of the launchability question (issue #36). Some
+files are the distribution form of the content itself: a PSN `.pkg` has to be installed into `dev_hdd0` by RPCS3 before
+anything can launch, and for digital-only titles no other form exists — so "this entry does not start it, pick another
 file" is the wrong advice. That is world knowledge about a platform, written nowhere on the machine, so it lives here:
 keyed by the atlas system id and the exact extension token ES-DE would derive (case-sensitive, leading dot), each entry
-with its statement and its citation. The table is consulted only where the extension is already outside the machine's
-own accept-list — what the catalogue declares launchable, is launchable, and this file never overrides a read.
+with its statement and its citation. The table is consulted before any entry is asked, whatever the system's accept-list
+says: the record is about the platform's format, and the question is the emulator's (issue #776).
 
 Each entry also names its `installers` (schema 2, issue #717): the emulators that install the format, each by the token
 ES-DE's own commands spell it with (the `X` of `%EMULATOR_X%`), so the verdict can name them as data and join each to
@@ -1280,9 +1279,16 @@ recorded lowercase and matched case-insensitively (the gate is the emulator's lo
 out of a zip. Where the loader does open them, as PPSSPP opens a `.zip` and boots the image inside it (issue #744), an
 archive the card takes answers `launchable` with `archive-contents-unread` rather than `entry-format-content-unread`:
 what loads is inside the archive, which atlas does not read. An emulator absent from the block is one whose loader
-nobody has read: the answer states `entry-format-unestablished`, never "refuses" — the same absence discipline the mods
-table spells out. RPCS3 is the exception the next paragraph names: absent from the block, and read all the same, by its
-boot.
+nobody has read: the verdict is `unestablished` with `entry-format-unestablished`, never a refusal — the same absence
+discipline the mods table spells out. RPCS3 is the exception the next paragraph names: absent from the block, and read
+all the same, by its boot.
+
+Every card states what its loader does with a directory it is handed (`directories`, schema 5, issue #776), read at the
+card's build: `recognises` lists the names inside a directory the loader starts one by, in the order it tests them, and
+an empty list says it starts no directory at all, with `source` citing it. Azahar, Dolphin, PrimeHack, DuckStation and
+PCSX2 start none — each recognises a path by its extension or requires a file — and PPSSPP starts a directory holding
+`EBOOT.PBP`, booting that file, or one holding `PSP_GAME`, mounted as the disc. A directory is never judged by its name:
+no emulator here asks for one with a particular suffix, which is ES-DE's scan rule and goes only into the naming caveat.
 
 RPCS3's entries in the catalogue's own command shapes are not judged by this block at all (issue #618). What the
 Directory and ISO entries boot depends on the content — the folder's layout, the image's header and the files inside it,

@@ -758,27 +758,29 @@ def catalogue_contract(answer: CatalogueAnswer) -> dict[str, Any]:
 
 
 def launchable_contract(answer: LaunchabilityAnswer) -> dict[str, Any]:
-    """The stable form of a launchability answer — the verdict, and everything a 'no' needs.
+    """The stable form of a launchability answer — the emulator's verdict, and everything a 'no' needs.
 
-    ``entry`` travels with the two verdicts that have one — ``launchable``,
-    and ``entry-not-accepted``, where the entry *is* the finding — and is
-    ``null`` on the rest: an emulator for a file nothing launches would
-    answer a different question. ``alternatives`` is ``entry-not-accepted``'s
-    remedy alone: the declared entries established to take the file.
-    ``installers`` is ``needs-installation``'s remedy, and ``null`` on every
-    other verdict: each emulator that installs the file, with the system's
-    entry that runs it through the same form as ``entry``, or ``null`` where
-    the system declares none — an empty list says that no emulator RetroDECK
-    or EmuDeck sets up installs it. ``boots`` is ``launchable``'s alone, and
-    only where atlas read the judged entry's own boot of the file: the
-    ``file`` the emulator's loader is handed and the ``disc_root`` it mounts,
-    ``null`` for a game that boots without one. ``opens`` travels with the two
-    verdicts that name an entry, and only where atlas read what the entry's
-    emulator opens through the file: each file in the order it is opened, how
-    it came to be opened, the file that names it or whose name it derives from,
-    and whether it is there. ``accepted`` stays the declared tokens
-    verbatim, the same non-vocabulary the ROM placement's ``extensions``
-    field carries.
+    ``entry`` travels with the three verdicts about the entry that would run —
+    ``launchable``, ``entry-not-accepted``, where the entry *is* the finding,
+    and ``unestablished`` — and is ``null`` on the rest: an emulator for a file
+    nothing launches would answer a different question. ``alternatives`` is
+    ``entry-not-accepted``'s remedy alone: the declared entries established to
+    take the path. ``installers`` is ``needs-installation``'s remedy, and
+    ``null`` on every other verdict: each emulator that installs the file, with
+    the system's entry that runs it through the same form as ``entry``, or
+    ``null`` where the system declares none — an empty list says that no
+    emulator RetroDECK or EmuDeck sets up installs it. ``boots`` rides
+    ``launchable`` and ``unestablished``, and only where atlas read the judged
+    entry's own boot of the path: the ``file`` the emulator's loader is handed
+    and the ``disc_root`` it mounts, ``null`` for a game that boots without
+    one. ``opens`` travels with the three verdicts that name an entry, and only
+    where atlas read what the entry's emulator opens through the file: each
+    file in the order it is opened, how it came to be opened, the file that
+    names it or whose name it derives from, and whether it is there.
+    ``extension`` is the token ES-DE derives from the path, and ``accepted``
+    the declared tokens verbatim — the frontend's list, never weighed in the
+    verdict — the same non-vocabulary the ROM placement's ``extensions`` field
+    carries.
     """
     return {
         "verdict": answer.verdict,

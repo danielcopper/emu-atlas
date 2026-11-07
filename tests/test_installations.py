@@ -282,12 +282,21 @@ class TestTheBootTravelsWithALaunchableEntryAlone:
     BOOT = atlas.Boot("/roms/ps3/Game.ps3/PS3_GAME/USRDIR/EBOOT.BIN", "/roms/ps3/Game.ps3")
 
     def test_a_boot_beside_another_verdict_is_refused(self):
-        with pytest.raises(ValueError, match="boots stand only on a launchable verdict about an entry"):
+        with pytest.raises(ValueError, match="boots stand only on a launchable or unestablished verdict about an entry"):
             atlas.LaunchabilityAnswer(verdict=atlas.VERDICT_ENTRY_NOT_ACCEPTED, extension=".ps3", boots=self.BOOT)
 
     def test_a_boot_without_an_entry_is_refused(self):
-        with pytest.raises(ValueError, match="boots stand only on a launchable verdict about an entry"):
+        with pytest.raises(ValueError, match="boots stand only on a launchable or unestablished verdict about an entry"):
             atlas.LaunchabilityAnswer(verdict=atlas.VERDICT_LAUNCHABLE, extension=".ps3", boots=self.BOOT)
+
+    def test_an_unestablished_reading_keeps_the_boot_it_established(self):
+        # A boot reading that stops short still states what it boots (#776 D9).
+        rd = TestLaunchable()._rd()  # pyright: ignore[reportPrivateUsage] - the class's own machine
+        entry = rd.launchable("dreamcast", "/roms/dreamcast/Game.chd").entry
+        answer = atlas.LaunchabilityAnswer(
+            verdict=atlas.VERDICT_UNESTABLISHED, extension=".ps3", entry=entry, boots=self.BOOT
+        )
+        assert answer.boots == self.BOOT
 
     def test_no_boot_is_every_verdicts_default(self):
         assert atlas.LaunchabilityAnswer(verdict=atlas.VERDICT_LAUNCHABLE, extension=".iso").boots is None
@@ -300,7 +309,7 @@ class TestTheOpensTravelWithAnEntryAlone:
 
     def test_opens_beside_a_verdict_that_names_no_entry_are_refused(self):
         with pytest.raises(ValueError, match="opens stand only on a verdict about an entry"):
-            atlas.LaunchabilityAnswer(verdict=atlas.VERDICT_NOT_ACCEPTED, extension=".cue", opens=self.OPENS)
+            atlas.LaunchabilityAnswer(verdict=atlas.VERDICT_UNKNOWN, extension=".cue", opens=self.OPENS)
 
     def test_opens_without_an_entry_are_refused(self):
         with pytest.raises(ValueError, match="opens stand only on a verdict about an entry"):
@@ -311,11 +320,13 @@ class TestTheOpensTravelWithAnEntryAlone:
 
 
 class TestLaunchable:
-    """Issue #36: whether a file launches as a system's content — and why not, when not.
+    """Issues #36 and #776: whether a file launches as a system's content — and why not, when not.
 
-    The accept-list is matched the way ES-DE matches it: the file name's token
-    from its last dot, case preserved, compared exactly against the declared
-    tokens (FileSystemUtil.cpp:630-645, SystemData.cpp:669 @ v3.4.1).
+    The verdict is the emulator's (#776 D1): the entry that would run is judged
+    on what it is handed. Whether ES-DE's scan lists the file — its token from
+    the last dot, case preserved, compared exactly against the declared tokens
+    (FileSystemUtil.cpp:630-645, SystemData.cpp:669 @ v3.4.1) — rides beside
+    the verdict as ``frontend-name-unscanned`` (D2).
     """
 
     DREAMCAST = (
@@ -329,12 +340,19 @@ class TestLaunchable:
     )
     FILES = {
         RETRODECK_JSON: RD_JSON,
-        RETRODECK_CFG: 'savefile_directory = "/mnt/sd/retrodeck/saves"\n',
+        RETRODECK_CFG: 'savefile_directory = "/mnt/sd/retrodeck/saves"\nlibretro_directory = "/app/cores"\n',
         RD_BUNDLED_ESDE: DREAMCAST,
+        "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Context]\nfilesystems=host;\n",
     }
+    # Flycast's claims, as its core answers them: a track's .bin is one.
+    FLYCAST = {"library_name": "Flycast", "valid_extensions": "chd|cdi|iso|elf|cue|gdi|lst|bin|dat|zip|7z|m3u"}
 
     def _rd(self, files=None):
-        return _retrodeck({**self.FILES, **(files or {})}, dirs=["/mnt/sd/retrodeck/saves"])
+        return _retrodeck(
+            {**self.FILES, **(files or {})},
+            dirs=["/mnt/sd/retrodeck/saves"],
+            cores={f"{RD_DEPLOY_CORES}/flycast_libretro.so": self.FLYCAST},
+        )
 
     def test_an_accepted_extension_is_launchable_with_its_entry(self):
         answer = self._rd().launchable("dreamcast", "/roms/dreamcast/Game.chd")
@@ -344,19 +362,33 @@ class TestLaunchable:
         assert answer.entry is not None
         assert answer.entry.label == "Flycast"
 
-    def test_the_match_is_case_sensitive_the_way_esde_scans(self):
+    def test_the_scan_is_case_sensitive_and_the_emulator_is_not(self):
         # ES-DE never lowercases: a .CHD file with only .chd declared never
-        # appears in the menu, and the verdict says so.
+        # appears in its menu. RetroArch folds case against the core's claims,
+        # so the verdict is the emulator's take, and the scan rides beside it.
         answer = self._rd().launchable("dreamcast", "/roms/dreamcast/Game.CHD")
-        assert answer.verdict == atlas.VERDICT_NOT_ACCEPTED
+        assert answer.verdict == atlas.VERDICT_LAUNCHABLE
         assert answer.extension == ".CHD"
-        assert answer.entry is None
+        assert [dict(c.data) for c in answer.caveats if c.code == atlas.CAVEAT_FRONTEND_NAME_UNSCANNED] == [
+            {
+                "system": "dreamcast",
+                "kind": atlas.SCANNED_KIND_FILE,
+                "extension": ".CHD",
+                "names": (".chd", ".cue", ".gdi"),
+                "reason": atlas.UNSCANNED_TOKEN_NOT_LISTED,
+            }
+        ]
 
-    def test_a_track_file_is_not_accepted(self):
+    def test_a_track_file_is_the_cores_claim_and_the_scan_leaves_it_out(self):
         # The GDI-rip case: the accept-list deliberately excludes track files,
-        # and the verdict steers a largest-file fallback away from them.
+        # which ES-DE therefore never lists — the core claims .bin all the
+        # same, so the verdict is its, and the name the frontend expects is
+        # stated beside it.
         answer = self._rd().launchable("dreamcast", "/roms/dreamcast/Game (Track 1).bin")
-        assert answer.verdict == atlas.VERDICT_NOT_ACCEPTED
+        assert answer.verdict == atlas.VERDICT_LAUNCHABLE
+        assert [c.data["reason"] for c in answer.caveats if c.code == atlas.CAVEAT_FRONTEND_NAME_UNSCANNED] == [
+            atlas.UNSCANNED_TOKEN_NOT_LISTED
+        ]
 
     def test_a_psn_package_needs_installation_first(self):
         answer = self._rd().launchable("ps3", "/roms/ps3/Game.pkg")
@@ -416,7 +448,7 @@ class TestLaunchable:
         ("system", "name", "verdict"),
         [
             ("dreamcast", "Game.chd", atlas.VERDICT_LAUNCHABLE),
-            ("dreamcast", "Game (Track 1).bin", atlas.VERDICT_NOT_ACCEPTED),
+            ("dreamcast", "Game (Track 1).bin", atlas.VERDICT_LAUNCHABLE),
             ("wonderswan", "Game.ws", atlas.VERDICT_UNKNOWN),
         ],
     )
@@ -543,7 +575,9 @@ class TestLaunchable:
             cores=core,
         )
         answer = rd.launchable("n3ds", "/roms/n3ds/Game.3ds")
-        assert answer.verdict == atlas.VERDICT_LAUNCHABLE
+        # Attempted, never refused — and whether the core reads it is not
+        # established (#776 D10).
+        assert answer.verdict == atlas.VERDICT_UNESTABLISHED
         assert atlas.CAVEAT_ENTRY_FORMAT_UNCLAIMED in [c.code for c in answer.caveats]
 
     def test_a_standalone_without_a_card_is_unestablished_never_refuses(self):
@@ -558,7 +592,7 @@ class TestLaunchable:
             dirs=["/mnt/sd/retrodeck/saves"],
         )
         answer = rd.launchable("n3ds", "/roms/n3ds/Game.3ds")
-        assert answer.verdict == atlas.VERDICT_LAUNCHABLE
+        assert answer.verdict == atlas.VERDICT_UNESTABLISHED
         assert atlas.CAVEAT_ENTRY_FORMAT_UNESTABLISHED in [c.code for c in answer.caveats]
 
     def test_a_3ds_archive_names_both_installers_and_only_the_declared_one_has_an_entry(self):
@@ -576,10 +610,10 @@ class TestLaunchable:
         assert named.verdict == atlas.VERDICT_NEEDS_INSTALLATION
         assert _installers(named) == [("AZAHAR", "Azahar"), ("AZAHARPLUS", None)]
 
-    def test_a_list_that_accepts_a_3ds_archive_meets_azahars_refusal(self):
-        # Issue #717 (D4): booting a .cia only offers to install it, so the
-        # card no longer claims it. A catalogue that scans one runs an entry
-        # established not to read it, and no install-first record is asked.
+    def test_a_list_that_accepts_a_3ds_archive_still_needs_installation(self):
+        # Issue #717 (D4): booting a .cia only offers to install it. The
+        # install-first record is about the platform's format, so it answers
+        # before any entry is asked, whatever the catalogue lists (#776).
         catalogue = self.N3DS.replace(
             "<extension>.3ds .zip .7z</extension>", "<extension>.3ds .cia</extension>"
         )
@@ -588,10 +622,9 @@ class TestLaunchable:
             dirs=["/mnt/sd/retrodeck/saves", RD_BIOS],
         )
         answer = rd.launchable("n3ds", "/roms/n3ds/Game.cia")
-        assert answer.verdict == atlas.VERDICT_ENTRY_NOT_ACCEPTED
-        assert answer.entry is not None
-        assert answer.entry.label == "Azahar"
-        assert answer.installers is None
+        assert answer.verdict == atlas.VERDICT_NEEDS_INSTALLATION
+        assert answer.entry is None
+        assert answer.installers is not None
 
     def test_an_entry_not_accepted_verdict_carries_no_installers(self):
         answer = self._n3ds().launchable("n3ds", "/roms/n3ds/Game.zip")

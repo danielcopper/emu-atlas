@@ -1330,7 +1330,7 @@ answer names the folder with `file-names-unestablished` and no file names.
 | `arrangement-unverified`                   | this arrangement has never been observed live — the answer is derived (see above)                                                                                |
 | `arrangement-version-drifted`              | it was observed, on another version than this machine runs — re-verification pending                                                                             |
 | `sandbox-path-untranslated`                | a configured path exists only inside the emulator's Flatpak sandbox; nothing there was read                                                                      |
-| `entry-format-unclaimed`                   | launchable: the running core does not claim this format — attempted, never refused                                                                               |
+| `entry-format-unclaimed`                   | launchable: the running core does not claim this format — attempted, never refused, and unestablished                                                            |
 | `archive-contents-unread`                  | launchable: RetroArch opens the container and picks by the core's claims — the inside is unread                                                                  |
 | `entry-format-unestablished`               | launchable: what the running entry reads was never established — not the same as "refuses"                                                                       |
 | `entry-format-content-unread`              | launchable: the running entry's loader takes the extension and then reads the content, which atlas does not                                                      |
@@ -2664,8 +2664,7 @@ Where you meet the same code, and what it replaces:
 - the **firmware inventory** lists no such row, and carries no caveat of that code either, so the row leaves no trace
   there: the inventory carries installed cores and carded standalone emulators, and this is neither — exactly as an
   un-carded standalone row is neither. Ask `firmware_for_system` for the row;
-- `launchable` answers `entry-not-accepted` and states the code: the system's accept-list is the union over every entry
-  and can say yes while the entry that would run takes no file at all, which is the split that verdict exists for. The
+- `launchable` answers `entry-not-accepted` and states the code: the entry that would run takes no file at all. The
   refusal is established from the command rather than from a loader, so no format word is stated, and `alternatives`
   names the sibling rows established to read the file. This is the one answer that carries the code **twice**, in
   `caveats` and again in `entry.caveats` with the same data, and the two are different statements about one row: at
@@ -2777,8 +2776,9 @@ could declare a different list. The entries are otherwise real: `core_so` names 
 enumeration is where the entry came from, so the identity stands with no command to read it out of), the label is the
 core's own `corename`, and the entry routes work — `entry.savefile_location(...)` answers, because a derived entry is a
 core and the core question was always answerable there. `systems()` on these arrangements lists the systems the cores
-file under, marked the same way. What stays unchanged: `launchable` (the accept-list is catalogue knowledge), and a
-system the readable EmuDeck layers _do_ declare (the catalogue's own answer, never overridden by a derivation).
+file under, marked the same way. What stays unchanged: `launchable` (with no frontend there is no entry that decides
+which core runs, issue #783), and a system the readable EmuDeck layers _do_ declare (the catalogue's own answer, never
+overridden by a derivation).
 
 `unavailable` is a statement about the machine; `unestablished` and `sealed` are statements about atlas, and a client
 that renders either as an absence is telling its user something nobody checked. `exclusive` is a statement about the
@@ -3266,18 +3266,20 @@ where the loop would read them once per system.
 
 ## Is this file launchable here?
 
-A client that has a file and a system needs to know whether anything on this machine will launch it — and when the
-answer is no, **which kind of no** (issue #36). The accept-list above is the read; this question is the judgment:
+A client that has a path and a system needs to know whether the emulator that would run starts it — and when the answer
+is no, **which kind of no** (issues #36, #776). The question is the emulator's, never whether ES-DE's scan would list
+the path: a client that starts a game with the resolver's command and the file's real path does not go through ES-DE's
+scan at all. ES-DE decides which entry runs; that entry is judged on what it is handed:
 
 ```python
 answer = inst.launchable("dreamcast", "/run/media/deck/roms/dreamcast/Game (Track 1).bin")
-answer.verdict       # 'launchable' | 'not-accepted' | 'entry-not-accepted' | 'needs-installation' | 'unknown'
+answer.verdict       # 'launchable' | 'entry-not-accepted' | 'unestablished' | 'needs-installation' | 'unknown'
 answer.extension     # '.bin' — the token ES-DE derives (name from the last dot, case preserved)
 answer.accepted      # ('.chd', '.cue', '.gdi') — the system's declared list, verbatim
-answer.entry         # the entry that would run — on 'launchable' and 'entry-not-accepted', with its launch answer
-answer.alternatives  # entry labels established to take the file — on 'entry-not-accepted' alone
+answer.entry         # the entry that would run — on the three verdicts about it, with its launch answer
+answer.alternatives  # entry labels established to take the path — on 'entry-not-accepted' alone
 answer.installers    # the emulators that install the file — on 'needs-installation' alone, None on every other
-answer.boots         # what the judged entry boots — on 'launchable' alone, where its emulator's own boot was read
+answer.boots         # what the judged entry boots — where its emulator's own boot was read
 answer.opens         # the files the judged entry's emulator opens through it — where that emulator's open was read
 ```
 
@@ -3301,31 +3303,48 @@ catalogue, and a sealed EmuDeck asked about a system only its installed cores de
 label, and refuse a label their core-derived entries do not carry the same way. Without `label` the entry that would run
 is judged.
 
-The match is exactly ES-DE's: the file name's token from its **last** dot, case preserved, compared **exactly** against
-the declared tokens — which is why catalogues list `.z64` and `.Z64` separately, and why a `.CHD` file on a `.chd`-only
-list is genuinely `not-accepted` (the frontend never scans it). A name without a dot yields `"."`, ES-DE's own sentinel.
-
 The five verdicts never collapse:
 
-- **`launchable`** — the list accepts the token; `entry` is the emulator that would run, resolved through the same
-  selection hierarchy `emulators_for` applies (per-game override first), and judged one level further (issue #66, see
-  below).
-- **`not-accepted`** — no declared token equals the derived one. The remedy is the consumer's: pick the `.gdi` instead
-  of its track file, unpack the container, or select an entry that accepts it. `extension` and `accepted` carry
-  everything that decision needs.
-- **`entry-not-accepted`** — the list accepts the token and the entry that would run is **established** not to read it:
-  the accept-list is declared per _system_ (the union over every entry) while the command is per _emulator_, so the
-  union can say yes and the machine then does nothing at all. `entry` names the refusing entry — it _is_ the finding —
-  and `alternatives` the declared entries established to take the file; the remedies are that verdict's own (unpack, or
-  select one of them), which is why it never collapses into `not-accepted`.
+- **`launchable`** — the entry's reading takes the path; `entry` is the emulator that would run, resolved through the
+  same selection hierarchy `emulators_for` applies (per-game override first), and judged the way that emulator judges
+  what it is handed (see below).
+- **`entry-not-accepted`** — the entry that would run is **established** not to start the path. `entry` names the
+  refusing entry — it _is_ the finding — and `alternatives` the declared entries established to take it; the remedies
+  are that verdict's own: unpack, pick another file, or select one of them.
+- **`unestablished`** — the entry's reading ended without a take or a refusal: an emulator whose loader atlas has not
+  read (a standalone without a card), a card whose builds disagree, a boot or an open that stops short, a directory a
+  core opens through its own loader, a file the libretro core does not claim — not an archive, which RetroArch opens and
+  searches, so it stays `launchable` with `archive-contents-unread` (D11 of issue #776). The riding caveats say which,
+  and what the reading did establish — `boots`, `opens` — stays on the answer.
 - **`needs-installation`** — the format is real content for the platform and an installation step has to run before
   anything launches: recorded world knowledge with its citation in the sources (`atlas/data/launch_formats.json` — a PSN
-  `.pkg` is the case that founded it). Never collapsed into `not-accepted`, because "find another file" is the wrong
-  advice for a digital-only title whose only form is the package. `installers` names who installs it (see below).
-- **`unknown`** — the system is not one this catalogue declares, the catalogue could not be read, (EmuDeck) the layer
-  that might declare it is sealed inside the AppImage, or a `label` names no entry of the system. A statement about the
-  look, never about the file — the riding caveats say which, and a client that treated it as either 'no' would be told
-  something nobody checked.
+  `.pkg` is the case that founded it). It is answered before any entry is asked, whatever the accept-list says, because
+  "find another file" is the wrong advice for a digital-only title whose only form is the package. `installers` names
+  who installs it (see below).
+- **`unknown`** — the system is not one this catalogue declares or runs (no `<extension>` or no `<command>`, which ES-DE
+  skips), the catalogue could not be read, (EmuDeck) the layer that might declare it is sealed inside the AppImage, or a
+  `label` names no entry of the system. A statement about the look, never about the path — the riding caveats say which,
+  and a client that treated it as a 'no' would be told something nobody checked.
+
+**How the frontend expects it named — `frontend-name-unscanned`.** A client that links its library into the frontend's
+names its links by ES-DE's scan rules, so they are stated as data beside the verdict, never as the verdict. ES-DE lists
+a file whose name's token from its **last** dot, case preserved, is **exactly** one of the system's declared tokens —
+which is why catalogues list `.z64` and `.Z64` separately — and a directory whose name ends in such a token other than
+`.`, which it then takes as one game launched through the file of its own name inside it, where one is; a name without a
+dot yields `"."`, ES-DE's own sentinel. Where the scan would not list the path under its name, the caveat says so:
+
+```python
+caveat.data["kind"]       # 'file' | 'directory' — what ES-DE's scan meets at the path
+caveat.data["extension"]  # the token it derives, e.g. '.CHD', or '.' for a directory without a dot
+caveat.data["names"]      # every token that would make it list the path, in the accept-list's order
+caveat.data["reason"]     # 'token-not-listed' | 'directory-without-token'
+```
+
+A `.CHD` file on a `.chd`-only list is the emulator's to judge — RetroArch folds case against the core's claims — and
+the caveat names `.chd` among the tokens the frontend would scan it under. A PS3 game folder kept under its library name
+boots by what it holds, and the caveat names the `.ps3` suffix among the rest. The caveat says nothing about where the
+path lies: a client asks with its own library's paths, outside the folder ES-DE scans, and where a game goes for ES-DE
+is the [ROM location](#where-do-this-systems-roms-live-and-what-launches-them) question.
 
 **Who installs it — `installers`.** A `needs-installation` verdict names the emulators that install the file, so a
 client can say "install it in RPCS3 first" and check that RPCS3 is there without writing the emulator in itself:
@@ -3351,24 +3370,53 @@ The list has three states, and they never collapse:
 `label` plays no part in it: the remedy is to install the file, whichever entry the caller would start it through. The
 formats and their installers are recorded, each with its citation, in `atlas/data/launch_formats.json`. A `.cia` is
 recorded as an installer and not as Azahar content: booting one only offers to install it, so Azahar's loader card does
-not claim it, and a catalogue that adds `.cia` to its accept-list meets `entry-not-accepted` on Azahar.
+not claim it, and a `.cia` answers `needs-installation` whatever a catalogue's accept-list says.
 
-**The per-entry judgment** splits along the boundary rule. A **libretro** entry's formats are read live off the
-installed core, and they are _claims_, not gates: RetroArch checks nothing on a direct load and hands the file over, so
-a file outside the claims stays `launchable` with `entry-format-unclaimed` stating the absent promise. Archives run
+**The per-entry judgment** is made on what `%ROM%` hands the entry — the path itself, or the file of its own name inside
+a directory ES-DE takes as a file — and splits along the boundary rule. A **libretro** entry's formats are read live off
+the installed core, and they are _claims_, not gates: RetroArch checks nothing on a direct load and hands the file over,
+so a file outside the claims is attempted, never refused — and whether the core reads it is something nobody
+established, so it answers `unestablished` with `entry-format-unclaimed` stating the absent promise. Archives run
 through RetroArch's own hands — a container the core does not claim is opened and searched for the first file matching
 the claims, so the verdict stands with `archive-contents-unread` (what is inside is something atlas does not read); a
 `block_extract` core handed a container it never claimed is the one libretro refusal the claims can establish; a core
 whose open atlas reads is judged by that reading instead (below). A **standalone** entry opens the file itself: its
 recorded loader decides (`launch_formats.json`'s `emulators` block, matched case-insensitively — the gate is the loader,
-not ES-DE's case-exact scan), and an emulator without a card earns `entry-format-unestablished` — never "refuses",
-because an entry nobody read is not an entry known to refuse the file. Two routes stand beside the claims and the cards:
-an entry whose emulator's own boot atlas reads (RPCS3, for the command shapes below) and one whose emulator's open of a
-disc file atlas reads (DuckStation, SwanStation and the mednafen cores, see
+not ES-DE's case-exact scan), and an emulator without a card answers `unestablished` with `entry-format-unestablished` —
+never a refusal, because an entry nobody read is not an entry known to refuse the file. Two routes stand beside the
+claims and the cards: an entry whose emulator's own boot atlas reads (RPCS3, for the command shapes below) and one whose
+emulator's open of a disc file atlas reads (DuckStation, SwanStation and the mednafen cores, see
 [what it opens](#is-this-file-launchable-here)) is judged by that reading, which answers before any card. RPCS3 has no
 card and is read anyway; an RPCS3 entry in any other command shape, such as one without `--no-gui`, is an entry nobody
 read and keeps `entry-format-unestablished`. A standalone loader that opens an archive itself answers a taken archive
 `launchable` with `archive-contents-unread`, the statement RetroArch's archive hands earn: what loads is inside it.
+
+**A directory** is judged by what the emulator does with a directory, never by its name (issue #776): no emulator here
+asks for one with a particular suffix, which is ES-DE's scan rule and goes only into the naming caveat. A directory
+holding a file of its own name is that file, since `%ROM%` names it. Any other directory reaches the entry as itself:
+
+- **A libretro entry** — RetroArch at a79435a reads the content of a core that takes it as bytes into memory, and a
+  directory yields none, so the load fails (`task_content.c:1465-1481`): `entry-not-accepted` with
+  `entry-takes-no-directory`. The core's `need_fullpath` decides which side it is on, read off the core beside its
+  claims.
+- **Not established** — `unestablished` with `entry-directory-unread`, whose `reason` says why: `own-loader`, a core
+  that takes its content by path and so is handed the directory, where its own loader decides and atlas has not read it;
+  `content-override-unread`, a core that takes bytes but where the directory's name carries an extension, and a content
+  override the core may register for that extension could hand it the path instead; `core-unread`, a core whose reading
+  does not say how it takes its content.
+- **A standalone entry** — its card's `directories` statement decides, read at every build the card serves: the names
+  inside a directory its loader starts one by. PPSSPP starts a directory holding `EBOOT.PBP`, booting that file, or one
+  holding `PSP_GAME`, mounted as the disc, and the take reads the content after, as its file takes do
+  (`entry-format-content-unread`); Azahar, Dolphin, PrimeHack, DuckStation and PCSX2 start none, so the entry answers
+  `entry-not-accepted` with `entry-takes-no-directory`. An emulator without a card answers `unestablished`, as for a
+  file; RPCS3's boot and the shell entry read a directory themselves (below).
+
+Beside a directory verdict, `entry-directory-holds` names the files inside it the entry would take as files of their own
+— the remedy where the directory does not start, and what a start rests on where it does. A libretro entry names the
+files its core claims and a card's entry the files its card takes, by their extension; RPCS3 handed the path names the
+files its `Load` takes by what they hold — an ISO 9660 image, a SELF or ELF, a savestate by its suffix — and a file
+whose content cannot be read is not named. The serial and shell entries name none. A `.pkg` directory is no package: the
+install-first record is about a file of the format, so a directory named like one is judged by what it holds.
 
 **Dolphin and PrimeHack** have cards read at the builds RetroDECK ships, Dolphin f84df020 and PrimeHack 81bfb96 (issue
 #618), for every entry ES-DE's and RetroDECK's catalogues declare for them — gc, wii, triforce, primehack, and ES-DE's
@@ -3376,12 +3424,12 @@ consolearcade. Both loaders take a file by its extension, folding its ASCII case
 `.wbfs` `.ciso` `.gcz` `.wia` `.rvz` `.nfs`, the executables `.dol` and `.elf`, a `.dff` FIFO log, a `.wad`, a `.json`
 game-mod descriptor and a `.m3u` or `.m3u8` list. Neither opens an archive, so a `.zip` or `.7z` a system's list
 declares answers `entry-not-accepted` on both. Past the extension both loaders read the content — the disc's magic, the
-WAD's header, the list's entries, the descriptor — and atlas does not: an accepted extension answers `launchable` with
+WAD's header, the list's entries, the descriptor — and atlas does not: a taken extension answers `launchable` with
 `entry-format-content-unread`, and `boots` stays `None`. Reading the content, and what a list, a descriptor, an
 extracted disc or a split image boots, is issue #732. `.bin` is where the builds part. Dolphin's disc set carries it;
 PrimeHack's carries it at the build EmuDeck installs from Flathub (53f53e0f) and not at RetroDECK's, so on PrimeHack a
-`.bin` stays `launchable` on the accept-list with `entry-format-build-dependent`, since a refusal would not hold on
-every machine the card serves.
+`.bin` answers `unestablished` with `entry-format-build-dependent`, since neither a take nor a refusal holds on every
+machine the card serves.
 
 Both cards answer for the command those catalogues give the emulator, `-b -e %ROM%` after its token. A leading
 `env NAME=value…` (RetroDECK's) or an `%INJECT%` of a per-game prefix file (ES-DE's own) in front of the token leaves
@@ -3423,11 +3471,11 @@ answer.boots.file       # '/roms/ps3/Game.ps3/PS3_GAME/USRDIR/EBOOT.BIN' — wha
 answer.boots.disc_root  # '/roms/ps3/Game.ps3' — what it mounts as the disc, or None for a game booted without one
 ```
 
-`boots` is `None` on every other verdict and on every entry whose emulator's boot atlas does not read — a `launchable`
-verdict with `boots` `None` says nothing about what boots. Where the reading cannot reach a verdict, the stance is
-unestablished as for an entry without a card: the verdict stays `launchable` on the accept-list, `boots` is `None`, and
-a caveat names the step that stopped it. Where it establishes a refusal, the verdict is `entry-not-accepted` with the
-reason as a caveat, and `alternatives` names the entries the same reading establishes to boot the file.
+`boots` is `None` on every verdict but `launchable` and `unestablished`, and on every entry whose emulator's boot atlas
+does not read — a verdict with `boots` `None` says nothing about what boots. Where the reading cannot reach a verdict,
+the verdict is `unestablished`, `boots` keeps whatever the reading did establish, and a caveat names the step that
+stopped it. Where it establishes a refusal, the verdict is `entry-not-accepted` with the reason as a caveat, and
+`alternatives` names the entries the same reading establishes to boot the file.
 
 **RPCS3's boot.** The entries that hand RPCS3 the file's path — ES-DE's `RPCS3 Directory` and `RPCS3 ISO`, both
 `%EMULATOR_RPCS3% --no-gui %ROM%` — are judged the way RPCS3 d5213de6 boots that path: the build RetroDECK ships and the
@@ -3482,8 +3530,8 @@ Two failures stay outside the reading: a boot file is taken by its first four by
 RPCS3 does not find fails later on decryption, and an ELF none of its loaders takes is refused there too.
 
 The Game Serial entry (`%EMULATOR_RPCS3% --no-gui %RPCS3_GAMEID%:%INJECT%=%BASENAME%.ps3`) hands RPCS3 a serial it
-resolves through its own game registry, which atlas does not read: the verdict stays `launchable` on the accept-list
-with `boots` `None` and `boot-registry-unread`, whose `registry` names the file. Reading that registry is issue #727.
+resolves through its own game registry, which atlas does not read: the verdict is `unestablished` with `boots` `None`
+and `boot-registry-unread`, whose `registry` names the file. Reading that registry is issue #727.
 
 **The shell entry.** An entry that runs `%ROM%` through the shell — ES-DE's `RPCS3 Shortcut`,
 `%EMULATOR_OS-SHELL%
@@ -3492,10 +3540,10 @@ one. That entry is the one ES-DE puts first for `ps3`, so a disc dump folder ask
 `entry-not-accepted`, with the Directory and ISO entries as `alternatives`. Every other file stays as the entry answers
 it without a card.
 
-**What it opens — `opens`.** ES-DE accepts a file by its extension alone, so a disc's `.cue` and its `.bin` tracks, and
-an `.m3u` listing several discs, all answer `launchable`. What tells a file to start from a file another one opens is
-what the emulator does with each, and for some entries atlas reads that (issue #716): each file the emulator opens or
-looks for through the launched file, in the order it does so, and the file its open stopped at.
+**What it opens — `opens`.** A disc's `.cue` and its `.bin` tracks, and an `.m3u` listing several discs, are all files
+an entry may be handed. What tells a file to start from a file another one opens is what the emulator does with each,
+and for some entries atlas reads that (issue #716): each file the emulator opens or looks for through the launched file,
+in the order it does so, and the file its open stopped at.
 
 ```python
 answer = inst.launchable("psx", "/roms/psx/Game/Game.m3u")
@@ -3509,17 +3557,17 @@ answer = inst.launchable("psx", "/roms/psx/Game/Game.m3u")
 `named` where the text of another file names it — a cue sheet's `FILE` line, a playlist's line — and `name-derived`
 where the emulator derives it from a file's own name: the `.sbi` beside an image, the `.img` and `.sub` of a `.ccd`, the
 `.mdf` of an `.mds`, the `<cue stem>.bin` a cue's missing first file is looked for as, a `.ppf` where the emulator's
-setting loads patches. `by` is that other file, and `present` whether a file is there — `None` where that cannot be
-told, or where the setting that decides whether a `.ppf` is opened could not be read (`opens-setting-unread`). A
-companion the emulator looks for and goes on without, such as a `.sbi` that is not there, is listed with `present`
-`False`, so a client adopting, checking or cleaning up an install sees every file the emulator touches. Every lookup is
-the filesystem's own, exactly as spelled: on Linux's own filesystems a name in other case is a file that is not there.
+setting loads patches or could not be read (`opens-setting-unread`). `by` is that other file, and `present` whether a
+file is there — `None` where that cannot be told. A companion the emulator looks for and goes on without, such as a
+`.sbi` that is not there, is listed with `present` `False`, so a client adopting, checking or cleaning up an install
+sees every file the emulator touches. Every lookup is the filesystem's own, exactly as spelled: on Linux's own
+filesystems a name in other case is a file that is not there.
 
-`opens` stands on `launchable` and on `entry-not-accepted`, where it lists what the emulator got to before it stopped
-and the file it stopped at, and is `None` everywhere else: on every entry whose emulator's open atlas does not read, on
-a file type this reading does not cover, and where the launched file itself is not there or could not be read
-(`opens-file-unread`) — never a refusal, so a client can ask before it places a file. This version reads these entries,
-each at the build atlas pins for it (`atlas/disc_opens.py` carries every citation):
+`opens` stands on `launchable`, on `unestablished`, and on `entry-not-accepted`, where it lists what the emulator got to
+before it stopped and the file it stopped at, and is `None` everywhere else: on every entry whose emulator's open atlas
+does not read, on a file type this reading does not cover, and where the launched file itself is not there or could not
+be read (`opens-file-unread`) — never a refusal, so a client can ask before it places a file. This version reads these
+entries, each at the build atlas pins for it (`atlas/disc_opens.py` carries every citation):
 
 - **DuckStation (standalone, the `-batch %ROM%` and `%ROM%` commands) and SwanStation** share one open: a `.cue`, an
   `.m3u`, a bare `.bin`, `.img` or `.iso`, and an `.mds`. A cue sheet is parsed whole before any file opens, in the
@@ -3528,7 +3576,11 @@ each at the build atlas pins for it (`atlas/disc_opens.py` carries every citatio
   playlist opens its first entry at launch and every other only when the player switches discs, so a nested playlist
   contributes its first entry alone. DuckStation reads `[CDROM] LoadImagePatches` from its settings file and looks for a
   `.ppf` beside every image it opens; SwanStation reads the core option `swanstation_CDROM_LoadImagePatches` over the
-  options files RetroArch reads for the content, and looks for one beside the launched path alone.
+  options files RetroArch reads for the content, and looks for one beside the launched path alone. A patch DuckStation
+  cannot apply fails the open, so one beside the launched image that is there, or whose presence cannot be told, answers
+  `unestablished` (`opens-content-unread`, `opens-file-unread`); beside a later playlist disc, opened only when the
+  player switches to it, the same caveat rides a `launchable` answer. SwanStation reopens the image unpatched, so its
+  patch decides nothing. Where the setting could not be read, the `.ppf` is looked for all the same.
 - **Beetle PSX and Beetle PSX HW, Beetle Saturn, Beetle PCE, Beetle PCE Fast and Beetle PC-FX** read a `.cue`, a `.ccd`
   and an `.m3u` with mednafen's loader: every `FILE` is opened at its line, the track type after it decides — `BINARY`
   and the raw audio types each core takes (Beetle PSX none) are taken, the types an audio reader opens are decided by

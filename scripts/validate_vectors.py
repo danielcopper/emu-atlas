@@ -184,8 +184,8 @@ SAVE_PART_FIELDS = {"memory", "slot", "region", "verdict", "source_group", "targ
 # from, mirrored from atlas.installations.LAUNCH_VERDICTS.
 KNOWN_LAUNCH_VERDICTS = {
     "launchable",
-    "not-accepted",
     "entry-not-accepted",
+    "unestablished",
     "needs-installation",
     "unknown",
 }
@@ -792,6 +792,9 @@ KNOWN_CAVEAT_CODES = {
     "boot-disc-dir-configured",
     "boot-disc-dir-unresolved",
     "entry-takes-no-directory",
+    "entry-directory-unread",
+    "entry-directory-holds",
+    "frontend-name-unscanned",
     "platform-unmapped",
     "platform-unknown",
     "platform-scraping-ignored",
@@ -1062,9 +1065,9 @@ def _validate_save_portability_query(name: str, query: Any) -> None:
 
 
 def _validate_launchable_query(name: str, query: Any) -> None:
-    # Both halves are the question's subject: a verdict without a file has
-    # nothing to derive an extension from, and one without a system has no
-    # accept-list to judge it by.
+    # Both halves are the question's subject: a verdict without a path has
+    # nothing to hand the emulator, and one without a system has no entry
+    # to judge.
     if not isinstance(query, dict):
         fail(f"{name}: input.launchable_query must be an object")
     keys = set(query)
@@ -1548,7 +1551,10 @@ def _validate_ps2_bios_header_spec(name: str, path: str, spec: Any) -> None:
 # where the file is an ISO, and the category the PARAM.SFO loader keeps, which
 # only a file opening with the PARAM.SFO magic can carry and only one of the
 # loader's own (PSF.cpp:274 at RPCS3 d5213de6).
-PS3_FILE_FIELDS = {"magic", "iso", "category"}
+PS3_FILE_FIELDS = {"magic", "iso", "category", "savestate"}
+# The eight bytes an uncompressed RPCS3 savestate opens with (savestate_utils.cpp:189).
+PS3_SAVESTATE_MAGIC = "RPCS3SAV"
+PS3_SAVESTATE_LEADING = PS3_SAVESTATE_MAGIC[:4]
 PS3_ISO_FIELDS = {"regions", "watermark"}
 PS3_ISO_OPTIONAL = {"blocks"}
 PS3_ISO_BLOCKS = {"clear", "encrypted", "none"}
@@ -1574,7 +1580,7 @@ def _validate_input_ps3_files(name: str, declared: Any, files: Any) -> None:
 
 def _validate_ps3_file_spec(name: str, path: str, spec: Any) -> None:
     if not isinstance(spec, dict) or "magic" not in spec or not set(spec) <= PS3_FILE_FIELDS:
-        fail(f"{name}: ps3 file {path!r} must be an object with magic and optionally iso and category")
+        fail(f"{name}: ps3 file {path!r} must be an object with magic and optionally iso, category and savestate")
     magic, category = spec["magic"], spec.get("category", "")
     if not isinstance(magic, str) or len(magic) > 4 or any(ord(char) > 0xFF for char in magic):
         fail(f"{name}: ps3 file {path!r} magic must be at most four one-byte characters (latin-1)")
@@ -1585,6 +1591,11 @@ def _validate_ps3_file_spec(name: str, path: str, spec: Any) -> None:
             f"{name}: ps3 file {path!r} states a category only beside the PARAM.SFO magic, and only one "
             "the loader keeps"
         )
+    savestate = spec.get("savestate", False)
+    if not isinstance(savestate, bool):
+        fail(f"{name}: ps3 file {path!r} savestate must be true or false")
+    if savestate and magic != PS3_SAVESTATE_LEADING:
+        fail(f"{name}: ps3 file {path!r} states a savestate only beside the magic {PS3_SAVESTATE_LEADING!r}")
     _validate_ps3_iso(name, path, spec.get("iso"))
 
 
@@ -3876,17 +3887,17 @@ def _validate_platform_identity(name: str, identity: Any) -> None:
 def _validate_launchable(name: str, answer: Any) -> None:
     """A launchability answer: the verdict, and the couplings only it may state.
 
-    ``entry`` travels with the two verdicts that have one — an emulator named
-    for a file nothing launches would answer a different question, and a
-    launchable verdict without the entry that would run has thrown half its
-    answer away. ``alternatives`` is ``entry-not-accepted``'s remedy alone
-    (and may be empty even there — none established is a legal answer).
-    ``installers`` is ``needs-installation``'s, a list there (empty where
-    nothing here installs the file) and ``null`` on every other verdict.
-    ``boots`` is ``launchable``'s alone, and ``null`` there too wherever the
-    entry's own boot was not read. ``opens`` rides the two verdicts that name
-    an entry, and is ``null`` there too wherever the entry's own open was not
-    read.
+    ``entry`` travels with the three verdicts about the entry that would run
+    — an emulator named for a file nothing launches would answer a different
+    question, and a launchable verdict or a refusal without the entry has
+    thrown half its answer away. ``alternatives`` is ``entry-not-accepted``'s
+    remedy alone (and may be empty even there — none established is a legal
+    answer). ``installers`` is ``needs-installation``'s, a list there (empty
+    where nothing here installs the file) and ``null`` on every other verdict.
+    ``boots`` rides ``launchable`` and ``unestablished`` alone, and is
+    ``null`` there too wherever the entry's own boot was not read. ``opens``
+    rides the three verdicts that name an entry, and is ``null`` there too
+    wherever the entry's own open was not read.
     """
     fields = {"verdict", "extension", "accepted", "entry", "alternatives", "installers", "boots", "opens", "caveats"}
     if not isinstance(answer, dict) or set(answer) != fields:
@@ -3902,9 +3913,7 @@ def _validate_launchable(name: str, answer: Any) -> None:
             fail(f"{name}: expected.launchable.{list_key} must be a list of non-empty strings")
     _validate_boots(name, answer)
     _validate_opens(name, answer)
-    entry_verdicts = {"launchable", "entry-not-accepted"}
-    if (answer["entry"] is not None) != (answer["verdict"] in entry_verdicts):
-        fail(f"{name}: expected.launchable.entry travels with {sorted(entry_verdicts)} alone")
+    _validate_launchable_entry(name, answer)
     if answer["alternatives"] and answer["verdict"] != "entry-not-accepted":
         fail(f"{name}: expected.launchable.alternatives travels with 'entry-not-accepted' alone")
     if answer["entry"] is not None:
@@ -3913,15 +3922,25 @@ def _validate_launchable(name: str, answer: Any) -> None:
     _validate_caveats(name, answer["caveats"])
 
 
+def _validate_launchable_entry(name: str, answer: dict[str, Any]) -> None:
+    """The entry that would run: stated on a take and on a refusal, possible on an unestablished reading, and on
+    no other verdict."""
+    entry_verdicts = {"launchable", "entry-not-accepted", "unestablished"}
+    if answer["entry"] is not None and answer["verdict"] not in entry_verdicts:
+        fail(f"{name}: expected.launchable.entry travels with {sorted(entry_verdicts)} alone")
+    if answer["entry"] is None and answer["verdict"] in ("launchable", "entry-not-accepted"):
+        fail(f"{name}: expected.launchable.entry must be stated on a '{answer['verdict']}' verdict")
+
+
 def _validate_boots(name: str, answer: dict[str, Any]) -> None:
-    """What the judged entry boots: ``null``, or a file beside a disc root or ``null`` — on a launchable verdict
-    about an entry alone, the coupling the answer type holds. Checked before the entry's own coupling, so a boot
-    stated without its entry is named as that."""
+    """What the judged entry boots: ``null``, or a file beside a disc root or ``null`` — on a launchable or an
+    unestablished verdict about an entry alone, the coupling the answer type holds. Checked before the entry's own
+    coupling, so a boot stated without its entry is named as that."""
     boots = answer["boots"]
     if boots is None:
         return
-    if answer["verdict"] != "launchable" or answer["entry"] is None:
-        fail(f"{name}: expected.launchable.boots travels with a 'launchable' verdict about an entry alone")
+    if answer["verdict"] not in ("launchable", "unestablished") or answer["entry"] is None:
+        fail(f"{name}: expected.launchable.boots travels with a 'launchable' or 'unestablished' verdict about an entry")
     _require_exact(name, boots, {"file", "disc_root"}, "expected.launchable.boots")
     if not isinstance(boots["file"], str) or not boots["file"].startswith("/"):
         fail(f"{name}: expected.launchable.boots.file must be an absolute path")
@@ -3938,7 +3957,7 @@ def _validate_opens(name: str, answer: dict[str, Any]) -> None:
     opens = answer["opens"]
     if opens is None:
         return
-    if answer["verdict"] not in ("launchable", "entry-not-accepted") or answer["entry"] is None:
+    if answer["verdict"] not in ("launchable", "entry-not-accepted", "unestablished") or answer["entry"] is None:
         fail(f"{name}: expected.launchable.opens travels with a verdict about an entry alone")
     if not isinstance(opens, list):
         fail(f"{name}: expected.launchable.opens must be a list or null")
