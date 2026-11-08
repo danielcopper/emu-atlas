@@ -429,20 +429,22 @@ def _fragments(citations: Iterable[str]) -> set[str]:
     return {fragment for citation in citations for fragment in citation.split("; ")}
 
 
-def _added(evidence: tuple[str, ...], attached: Iterable[str], where: str) -> tuple[str, ...]:
-    """*evidence* when it adds to what the loader attaches anyway; a repeated fragment is refused."""
-    repeated = sorted(_fragments(evidence) & _fragments(attached))
+def _added(evidence: str | None, attached: Iterable[str], where: str) -> list[str]:
+    """*evidence*, as the citations it adds to what the loader attaches anyway; a repeated fragment is refused."""
+    if evidence is None:
+        return []
+    repeated = sorted(_fragments((evidence,)) & _fragments(attached))
     if repeated:
         raise ValueError(f"{where}: citation repeats {'; '.join(repeated)}, which the loader attaches from the anchors")
-    return evidence
+    return [evidence]
 
 
-def _stated(entry: dict[str, Any], where: str) -> tuple[str, ...]:
-    """An override's reason, and the evidence it adds beyond its anchors' own citations (``null`` for none)."""
+def _stated(entry: dict[str, Any], where: str) -> str | None:
+    """An override's reason, and the evidence it adds beyond its anchors' own citations (``None`` for none)."""
     _expect_str(entry["reason"], f"{where}: reason")
     if entry["citation"] is None:
-        return ()
-    return (_expect_str(entry["citation"], f"{where}: citation"),)
+        return None
+    return _expect_str(entry["citation"], f"{where}: citation")
 
 
 class _Overrides:
@@ -718,7 +720,7 @@ def load_platform_table(
     _required_columns(sources)
     rows = _rows(raw["rows"])
     cited = _keys(raw["keys"], sources)
-    keys = {source: frozenset(k for s, k in cited if s == source) for source in sources}
+    keys = {source: frozenset(k for s, k in cited.keys() if s == source) for source in sources}
     stated = _key_kinds(raw["kinds"], keys)
     if not isinstance(raw["mappings"], list):
         raise ValueError("platform_table: 'mappings' must be a list")

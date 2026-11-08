@@ -63,8 +63,9 @@ mapped-or-excluded (D17). Every entry is open-ended at its source's pinned
 version (D15): ``valid_from`` is that version, ``valid_to`` is ``null``.
 
 A maintainer tool, not part of the library: it fetches the pinned revisions
-from the network (``--cache DIR`` keeps them between runs) and rewrites the
-data file. stdlib only, like everything else in the tree.
+from the network (``--cache DIR``, inside the repository or the temporary
+directory, keeps them between runs) and rewrites the data file. stdlib only,
+like everything else in the tree.
 """
 
 from __future__ import annotations
@@ -78,6 +79,7 @@ import os
 import re
 import sys
 import tarfile
+import tempfile
 import time
 import urllib.parse
 import urllib.request
@@ -1179,9 +1181,9 @@ def emudeck_folders(fetcher: Fetcher) -> list[SourceKey]:
     lines: dict[str, tuple[str, int]] = {}
     text = fetcher.text(f"{EMUDECK.raw}/{EMUDECK_SYSTEMS_TXT}")
     for number, line in enumerate(text.splitlines(), start=1):
-        match = re.match(r"^([^:]+):\s*(.*)$", line)
-        if match:
-            lines[match.group(1).strip()] = (match.group(2).strip(), number)
+        folder, colon, name = line.partition(":")
+        if colon and folder:
+            lines[folder.strip()] = (name.strip(), number)
     keys: list[SourceKey] = []
     for entry in sorted(listing, key=lambda e: e["name"]):
         if entry["type"] != "dir":
@@ -1203,10 +1205,28 @@ def rocknix_files(fetcher: Fetcher) -> dict[str, str]:
     }
 
 
-def main(argv: list[str] | None = None) -> int:
+def allowed_path(raw: str, what: str) -> Path:
+    """*raw* resolved, refused unless it lies inside the repository or the system's temporary directory.
+
+    The generator writes the cache and the findings where the command line
+    says; bounding both to the checkout and the temporary directory (``TMPDIR``
+    moves it) keeps a mistyped or hostile argument from writing anywhere else.
+    """
+    path = Path(raw).resolve()
+    roots = (ROOT.resolve(), Path(tempfile.gettempdir()).resolve())
+    if not any(path.is_relative_to(root) for root in roots):
+        raise SystemExit(f"{what} {path} lies outside the repository and the temporary directory")
+    return path
+
+
+def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
-    parser.add_argument("--cache", type=Path, help="keep fetched files here between runs")
-    parser.add_argument("--findings", type=Path, help="write the join findings (gaps, splits) here")
+    parser.add_argument(
+        "--cache", help="keep fetched files here between runs (inside the repository or the temporary directory)"
+    )
+    parser.add_argument(
+        "--findings", help="write the join findings here (inside the repository or the temporary directory)"
+    )
     parser.add_argument(
         "--repin-wikidata", action="store_true", help="pin Wikidata's current item revisions, then stop"
     )
@@ -1216,20 +1236,21 @@ def main(argv: list[str] | None = None) -> int:
         WIKIDATA_PINS.write_text(text, encoding="utf-8")
         digest = hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
         print(f"pinned {WIKIDATA_PINS.name}; record revision {digest} in SOURCES.md's wikidata block")
-        return 0
+        return
+    cache = allowed_path(args.cache, "--cache") if args.cache else None
+    findings = allowed_path(args.findings, "--findings") if args.findings else None
     check_sources(SOURCES_MD.read_text(encoding="utf-8"))
-    table = build(Fetcher(args.cache))
+    table = build(Fetcher(cache))
     data = payload(table)
     OUTPUT.write_text(json.dumps(data, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
-    if args.findings:
-        args.findings.write_text(json.dumps(table.findings, indent=1, ensure_ascii=False) + "\n")
+    if findings is not None:
+        findings.write_text(json.dumps(table.findings, indent=1, ensure_ascii=False) + "\n")
     print(
         f"wrote {OUTPUT.name}: {len(data['rows'])} rows, {len(data['mappings'])} mappings, "
         + ", ".join(f"{c} {len(k)}" for c, k in data["keys"].items())
     )
     for line in finding_counts(table.findings):
         print(line)
-    return 0
 
 
 def finding_counts(findings: dict[str, list[str]]) -> list[str]:
@@ -1238,4 +1259,4 @@ def finding_counts(findings: dict[str, list[str]]) -> list[str]:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()

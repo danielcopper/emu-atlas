@@ -41,12 +41,14 @@ class TestTheSourcesFile:
 
     @pytest.mark.parametrize("missing", ["licence", "decision"])
     def test_a_block_without_a_licence_or_a_decision_stops_the_generator(self, missing):
+        text = _sources(romm={missing: ""})
         with pytest.raises(SystemExit, match=f"'romm' has no {missing} line"):
-            generator.check_sources(_sources(romm={missing: ""}))
+            generator.check_sources(text)
 
     def test_a_block_that_does_not_record_the_pinned_revision_stops_the_generator(self):
+        text = _sources(romm={"revision": "0000000"})
         with pytest.raises(SystemExit, match=f"'romm' does not record the pinned revision {generator.ROMM.revision}"):
-            generator.check_sources(_sources(romm={"revision": "0000000"}))
+            generator.check_sources(text)
 
     def test_the_packaged_table_names_the_pinned_revisions(self):
         import json
@@ -77,8 +79,9 @@ class TestTheEsdeSourceFiles:
         assert symbols == {"THREEDO": "3do", "SUPER_NINTENDO": "snes", "PLATFORM_IGNORE": "ignore"}
 
     def test_a_symbol_count_that_differs_from_the_names_stops_the_generator(self):
+        cpp = self.CPP.replace('    "ignore"\n', "")
         with pytest.raises(SystemExit, match="3 enum symbols, 2 names"):
-            generator.esde_platform_ids(self.CPP.replace('    "ignore"\n', ""), self.HEADER)
+            generator.esde_platform_ids(cpp, self.HEADER)
 
     def test_a_scraper_map_gives_each_platform_its_provider_id_and_line(self):
         cpp = "const std::map<PlatformId, unsigned short> screenscraper_platformid_map {\n    {THREEDO, 29},\n    {SUPER_NINTENDO, \"4\"},\n};\n"
@@ -359,12 +362,14 @@ class TestTheWikidataPin:
             generator.wikidata_items(answers, {"Q1": 11})  # type: ignore[arg-type]
 
     def test_no_pinned_item_stops_the_generator(self):
+        answers = _Answers()
         with pytest.raises(SystemExit, match="pins no Wikidata item"):
-            generator.wikidata_items(_Answers(), {})  # type: ignore[arg-type]
+            generator.wikidata_items(answers, {})  # type: ignore[arg-type]
 
     def test_a_query_answering_no_item_is_not_pinned(self):
+        answers = _Answers({"results": {"bindings": []}})
         with pytest.raises(SystemExit, match="answered no item"):
-            generator.repin_wikidata(_Answers({"results": {"bindings": []}}))  # type: ignore[arg-type]
+            generator.repin_wikidata(answers)  # type: ignore[arg-type]
 
     def test_the_pin_files_digest_is_the_revision_sources_md_records(self):
         text = (ROOT / "scripts" / "wikidata_revisions.json").read_text(encoding="utf-8")
@@ -394,6 +399,34 @@ class TestTheFetcher:
         assert [p.name for p in tmp_path.iterdir()] == [hashlib.sha256(url.encode("utf-8")).hexdigest()]
         assert fetcher.bytes(url) == b"payload"
         assert calls == [url]
+
+
+class TestTheEmudeckFolders:
+    class _Fetcher:
+        def json(self, url: str) -> object:
+            return [{"name": "snes", "type": "dir"}, {"name": "gb", "type": "dir"}, {"name": "README.md", "type": "file"}]
+
+        def text(self, url: str) -> str:
+            return "snes: Super Nintendo: SFC\n:no folder\nno colon here\ngb:Game Boy\n"
+
+    def test_a_systems_line_names_its_folder_up_to_the_first_colon(self):
+        keys = generator.emudeck_folders(self._Fetcher())  # type: ignore[arg-type]
+        assert [(k.key, k.name, k.citation) for k in keys] == [
+            ("gb", "Game Boy", f"emudeck:roms/gb/; emudeck:{generator.EMUDECK_SYSTEMS_TXT}:4"),
+            ("snes", "Super Nintendo: SFC", f"emudeck:roms/snes/; emudeck:{generator.EMUDECK_SYSTEMS_TXT}:1"),
+        ]
+
+
+class TestTheCommandLinePaths:
+    def test_a_path_inside_the_repository_or_the_temporary_directory_is_taken(self, tmp_path):
+        assert generator.allowed_path(str(ROOT / "build" / "cache"), "--cache") == (ROOT / "build" / "cache").resolve()
+        assert generator.allowed_path(str(tmp_path / "findings.json"), "--findings") == (tmp_path / "findings.json").resolve()
+
+    @pytest.mark.parametrize("raw", ["/etc/findings.json", "../../outside.json"])
+    def test_a_path_anywhere_else_stops_the_generator(self, raw, monkeypatch):
+        monkeypatch.chdir(ROOT)
+        with pytest.raises(SystemExit, match="--findings .* lies outside the repository and the temporary directory"):
+            generator.allowed_path(raw, "--findings")
 
 
 def test_every_run_prints_a_count_per_kind_of_finding():

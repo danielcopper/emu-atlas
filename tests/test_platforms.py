@@ -188,8 +188,9 @@ class TestTheLoaderRefusesATableItCannotStandBehind:
         assert dict(table.sources) == {"esde": "v1", "batocera": "b1", "romm": "m1", **{s: "x1" for s in REQUIRED}}
 
     def test_an_unknown_schema_is_refused(self):
+        table = fixture_table(schema=9)
         with pytest.raises(ValueError, match="unsupported schema 9"):
-            _load(fixture_table(schema=9))
+            _load(table)
 
     def test_a_placed_key_its_source_does_not_list_is_refused(self):
         table = fixture_table()
@@ -244,8 +245,9 @@ class TestTheLoaderRefusesATableItCannotStandBehind:
 
     def test_folder_is_not_a_source_name(self):
         sources = {**SOURCES, "folder": {"upstream": "x", "version": "1", "revision": "r"}}
+        table = fixture_table(sources=sources)
         with pytest.raises(ValueError, match="pseudo-source"):
-            _load(fixture_table(sources=sources))
+            _load(table)
 
 
 class TestTheOverrides:
@@ -263,8 +265,9 @@ class TestTheOverrides:
     def test_a_map_states_related_or_narrow_only(self):
         table = _load(overrides=overrides_doc(_map("romm/pico", "esde/gb", relation=RELATED_MATCH)))
         assert _keys(translate([("esde", "gb")], table), "romm") == [("gb", EXACT_MATCH), ("pico", RELATED_MATCH)]
+        overrides = overrides_doc(_map("romm/pico", "esde/gb", relation=EXACT_MATCH))
         with pytest.raises(ValueError, match="only narrowMatch or relatedMatch"):
-            _load(overrides=overrides_doc(_map("romm/pico", "esde/gb", relation=EXACT_MATCH)))
+            _load(overrides=overrides)
 
     def test_a_merge_cites_itself_on_every_key_it_moves(self):
         table = _load(overrides=overrides_doc(_merge("batocera/jaguar", "esde/atarijaguar", citation="the merge's line")))
@@ -310,28 +313,34 @@ class TestTheOverrides:
         ],
     )
     def test_an_override_naming_a_key_its_source_does_not_have_is_refused(self, entry, message):
+        overrides = overrides_doc(entry)
         with pytest.raises(ValueError, match=message):
-            _load(overrides=overrides_doc(entry))
+            _load(overrides=overrides)
 
     def test_a_merge_of_a_row_into_itself_is_refused(self):
+        overrides = overrides_doc(_merge("batocera/gb", "esde/gb"))
         with pytest.raises(ValueError, match="on one row already"):
-            _load(overrides=overrides_doc(_merge("batocera/gb", "esde/gb")))
+            _load(overrides=overrides)
 
     def test_a_merge_needs_anchors_on_one_row(self):
+        overrides = overrides_doc(_merge("batocera/megadrive", "esde/gb"))
         with pytest.raises(ValueError, match="covers 2 rows"):
-            _load(overrides=overrides_doc(_merge("batocera/megadrive", "esde/gb")))
+            _load(overrides=overrides)
 
     def test_a_key_is_mapped_once(self):
+        overrides = overrides_doc(_map("romm/pico", "esde/gb"), _map("romm/pico", "esde/genesis"))
         with pytest.raises(ValueError, match="mapped once"):
-            _load(overrides=overrides_doc(_map("romm/pico", "esde/gb"), _map("romm/pico", "esde/genesis")))
+            _load(overrides=overrides)
 
     def test_an_override_without_a_reason_is_refused(self):
+        overrides = overrides_doc(_merge("batocera/jaguar", "esde/atarijaguar", reason=""))
         with pytest.raises(ValueError, match="reason"):
-            _load(overrides=overrides_doc(_merge("batocera/jaguar", "esde/atarijaguar", reason="")))
+            _load(overrides=overrides)
 
     def test_an_override_of_no_known_shape_is_refused(self):
+        overrides = overrides_doc({"source": "romm", "key": "pico"})
         with pytest.raises(ValueError, match="a merge, a map or a kind"):
-            _load(overrides=overrides_doc({"source": "romm", "key": "pico"}))
+            _load(overrides=overrides)
 
     def test_an_excluded_key_is_placed_nowhere(self):
         table = _load(excluded=excluded_doc({"source": "romm", "key": "pico", "reason": "a wrong value"}))
@@ -347,8 +356,10 @@ class TestTheOverrides:
         ],
     )
     def test_an_override_naming_an_excluded_key_is_refused(self, entry):
+        overrides = overrides_doc(entry)
+        excluded = excluded_doc({"source": "romm", "key": "pico", "reason": "r"})
         with pytest.raises(ValueError, match="romm/pico is excluded, so no judgement may also name it"):
-            _load(overrides=overrides_doc(entry), excluded=excluded_doc({"source": "romm", "key": "pico", "reason": "r"}))
+            _load(overrides=overrides, excluded=excluded)
 
     def test_a_map_places_a_key_the_generator_placed_nowhere(self):
         table = fixture_table()
@@ -357,8 +368,9 @@ class TestTheOverrides:
         assert _keys(translate([("romm", "dc")], loaded), "esde") == [("gb", EXACT_MATCH)]
 
     def test_a_row_is_no_subset_of_itself(self):
+        overrides = overrides_doc(kind_override("romm/pico", "content-subset", subset_of="romm/pico"))
         with pytest.raises(ValueError, match="subset_of names the row itself"):
-            _load(overrides=overrides_doc(kind_override("romm/pico", "content-subset", subset_of="romm/pico")))
+            _load(overrides=overrides)
 
     @pytest.mark.parametrize(
         "anchoring",
@@ -369,8 +381,9 @@ class TestTheOverrides:
         ],
     )
     def test_a_mapped_key_is_no_anchor_for_another_judgement(self, anchoring):
+        overrides = overrides_doc(_map("romm/pico", "esde/gb"), anchoring)
         with pytest.raises(ValueError, match="romm/pico is itself mapped"):
-            _load(overrides=overrides_doc(_map("romm/pico", "esde/gb"), anchoring))
+            _load(overrides=overrides)
 
     def test_a_map_is_cited_by_its_anchors_and_by_the_evidence_it_adds(self):
         table = fixture_table()
@@ -392,16 +405,19 @@ class TestTheOverrides:
         table = fixture_table()
         table["keys"]["romm"]["pico"] = "romm:slugs:7"
         table["keys"]["esde"]["atarijaguar"] = "es:systems:9"
+        overrides = overrides_doc(entry)
         with pytest.raises(ValueError, match="citation repeats .*, which the loader attaches from the anchors"):
-            _load(table, overrides=overrides_doc(entry))
+            _load(table, overrides=overrides)
 
     def test_an_override_states_its_evidence_or_null(self):
+        overrides = overrides_doc(_map("romm/pico", "esde/gb", citation=""))
         with pytest.raises(ValueError, match="citation: expected a non-empty string"):
-            _load(overrides=overrides_doc(_map("romm/pico", "esde/gb", citation="")))
+            _load(overrides=overrides)
 
     def test_an_excluded_key_its_source_does_not_have_is_refused(self):
+        excluded = excluded_doc({"source": "romm", "key": "dc", "reason": "r"})
         with pytest.raises(ValueError, match="not a key of its source at the pin"):
-            _load(excluded=excluded_doc({"source": "romm", "key": "dc", "reason": "r"}))
+            _load(excluded=excluded)
 
 
 class TestThePackagedTable:
@@ -609,14 +625,16 @@ class TestTheLookup:
 
     @pytest.mark.parametrize("pair", [("romm", 7), (7, "gb"), ("romm", None), ("romm", "gb", 2)])
     def test_a_value_that_is_not_a_string_is_refused(self, pair):
+        table = _load()
         with pytest.raises(ValueError, match="expected a string"):
-            translate([pair], _load())
+            translate([pair], table)
 
     def test_a_malformed_pair_or_no_pair_is_refused(self):
+        table = _load()
         with pytest.raises(ValueError, match="at least one"):
-            translate([], _load())
+            translate([], table)
         with pytest.raises(ValueError, match=r"\(source, key\)"):
-            translate([("romm",)], _load())
+            translate([("romm",)], table)
 
     def test_the_machine_half_reads_the_esde_names_and_the_exact_tags(self):
         table = _load()
@@ -676,8 +694,9 @@ class TestTheAnswerTypesHoldTheirInvariants:
     def test_a_translation_states_one_intersection(self, status, pairs, intersection, conflict, message):
         answer = {"known": self.KNOWN, "unknown": self.UNKNOWN}
         asked = () if pairs is None else (answer[pairs],)
+        conflicting = tuple(answer[c] for c in conflict)
         with pytest.raises(ValueError, match=message):
-            PlatformTranslation(1, (), asked, status, intersection, tuple(answer[c] for c in conflict), ())
+            PlatformTranslation(1, (), asked, status, intersection, conflicting, ())
 
 
 class TestTheHandleQuestion:
