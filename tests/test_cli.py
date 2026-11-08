@@ -23,6 +23,7 @@ from atlas.cli import run
 from atlas.installations import RETRODECK_JSON_SUFFIX
 from atlas.machine import FixtureMachine
 from tests.empty_home import assert_nothing_the_empty_home_holds_is_detected
+from tests.platform_projection import with_projected_translation
 from tests.test_machine_vectors import fixture_machine, load_vectors
 
 # expected key → the input key carrying its query (the library runner's own
@@ -158,6 +159,11 @@ def _argv_for(key: str, query, expected, name: str) -> list[str]:
     return _question_argv(key, query) + ["--installation", selector]
 
 
+# The two platform answers carry a translation, which the vectors assert in its
+# projection (vectors/README.md); the CLI prints the full contract.
+_PROJECTED = frozenset({"systems_for_platform", "platform_ids"})
+
+
 @pytest.mark.parametrize("vector", list(load_vectors()))
 def test_the_cli_answers_every_vector_byte_for_byte(vector, capsys):
     inp = vector["input"]
@@ -181,7 +187,10 @@ def test_the_cli_answers_every_vector_byte_for_byte(vector, capsys):
         exit_code = run(argv, home=inp["home"], machine=machine)
         out = capsys.readouterr().out
         assert exit_code == 0, f"{name}: {argv} exited {exit_code}"
-        assert json.loads(out) == expectation, rationale
+        answer = json.loads(out)
+        if key in _PROJECTED:
+            answer = with_projected_translation(answer)
+        assert answer == expectation, rationale
 
 
 class TestTheExitCodeSeparatesAnsweringFromAsking:

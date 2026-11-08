@@ -626,29 +626,56 @@ only exists in `~/ES-DE/logs/es_log.txt` after a first launch, and a fresh insta
 Every question about a system — `emulators_for`, `firmware_for_system` — takes an id in **ES-DE's vocabulary**: `gb`,
 `n64`, `dreamcast`. That is what a frontend catalogue on the machine declares, so it is what an answer can be about.
 
-If your catalogue speaks a public vocabulary — IGDB, libretro's database names, ScreenScraper or TheGamesDB ids — atlas
-translates it, and qualifies the translation by this installation:
+If your catalogue speaks another vocabulary — RomM's slugs or folder names, a distribution's folders (Batocera, KNULLI,
+ROCKNIX, EmuDeck, RetroDECK), ES-DE's platform ids, libretro's database names, IGDB ids and slugs, ScreenScraper or
+TheGamesDB ids — atlas translates it from one packaged table that maps the keys of every source onto one another. The
+pure lookup takes `(source, key)` pairs and needs no machine:
 
 ```python
-answer = inst.systems_for_platform("igdb", "dc")     # slug or numeric id as a string, both match
-# answer.platforms == ('dreamcast',)                  ← the crosswalk half: what the id corresponds to
+answer = atlas.translate([("romm", "genesis")])
+# per source, that source's keys for the systems the pair names, each with its relation:
+#   esde     genesis, megadrive, megadrivejp  — narrowMatch: ES-DE is finer here, RomM's slug covers all three
+#   batocera megadrive, megadrive-msu         — narrowMatch
+#   romm     genesis                          — exactMatch
+# a source with no key for those systems states 'none'
+answer.table_version, answer.source_versions   # the table's version and every source's pinned version
+```
+
+Several keys in one source are a fact about that source being finer, never uncertainty: the answer states the set, and
+your rules (or your user) decide. Each key carries its citations — the pinned file and line, a Wikidata statement that
+agrees, or the reviewed hand judgement that placed it.
+
+Ask with more than one pair and the answer adds their **intersection**:
+`[("folder", "megadrive"), ("esde",
+"megadrive")]` narrows to ES-DE's `megadrive` alone. A bare folder name — the source
+`"folder"` — means the union of what every folder vocabulary means by it, and only another pair narrows it. Pairs that
+share no system are a `conflict` naming them (`[("esde", "sgb"), ("esde", "gbc")]`), and atlas picks neither. A pair the
+table does not hold is `unknown`: an unknown key is stated with `platform-unmapped`, and a source the table does not
+carry with `platform-source-unknown`, which names the table's sources. A pair may carry the version of its source,
+`("romm", "genesis", "5.3.0")`; where that is not the version the table holds, the answer is the pinned meaning plus the
+`platform-source-version-differs` caveat. Keys are strings — a numeric id passes as its decimal string — and a
+non-string raises `ValueError` rather than being coerced.
+
+The table's sources, their pins, licences and the decision to ship each are in `atlas/data/SOURCES.md`. The
+ScreenScraper and TheGamesDB ids come from ES-DE's own scraper maps (RomM's ScreenScraper table adds the boards and
+games ES-DE maps to a family tag, `cps1` or `doom`), and the IGDB column holds both keys of each record in RomM's IGDB
+list on the same rows: the **numeric** platform id — the stable one; IGDB re-spells slugs under an unchanged id, so
+prefer `str(igdb_id)` — and the slug as recorded at the pin.
+
+The handle question qualifies a pair by this installation:
+
+```python
+answer = inst.systems_for_platform("romm", "dc")
+# answer.translation   ← the table's answer for ("romm", "dc"), as atlas.translate gives it
 # answer.matches   == (PlatformSystemMatch(system='dreamcast', status='declared',
 #                                          platforms=('dreamcast',), tags_source='catalogue'),)
 ```
 
-The platform value is a string in every vocabulary, so a numeric id passes as its decimal string: holding IGDB's numeric
-`igdb_id`, ask with `str(igdb_id)`. An unknown vocabulary and a non-string value both raise `ValueError`, and nothing is
-coerced on the way in — `str()` of `None`, `True` or `7.0` is `'None'`, `'True'` or `'7.0'`, so atlas states what it
-wanted rather than reporting `platform-unmapped` for a value that was never a key.
-
-The question is answered from its two rightful places. What the id _corresponds to_ is world knowledge — a pinned,
-source-cited crosswalk (`atlas/data/platform_ids_crosswalk.json`), keyed on ES-DE's **platform** vocabulary and, for
-IGDB, on the **numeric id** (IGDB slugs drift: platform 117 renamed `philips-cd-i` → `philips-cdi` under the same
-number). Whether the corresponding systems _are here_ is read off the machine: every catalogue system carries a
-`<platform>` tag connecting it to its platform family (`sfc` → `snes`, `naomi` → `arcade`), so a system the user added
-by hand translates without any table knowing it.
-
-Each match's `status` says what your next step is, and the three never collapse:
+A system matches when the translation names it in a catalogue column this installation deploys — ES-DE's system names,
+and RetroDECK's or EmuDeck's own on those installations — and a declared system also matches through its live
+`<platform>` tag when that tag is an exact ES-DE platform key of the translation — the table does not know the name of a
+system the user added by hand, but it knows the tag that system carries. Each match's `status` says what your next step
+is, and the three never collapse:
 
 - **`declared`** — this installation's catalogue lists it: place content now.
 - **`disabled`** — the catalogue's text carries it only inside an XML comment (RetroDECK 0.10.9b shipped 31 systems that
@@ -656,42 +683,25 @@ Each match's `status` says what your next step is, and the three never collapse:
 - **`absent`** — the vocabulary knows the system and this installation does not have it: don't place content here.
 
 `tags_source` says where the tags came from: `catalogue` is a live read; `vocabulary` is the stated build's snapshot
-column (what backs an `absent` system, and a sealed catalogue's derived systems). A value nothing maps to answers no
-systems, no platforms and the `platform-unmapped` caveat — placing content under the raw id would name a folder no
-catalogue declares, which is exactly the quiet failure this question exists to prevent.
+column (what backs an `absent` system, and a sealed catalogue's derived systems). A pair the table does not hold answers
+no matches and the translation's own caveat, `platform-unmapped` or `platform-source-unknown` — placing content under
+the raw key would name a folder no catalogue declares, which is exactly the quiet failure this question exists to
+prevent.
 
-A few ids stand for one **system** rather than a platform. ES-DE tags `cps1` `arcade` like every other arcade system, so
-ScreenScraper's id for the CPS1 board cannot live in a platform row without answering all of them. Those ids come from a
-second pinned table keyed by system (`atlas/data/platform_ids_by_system.json`), and an id listed there wins:
-
-```python
-answer = inst.systems_for_platform("screenscraper", "6")
-# answer.systems   == ('cps1',)                       ← the per-system half: the one system the id stands for
-# answer.platforms == ()                              ← no platform was resolved
-# answer.matches   == (PlatformSystemMatch(system='cps1', status='declared',
-#                                          platforms=('arcade',), tags_source='catalogue'),)
-```
-
-`systems` and `platforms` are never both filled, and the one system is qualified exactly as a tag match is — `declared`,
-`disabled` or `absent`. ScreenScraper's generic arcade id (`75`) is not in that table and keeps answering every `arcade`
-system. `atlas.systems_for(vocabulary, value)` asks the table alone, without a machine.
-
-The reverse direction reads the system's own tags and translates them out:
+The reverse direction reads the system's own tags and gives the table's answer for the system's name in the first
+catalogue column this installation deploys that holds it; for a declared system the table knows by no name (one added by
+hand), it gives the answer for its live tags that are exact ES-DE platform keys, and where neither reaches the table the
+answer is `unknown` with `platform-unmapped`:
 
 ```python
 answer = inst.platform_ids("sfc")
-# answer.platforms  == ('snes',)                      ← the tag, read live when declared
-# answer.identities[0].igdb  == (IgdbIdentity(id=19, slug='snes', ...), IgdbIdentity(id=58, slug='sfam', ...))
-# answer.identities[0].libretro == ('Nintendo - Super Nintendo Entertainment System',)
+# answer.platforms   == ('snes',)                     ← the tag, read live when declared
+# answer.translation ← every source's keys for sfc, as atlas.translate([("esde", "sfc")]) gives them
 ```
 
-It translates the crosswalk only: `platform_ids("cps1")` answers the `arcade` identities, not ScreenScraper `6`, though
-the forward question answers `cps1` for that id.
-
-Two caveats state the tags a translation cannot use: `platform-unknown` (a token outside the platform vocabulary — the
-same token ES-DE itself warns about and drops) and `platform-scraping-ignored` (the catalogue's deliberate `ignore`
-opt-out). RomM's own slugs are deliberately not a vocabulary here: RomM publishes each platform's IGDB identifiers
-itself, so a RomM client arrives via `igdb` without atlas learning a server product's private namespace.
+Two caveats state the tags that name no ES-DE platform id: `platform-unknown` (a token outside ES-DE's platform ids —
+the same token ES-DE itself warns about and drops) and `platform-scraping-ignored` (the catalogue's deliberate `ignore`
+opt-out).
 
 **If you keep a private map anyway**, validate it — the target set is still the contract:
 
@@ -701,7 +711,7 @@ atlas.from_esde_system("sega-dreamcast")  # None — not an id, whatever it look
 atlas.known_systems()                     # every id, sorted — the whole vocabulary
 ```
 
-The id set and the crosswalk are packaged data, cited to pinned builds and guarded by tests. They move with atlas
+The id set and the platform table are packaged data, cited to pinned builds and guarded by tests. They move with atlas
 releases, not with your code — so pin your atlas version and re-run your checks when you bump it.
 
 ## Where does this save live?
@@ -1337,6 +1347,7 @@ answer names the folder with `file-names-unestablished` and no file names.
 | `entry-format-build-dependent`             | launchable: the builds the running entry's loader card serves disagree on this extension — neither a take nor a refusal holds                                    |
 | `emulator-list-derived`                    | the entries/systems come from the installed cores' own `.info`, not a catalogue — no launch command                                                              |
 | `platform-unmapped`                        | the asked id or system corresponds to no platform knowledge — don't invent a folder from the raw id                                                              |
+| `platform-source-unknown`                  | the asked pair names a source the platform table does not include — check the source name against the listed ones                                                |
 | `platform-unknown`                         | a catalogue's `<platform>` token is outside the platform vocabulary — ES-DE warns and drops it too                                                               |
 | `platform-scraping-ignored`                | the catalogue tags this system `ignore` — a deliberate opt-out, not a missing tag                                                                                |
 
@@ -5057,10 +5068,9 @@ if placement.dir != last_seen_dir(rom):
 
 Honest limits you must cover yourself today (roadmap: `ROADMAP.md`):
 
-- **Vocabulary translation.** Mapping your library's platform identifiers to atlas's system ids is **yours, by design**
-  and not on the roadmap — atlas carries no foreign product's vocabulary (`DESIGN.md`, Vocabulary). What it gives you is
-  the target set to validate that map against; see
-  [Validating your own platform map](#validating-your-own-platform-map). Separately, atlas itself speaks the frontend's
+- **Vocabulary translation.** atlas translates between the vocabularies its platform table includes (see
+  [Arriving from a public platform id](#arriving-from-a-public-platform-id)); a vocabulary outside them — your own, or a
+  product the table does not ship — is yours to map onto one of them. Separately, atlas itself speaks the frontend's
   system names (ES-DE) where a catalogue exists and an atlas slug where none does — `firmware_for_system` states that
   switch with the `emulator-catalogue-unavailable` caveat rather than translating, and closing that seam is atlas's own
   open work.

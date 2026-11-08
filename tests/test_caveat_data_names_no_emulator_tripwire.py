@@ -207,7 +207,7 @@ UNPLACED_VALUES: dict[tuple[str, str, str], str] = {
     ("installations.py", "_savestate_support_caveats", CORE_SO_KEY): (
         "os.path.basename(core_so)"
     ),
-    ("installations.py", "platform_ids", TOKEN_KEY): "tag",
+    ("installations.py", "_tag_notes", TOKEN_KEY): "tag",
 }
 
 # The generator's own primitives, bound once here rather than reimplemented:

@@ -23,7 +23,8 @@
 A Python library that answers, for any emulator installation on a machine, which config files govern it, how they
 override each other, and where saves, savestates, firmware, texture packs, mods, screenshots and ROMs actually live. It
 also answers what the installed frontend declares: its systems, the emulators that launch them, whether a file would
-launch, and how its systems meet the public platform ids (IGDB, libretro, ScreenScraper, TheGamesDB).
+launch, and how its systems meet the keys other products use for them (RomM, Batocera and the other distributions,
+libretro, IGDB, ScreenScraper, TheGamesDB).
 
 _A resolver, not a lookup — every answer is read off the running machine the way the emulator reads it._
 
@@ -188,9 +189,11 @@ data, never free text alone and never silence.
   the entry that would run or the one a label names, and why not, `launch_command(system, content_path, label=...)`
   takes the command the frontend would run for it apart into program, arguments, environment and working folder, and
   `screenshot_location(...)` keeps screenshots out of every sync's file set.
-- **The platform crosswalk** — `systems_for_platform(vocabulary, value)` and `platform_ids(system)` translate between
-  the machine's catalogue and the public platform identities in both directions: the `<platform>` tags read live off the
-  catalogue, the identity table packaged, versioned and regenerated from pinned upstreams.
+- **The platform table** — `translate(pairs)` answers, for `(source, key)` pairs in any included vocabulary (ES-DE,
+  RetroDECK, EmuDeck, RomM, libretro, Batocera, KNULLI, ROCKNIX, IGDB, ScreenScraper, TheGamesDB), every source's keys —
+  the asked one's included — with relation and citation; `systems_for_platform(vocabulary, value)` and
+  `platform_ids(system)` qualify that by the machine — which named systems this installation declares, read live off its
+  catalogue.
 
 Answers are frozen value objects. [`atlas/contract.py`](atlas/contract.py) is their canonical JSON-shaped serialization
 — the same code the conformance run asserts with exact equality, and the same bytes the CLI writes.
@@ -217,14 +220,12 @@ nullability, what it means, and which caveat code rides which question with whic
    tree the emulated PS3's own VFS names) and Vita3K (the `ux0` tree below its preference path) today — one emulator per
    sub-issue until every emulator RetroDECK ships resolves, on EmuDeck too, whichever way its catalogue launches them:
    AppImage, flatpak, or a binary unpacked out of one.
-5. **The system vocabulary and the platform crosswalk** — the ids every question about a system takes are ES-DE's system
+5. **The system vocabulary and the platform table** — the ids every question about a system takes are ES-DE's system
    names, shipped as packaged data cited to a stated build and guarded by a test that parses that build's own
    `es_systems.xml`; `known_systems()` and `from_esde_system()` let a client check its own map before using it. Beside
-   them, the **platform** crosswalk answers how a catalogue's `<platform>` tags — read live — meet the public platform
-   identities (IGDB by numeric id, libretro names, and the ScreenScraper/TheGamesDB ids ES-DE's own scrapers use):
-   `systems_for_platform(vocabulary, value)` and `platform_ids(system)`. The identity table behind the platform
-   crosswalk is world knowledge under the boundary rule — versioned, source-cited, regenerated from pinned upstreams —
-   while which tags a system carries is always the machine's own statement.
+   them, one cited **platform table** maps the keys of every included source onto one another — generated from pinned
+   upstreams with their licences recorded, hand judgements kept apart, each with a reason and cited — while which
+   systems an installation declares is always the machine's own statement.
 
 The boundary rule that decides every "table or live?" question, and the reasoning behind all of it, is
 [`DESIGN.md`](DESIGN.md):

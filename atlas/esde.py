@@ -58,6 +58,12 @@ from . import _xml as ET
 # a file name can be one anyway.
 _CORE_SO_RE = re.compile(r"([A-Za-z0-9_\-\[\]]{1,255}_libretro\.so)")
 
+
+def core_so(command: str) -> str | None:
+    """The ``*_libretro.so`` file *command* names — the core its entry loads — or ``None``."""
+    match = _CORE_SO_RE.search(command)
+    return match.group(1) if match else None
+
 # The same run with its suffix left open: on the desktop platforms a libretro
 # core file is named ``<core>_libretro.<suffix>``, and the suffix is the part
 # that says which host it was built for. ES-DE ships one catalogue per
@@ -374,13 +380,13 @@ def _launch_entries(system_el: ET.Element, *, system: str, provenance: str) -> t
         command = (command_el.text or "").strip()
         if not command:
             continue
-        match = _CORE_SO_RE.search(command)
+        core = core_so(command)
         entries.append(
             EmulatorSpec(
                 system=system,
                 label=(command_el.get("label") or "").strip(),
-                kind=_classify(command, loads_core=match is not None),
-                core_so=match.group(1) if match else None,
+                kind=_classify(command, loads_core=core is not None),
+                core_so=core,
                 command=command,
                 provenance=provenance,
                 emulator=emulator_identity(command),
@@ -431,7 +437,7 @@ def esde_extension(path: str) -> str:
     return "."
 
 
-def _platform_tokens(text: str) -> tuple[str, ...]:
+def platform_tokens(text: str) -> tuple[str, ...]:
     """The ``<platform>`` list the way ES-DE reads it — tokens, not judgments.
 
     ``SystemData.cpp:1074-1092`` @ v3.4.1: the text is lowercased
@@ -441,8 +447,8 @@ def _platform_tokens(text: str) -> tuple[str, ...]:
     system's sole platform becomes ``ignore``. What this deliberately does
     *not* replicate is ``getPlatformId``'s validity judgment (an unknown token
     is warned about and dropped upstream): whether a token is in the platform
-    vocabulary is the crosswalk's question, answered where the vocabulary
-    lives — the parser states what the file says.
+    vocabulary is the platform table's question, answered where the
+    vocabulary lives — the parser states what the file says.
     """
     tokens = _read_list(text.lower())
     if "ignore" in tokens:
@@ -462,9 +468,8 @@ class SystemDeclaration:
     SystemData.cpp:795 @ v3.4.1), each token exactly as declared: ES-DE lists
     both cases separately (``.z64 .Z64``), and normalizing would state a
     vocabulary the file does not. ``platforms`` is the ``<platform>`` list the
-    way ES-DE reads it (see :func:`_platform_tokens`) — the tag that connects
-    a system to the platform vocabulary, and through it to the public platform
-    identities.
+    way ES-DE reads it (see :func:`platform_tokens`) — ES-DE's platform ids,
+    one column of the platform table (``esde-platform``).
     """
 
     entries: tuple[EmulatorSpec, ...] = ()
@@ -566,7 +571,7 @@ def parse_es_systems(text: str, *, provenance: str) -> CatalogueLayer:
             entries=_launch_entries(system_el, system=name, provenance=provenance),
             rom_path=declared_path or None,
             extensions=_read_list(system_el.findtext("extension") or ""),
-            platforms=_platform_tokens(system_el.findtext("platform") or ""),
+            platforms=platform_tokens(system_el.findtext("platform") or ""),
         )
     return CatalogueLayer(systems=result, load_exclusive=load_exclusive)
 
@@ -596,7 +601,7 @@ def commented_out_systems(text: str) -> tuple[tuple[str, tuple[str, ...]], ...]:
             name = (system_el.findtext("name") or "").strip()
             if not name:
                 continue
-            found.append((name, _platform_tokens(system_el.findtext("platform") or "")))
+            found.append((name, platform_tokens(system_el.findtext("platform") or "")))
     return tuple(found)
 
 

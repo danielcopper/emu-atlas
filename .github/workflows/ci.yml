@@ -49,6 +49,8 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Validate vector file shape
         run: python scripts/validate_vectors.py
+      - name: Check the platform table (release check)
+        run: python scripts/check_platform_table.py
       - name: Run the unit tests and the machine-vector runner
         run: |
           pip install -e '.[dev]'
