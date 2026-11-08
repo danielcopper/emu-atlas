@@ -418,15 +418,51 @@ class TestTheEmudeckFolders:
 
 
 class TestTheCommandLinePaths:
-    def test_a_path_inside_the_repository_or_the_temporary_directory_is_taken(self, tmp_path):
-        assert generator.allowed_path(str(ROOT / "build" / "cache"), "--cache") == (ROOT / "build" / "cache").resolve()
-        assert generator.allowed_path(str(tmp_path / "findings.json"), "--findings") == (tmp_path / "findings.json").resolve()
+    """The two roots are set here, so the cases do not depend on where pytest keeps tmp_path."""
 
-    @pytest.mark.parametrize("raw", ["/etc/findings.json", "../../outside.json"])
-    def test_a_path_anywhere_else_stops_the_generator(self, raw, monkeypatch):
-        monkeypatch.chdir(ROOT)
+    @pytest.fixture
+    def roots(self, tmp_path, monkeypatch):
+        repository, temporary, outside = (tmp_path / name for name in ("repository", "temporary", "outside"))
+        for directory in (repository, temporary, outside):
+            directory.mkdir()
+        monkeypatch.setattr(generator, "ROOT", repository)
+        monkeypatch.setattr(generator.tempfile, "tempdir", str(temporary))
+        monkeypatch.chdir(repository)
+        return repository, temporary, outside
+
+    def test_a_path_inside_the_repository_or_the_temporary_directory_is_taken(self, roots):
+        repository, temporary, _ = roots
+        assert generator.allowed_path(str(repository / "build" / "cache"), "--cache") == repository / "build" / "cache"
+        assert generator.allowed_path("build/cache", "--cache") == repository / "build" / "cache"
+        assert generator.allowed_path(str(temporary / "findings.json"), "--findings") == temporary / "findings.json"
+
+    @pytest.mark.parametrize(
+        "raw",
+        [
+            lambda repository, outside: str(outside / "findings.json"),
+            lambda repository, outside: "../outside/findings.json",
+            lambda repository, outside: str(repository / ".." / ".." / "etc" / "x.json"),
+        ],
+        ids=["absolute", "relative", "dot-dot-inside-the-repository"],
+    )
+    def test_a_path_anywhere_else_stops_the_generator(self, roots, raw):
+        repository, _, outside = roots
+        path = raw(repository, outside)
         with pytest.raises(SystemExit, match="--findings .* lies outside the repository and the temporary directory"):
-            generator.allowed_path(raw, "--findings")
+            generator.allowed_path(path, "--findings")
+
+    @pytest.mark.parametrize("option", ["--cache", "--findings"])
+    def test_main_refuses_an_outside_path_before_it_reads_or_writes_anything(self, roots, monkeypatch, option):
+        _, _, outside = roots
+
+        def reached(*_args, **_kwargs):
+            raise AssertionError("reached")
+
+        monkeypatch.setattr(generator, "check_sources", reached)
+        monkeypatch.setattr(generator, "build", reached)
+        argv = [option, str(outside / "x")]
+        with pytest.raises(SystemExit, match=f"{option} .* lies outside"):
+            generator.main(argv)
 
 
 def test_every_run_prints_a_count_per_kind_of_finding():
