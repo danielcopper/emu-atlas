@@ -242,6 +242,14 @@ class TestTheRommJoins:
         assert table.rows_of("romm", "altair-8800") == ["romm:altair-8800"]
         assert table.rows_of("romm-folder", "altair-8800") == ["romm:altair-8800"]
 
+    def test_a_folder_spelled_as_its_slug_cites_the_slugs_line_once(self):
+        placements = self._build().placements[("romm", "genesis")]
+        assert {p.row: p.citation for p in placements} == {
+            "esde:genesis": "u:0",
+            "esde:megadrive": "u:0; romm:backend/utils/platform_aliases.py:10",
+            "esde:megadrivejp": "u:0; romm:backend/utils/platform_aliases.py:11",
+        }
+
     def test_an_alias_folder_is_the_frontend_folder_of_its_spelling(self):
         assert self._build().rows_of("romm-folder", "megadrivejp") == ["esde:megadrivejp"]
 

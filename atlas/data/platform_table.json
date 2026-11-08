@@ -29614,7 +29614,7 @@
    "row": "esde:3do",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:11; romm:backend/utils/platform_slugs.py:11",
+   "citation": "romm:backend/utils/platform_slugs.py:11",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -29784,7 +29784,7 @@
    "row": "esde:amiga",
    "relation": "broadMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:25; romm:backend/utils/platform_slugs.py:25",
+   "citation": "romm:backend/utils/platform_slugs.py:25",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -29874,7 +29874,7 @@
    "row": "esde:android",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:31; romm:backend/utils/platform_slugs.py:31",
+   "citation": "romm:backend/utils/platform_slugs.py:31",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -29994,7 +29994,7 @@
    "row": "esde:arcade",
    "relation": "broadMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:42; romm:backend/utils/platform_slugs.py:42",
+   "citation": "romm:backend/utils/platform_slugs.py:42",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -30124,7 +30124,7 @@
    "row": "esde:arduboy",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:44; romm:backend/utils/platform_slugs.py:44",
+   "citation": "romm:backend/utils/platform_slugs.py:44",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -30214,7 +30214,7 @@
    "row": "esde:atari2600",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:51; romm:backend/utils/platform_slugs.py:51",
+   "citation": "romm:backend/utils/platform_slugs.py:51",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -30224,7 +30224,7 @@
    "row": "esde:atari5200",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:52; romm:backend/utils/platform_slugs.py:52",
+   "citation": "romm:backend/utils/platform_slugs.py:52",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -30234,7 +30234,7 @@
    "row": "esde:atari7800",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:53; romm:backend/utils/platform_slugs.py:53",
+   "citation": "romm:backend/utils/platform_slugs.py:53",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -30244,7 +30244,7 @@
    "row": "esde:atari800",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:54; romm:backend/utils/platform_slugs.py:54",
+   "citation": "romm:backend/utils/platform_slugs.py:54",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -30374,7 +30374,7 @@
    "row": "esde:bbcmicro",
    "relation": "broadMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:67; romm:backend/utils/platform_slugs.py:67",
+   "citation": "romm:backend/utils/platform_slugs.py:67",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -30534,7 +30534,7 @@
    "row": "emudeck:c16",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:82; romm:backend/utils/platform_slugs.py:82",
+   "citation": "romm:backend/utils/platform_slugs.py:82",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -30544,7 +30544,7 @@
    "row": "esde:c64",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:83; romm:backend/utils/platform_slugs.py:83",
+   "citation": "romm:backend/utils/platform_slugs.py:83",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -30684,7 +30684,7 @@
    "row": "esde:colecovision",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:97; romm:backend/utils/platform_slugs.py:97",
+   "citation": "romm:backend/utils/platform_slugs.py:97",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -30784,7 +30784,7 @@
    "row": "esde:cps1",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:106; romm:backend/utils/platform_slugs.py:106",
+   "citation": "romm:backend/utils/platform_slugs.py:106",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -30794,7 +30794,7 @@
    "row": "esde:cps2",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:107; romm:backend/utils/platform_slugs.py:107",
+   "citation": "romm:backend/utils/platform_slugs.py:107",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -30804,7 +30804,7 @@
    "row": "esde:cps3",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:108; romm:backend/utils/platform_slugs.py:108",
+   "citation": "romm:backend/utils/platform_slugs.py:108",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -30944,7 +30944,7 @@
    "row": "esde:doom",
    "relation": "broadMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:121; romm:backend/utils/platform_slugs.py:121",
+   "citation": "romm:backend/utils/platform_slugs.py:121",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -30954,7 +30954,7 @@
    "row": "esde:dos",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:122; romm:backend/utils/platform_slugs.py:122",
+   "citation": "romm:backend/utils/platform_slugs.py:122",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -31124,7 +31124,7 @@
    "row": "esde:famicom",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:139; romm:backend/utils/platform_slugs.py:139",
+   "citation": "romm:backend/utils/platform_slugs.py:139",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -31134,7 +31134,7 @@
    "row": "esde:fds",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:140; romm:backend/utils/platform_slugs.py:140",
+   "citation": "romm:backend/utils/platform_slugs.py:140",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -31214,7 +31214,7 @@
    "row": "esde:gamate",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:148; romm:backend/utils/platform_slugs.py:148",
+   "citation": "romm:backend/utils/platform_slugs.py:148",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -31244,7 +31244,7 @@
    "row": "esde:gamegear",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:151; romm:backend/utils/platform_slugs.py:151",
+   "citation": "romm:backend/utils/platform_slugs.py:151",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -31274,7 +31274,7 @@
    "row": "esde:gb",
    "relation": "broadMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:153; romm:backend/utils/platform_slugs.py:153",
+   "citation": "romm:backend/utils/platform_slugs.py:153",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -31284,7 +31284,7 @@
    "row": "esde:gba",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:154; romm:backend/utils/platform_slugs.py:154",
+   "citation": "romm:backend/utils/platform_slugs.py:154",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -31314,7 +31314,7 @@
    "row": "esde:gbc",
    "relation": "broadMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:155; romm:backend/utils/platform_slugs.py:155",
+   "citation": "romm:backend/utils/platform_slugs.py:155",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -31354,7 +31354,7 @@
    "row": "esde:genesis",
    "relation": "broadMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:157; romm:backend/utils/platform_slugs.py:157",
+   "citation": "romm:backend/utils/platform_slugs.py:157",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -31714,7 +31714,7 @@
    "row": "esde:intellivision",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:190; romm:backend/utils/platform_slugs.py:190",
+   "citation": "romm:backend/utils/platform_slugs.py:190",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -31794,7 +31794,7 @@
    "row": "esde:j2me",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:198; romm:backend/utils/platform_slugs.py:198",
+   "citation": "romm:backend/utils/platform_slugs.py:198",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -32144,7 +32144,7 @@
    "row": "esde:model2",
    "relation": "broadMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:234; romm:backend/utils/platform_slugs.py:234",
+   "citation": "romm:backend/utils/platform_slugs.py:234",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -32154,7 +32154,7 @@
    "row": "esde:model3",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:235; romm:backend/utils/platform_slugs.py:235",
+   "citation": "romm:backend/utils/platform_slugs.py:235",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -32214,7 +32214,7 @@
    "row": "esde:msx",
    "relation": "broadMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:241; romm:backend/utils/platform_slugs.py:241",
+   "citation": "romm:backend/utils/platform_slugs.py:241",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -32244,7 +32244,7 @@
    "row": "esde:msx2",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:243; romm:backend/utils/platform_slugs.py:243",
+   "citation": "romm:backend/utils/platform_slugs.py:243",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -32274,7 +32274,7 @@
    "row": "esde:mugen",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:246; romm:backend/utils/platform_slugs.py:246",
+   "citation": "romm:backend/utils/platform_slugs.py:246",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -32284,7 +32284,7 @@
    "row": "esde:multivision",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:247; romm:backend/utils/platform_slugs.py:247",
+   "citation": "romm:backend/utils/platform_slugs.py:247",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -32294,7 +32294,7 @@
    "row": "esde:n64",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:249; romm:backend/utils/platform_slugs.py:249",
+   "citation": "romm:backend/utils/platform_slugs.py:249",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -32314,7 +32314,7 @@
    "row": "esde:nds",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:252; romm:backend/utils/platform_slugs.py:252",
+   "citation": "romm:backend/utils/platform_slugs.py:252",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -32394,7 +32394,7 @@
    "row": "esde:nes",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:260; romm:backend/utils/platform_slugs.py:260",
+   "citation": "romm:backend/utils/platform_slugs.py:260",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -32434,7 +32434,7 @@
    "row": "esde:ngage",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:264; romm:backend/utils/platform_slugs.py:264",
+   "citation": "romm:backend/utils/platform_slugs.py:264",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -32614,7 +32614,7 @@
    "row": "esde:openbor",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:281; romm:backend/utils/platform_slugs.py:281",
+   "citation": "romm:backend/utils/platform_slugs.py:281",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -32634,7 +32634,7 @@
    "row": "esde:oric",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:283; romm:backend/utils/platform_slugs.py:283",
+   "citation": "romm:backend/utils/platform_slugs.py:283",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -33064,7 +33064,7 @@
    "row": "esde:ps2",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:325; romm:backend/utils/platform_slugs.py:325",
+   "citation": "romm:backend/utils/platform_slugs.py:325",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -33074,7 +33074,7 @@
    "row": "esde:ps3",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:326; romm:backend/utils/platform_slugs.py:326",
+   "citation": "romm:backend/utils/platform_slugs.py:326",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -33084,7 +33084,7 @@
    "row": "esde:ps4",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:327; romm:backend/utils/platform_slugs.py:327",
+   "citation": "romm:backend/utils/platform_slugs.py:327",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -33104,7 +33104,7 @@
    "row": "esde:psp",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:329; romm:backend/utils/platform_slugs.py:329",
+   "citation": "romm:backend/utils/platform_slugs.py:329",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -33124,7 +33124,7 @@
    "row": "esde:psvita",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:331; romm:backend/utils/platform_slugs.py:331",
+   "citation": "romm:backend/utils/platform_slugs.py:331",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -33154,7 +33154,7 @@
    "row": "esde:psx",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:334; romm:backend/utils/platform_slugs.py:334",
+   "citation": "romm:backend/utils/platform_slugs.py:334",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -33224,7 +33224,7 @@
    "row": "esde:satellaview",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:341; romm:backend/utils/platform_slugs.py:341",
+   "citation": "romm:backend/utils/platform_slugs.py:341",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -33234,7 +33234,7 @@
    "row": "esde:saturn",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:342; romm:backend/utils/platform_slugs.py:342",
+   "citation": "romm:backend/utils/platform_slugs.py:342",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -33264,7 +33264,7 @@
    "row": "esde:scummvm",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:345; romm:backend/utils/platform_slugs.py:345",
+   "citation": "romm:backend/utils/platform_slugs.py:345",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -33334,7 +33334,7 @@
    "row": "esde:segacd",
    "relation": "broadMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:350; romm:backend/utils/platform_slugs.py:350",
+   "citation": "romm:backend/utils/platform_slugs.py:350",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -33524,7 +33524,7 @@
    "row": "esde:snes",
    "relation": "broadMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:365; romm:backend/utils/platform_slugs.py:365",
+   "citation": "romm:backend/utils/platform_slugs.py:365",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -33564,7 +33564,7 @@
    "row": "esde:spectravideo",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:369; romm:backend/utils/platform_slugs.py:369",
+   "citation": "romm:backend/utils/platform_slugs.py:369",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -33594,7 +33594,7 @@
    "row": "esde:steam",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:372; romm:backend/utils/platform_slugs.py:372",
+   "citation": "romm:backend/utils/platform_slugs.py:372",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -33614,7 +33614,7 @@
    "row": "esde:stv",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:374; romm:backend/utils/platform_slugs.py:374",
+   "citation": "romm:backend/utils/platform_slugs.py:374",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -33664,7 +33664,7 @@
    "row": "esde:supergrafx",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:379; romm:backend/utils/platform_slugs.py:379",
+   "citation": "romm:backend/utils/platform_slugs.py:379",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -33674,7 +33674,7 @@
    "row": "esde:supervision",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:380; romm:backend/utils/platform_slugs.py:380",
+   "citation": "romm:backend/utils/platform_slugs.py:380",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -33704,7 +33704,7 @@
    "row": "esde:switch",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:383; romm:backend/utils/platform_slugs.py:383",
+   "citation": "romm:backend/utils/platform_slugs.py:383",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -33734,7 +33734,7 @@
    "row": "esde:symbian",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:386; romm:backend/utils/platform_slugs.py:386",
+   "citation": "romm:backend/utils/platform_slugs.py:386",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -33874,7 +33874,7 @@
    "row": "esde:tg16",
    "relation": "broadMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:399; romm:backend/utils/platform_slugs.py:399",
+   "citation": "romm:backend/utils/platform_slugs.py:399",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -34044,7 +34044,7 @@
    "row": "esde:trs-80",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:418; romm:backend/utils/platform_slugs.py:418",
+   "citation": "romm:backend/utils/platform_slugs.py:418",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -34114,7 +34114,7 @@
    "row": "esde:type-x",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:424; romm:backend/utils/platform_slugs.py:424",
+   "citation": "romm:backend/utils/platform_slugs.py:424",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -34124,7 +34124,7 @@
    "row": "esde:uzebox",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:425; romm:backend/utils/platform_slugs.py:425",
+   "citation": "romm:backend/utils/platform_slugs.py:425",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -34154,7 +34154,7 @@
    "row": "esde:vectrex",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:429; romm:backend/utils/platform_slugs.py:429",
+   "citation": "romm:backend/utils/platform_slugs.py:429",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -34234,7 +34234,7 @@
    "row": "esde:virtualboy",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:435; romm:backend/utils/platform_slugs.py:435",
+   "citation": "romm:backend/utils/platform_slugs.py:435",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -34284,7 +34284,7 @@
    "row": "esde:vsmile",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:442; romm:backend/utils/platform_slugs.py:442",
+   "citation": "romm:backend/utils/platform_slugs.py:442",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -34334,7 +34334,7 @@
    "row": "esde:wii",
    "relation": "broadMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:447; romm:backend/utils/platform_slugs.py:447",
+   "citation": "romm:backend/utils/platform_slugs.py:447",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -34354,7 +34354,7 @@
    "row": "esde:wiiu",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:448; romm:backend/utils/platform_slugs.py:448",
+   "citation": "romm:backend/utils/platform_slugs.py:448",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -34464,7 +34464,7 @@
    "row": "esde:wonderswan",
    "relation": "broadMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:457; romm:backend/utils/platform_slugs.py:457",
+   "citation": "romm:backend/utils/platform_slugs.py:457",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -34494,7 +34494,7 @@
    "row": "esde:x1",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:459; romm:backend/utils/platform_slugs.py:459",
+   "citation": "romm:backend/utils/platform_slugs.py:459",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -34514,7 +34514,7 @@
    "row": "esde:xbox",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:461; romm:backend/utils/platform_slugs.py:461",
+   "citation": "romm:backend/utils/platform_slugs.py:461",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -34524,7 +34524,7 @@
    "row": "esde:xbox360",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:462; romm:backend/utils/platform_slugs.py:462",
+   "citation": "romm:backend/utils/platform_slugs.py:462",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -34544,7 +34544,7 @@
    "row": "esde:xboxone",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:464; romm:backend/utils/platform_slugs.py:464",
+   "citation": "romm:backend/utils/platform_slugs.py:464",
    "valid_from": "5.4.1",
    "valid_to": null
   },
@@ -34674,7 +34674,7 @@
    "row": "esde:zx81",
    "relation": "exactMatch",
    "via": "romm-resolve",
-   "citation": "romm:backend/utils/platform_slugs.py:477; romm:backend/utils/platform_slugs.py:477",
+   "citation": "romm:backend/utils/platform_slugs.py:477",
    "valid_from": "5.4.1",
    "valid_to": null
   },

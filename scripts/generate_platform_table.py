@@ -910,7 +910,8 @@ def build_romm(
             table.own_row("romm", slug)
             continue
         for row, citation in reached:
-            table.place("romm", slug.key, row, "romm-resolve", f"{slug.citation}; {citation}")
+            # A folder spelled as its slug cites the slug's own line: once, not twice.
+            table.place("romm", slug.key, row, "romm-resolve", "; ".join(dict.fromkeys((slug.citation, citation))))
     for folder, (rows, citation) in sorted(folder_rows.items()):
         table.add_key("romm-folder", SourceKey(folder, citation))
         target = resolves[folder]
