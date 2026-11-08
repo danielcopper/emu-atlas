@@ -1,4 +1,4 @@
-"""atlas's own system vocabulary — the ids every question about a system takes.
+"""The system ids every question about a system takes — ES-DE's, not atlas's own.
 
 Those ids are **ES-DE's system names** — ``gb``, ``n64``, ``dreamcast`` —
 because that is what a frontend catalogue on the machine declares, and a

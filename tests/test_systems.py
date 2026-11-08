@@ -1,4 +1,4 @@
-"""Tests for atlas.systems — atlas's own system vocabulary.
+"""Tests for atlas.systems — the system ids the questions take (ES-DE's system names).
 
 Two things are held down here: the loader refuses a list it cannot place, and
 the packaged ids really are the ids the shipped build declares. The second one
