@@ -65,11 +65,12 @@ reference would carry, which is where the stronger check belongs.
 
 **The consumable surface** (#196, #68, #65, #202, #108): the `emu-atlas` CLI — one question per invocation, the contract
 JSON on stdout, the conformance vectors run through its dispatch; the platform questions (`systems_for_platform` /
-`platform_ids`, live `<platform>` tags against a pinned identity table — since #785 the platform table); the AppImage
-reader (`atlas.squashfs`, pure stdlib) opening the catalogue sealed inside ES-DE's AppImage wherever the runtime has the
-zstd codec (3.14's `compression.zstd`, `backports.zstd` a host vendors, or a provider the host hands over); the release
-artifacts — vectors, wheel, and the self-contained bundle (CLI + pinned CPython 3.14) for consumers without a Python;
-and the weekly canary deploying the newest RetroDECK from Flathub against the full suite, so drift announces itself.
+`platform_ids`: the platform table's translation, qualified by what this installation's catalogue declares, read live);
+the AppImage reader (`atlas.squashfs`, pure stdlib) opening the catalogue sealed inside ES-DE's AppImage wherever the
+runtime has the zstd codec (3.14's `compression.zstd`, `backports.zstd` a host vendors, or a provider the host hands
+over); the release artifacts — vectors, wheel, and the self-contained bundle (CLI + pinned CPython 3.14) for consumers
+without a Python; and the weekly canary deploying the newest RetroDECK from Flathub against the full suite, so drift
+announces itself.
 
 ## Next: follow-up branches
 
