@@ -2,12 +2,13 @@
 
 These files are the normative artifact: a fixture machine goes in, the answers atlas must give come out. They are what a
 **port** is checked against (a reimplementation in another language passes atlas's vectors or it is not a port), and
-what a change to the resolver is measured by. The reference implementation runs them in `tests/test_machine_vectors.py`;
-the shape rules below are enforced independently by `scripts/validate_vectors.py`, which is stdlib-only so a port author
-can run it without importing atlas.
+what a change to the resolver is measured by. The reference implementation runs them in `tests/test_machine_vectors.py`
+and `tests/test_platform_table_vectors.py`; the shape rules below are enforced independently by
+`scripts/validate_vectors.py`, which is stdlib-only so a port author can run it without importing atlas.
 
 The whole idea in one line: **the expected block is the canonical serialization of a real answer, asserted with exact
-equality.** Nothing here is a description of an answer — it is the answer.
+equality.** Nothing here is a description of an answer — it is the answer. The one cut is the platform translation,
+asserted in its projection: the serialization with its citations and pinned versions removed (see below).
 
 ## Layout
 
@@ -19,13 +20,13 @@ Two families: `machines`, a whole machine as plain data with the answers atlas m
 pairs in and the platform table's translation out (see _The platform-table family_ below). Every file carries a header
 and its vectors:
 
-| key           | meaning                                                   |
-| ------------- | --------------------------------------------------------- |
-| `family`      | must match the directory (`machines`, `platform-table`)   |
-| `schema`      | the generation of the fixture grammar — **5** (see below) |
-| `spec`        | which document this file's guarantees come from           |
-| `description` | what this file covers                                     |
-| `vectors`     | the vectors themselves                                    |
+| key           | meaning                                                                                               |
+| ------------- | ----------------------------------------------------------------------------------------------------- |
+| `family`      | must match the directory (`machines`, `platform-table`)                                               |
+| `schema`      | the generation of the family's grammar — **5** for `machines` (see below), **1** for `platform-table` |
+| `spec`        | which document this file's guarantees come from                                                       |
+| `description` | what this file covers                                                                                 |
+| `vectors`     | the vectors themselves                                                                                |
 
 A vector is `{name, rationale?, input, expected}`. `name` is unique within its file; `rationale` is prose for the reader
 and part of no contract. Two uniqueness rules matter more than they look:
