@@ -1,0 +1,19 @@
+# gitleaks reads this file from the repository root when it scans the tree
+# or its commits; the default rules stay in force.
+title = "emu-atlas"
+
+[extend]
+useDefault = true
+
+# The platform table and its two hand-written companions hold one entry per
+# platform key of every included source, serialized as `"key": "<key>"`.
+# gitleaks' generic-api-key rule reads a long key such as a RomM slug as a
+# credential; nothing in these files is one, so they are excluded by path.
+# Every other path is scanned with the default rules.
+[[allowlists]]
+description = "platform keys of the sources, serialized as `key`, are not credentials"
+paths = [
+  '''(^|/)atlas/data/platform_table\.json$''',
+  '''(^|/)atlas/data/platform_overrides\.json$''',
+  '''(^|/)atlas/data/platform_excluded\.json$''',
+]
