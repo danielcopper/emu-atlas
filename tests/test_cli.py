@@ -32,6 +32,7 @@ _QUERY_KEY = {
     "catalogue": "catalogue_query",
     "systems": "systems_query",
     "systems_for_platform": "platform_systems_query",
+    "systems_for_platforms": "platform_pairs_query",
     "platform_ids": "platform_ids_query",
     "roots": "roots_query",
     "launchable": "launchable_query",
@@ -64,6 +65,11 @@ _LIBRARY_ONLY = {
 
 def _flag(name: str, value) -> list[str]:
     return [] if value is None else [name, str(value)]
+
+
+def _pair_flag(pair: list[str]) -> str:
+    """A vector's [source, key] or [source, key, version] as the CLI's SOURCE:KEY[@VERSION]."""
+    return f"{pair[0]}:{pair[1]}" + (f"@{pair[2]}" if len(pair) == 3 else "")
 
 
 def _firmware_argv(query) -> list[str]:
@@ -103,6 +109,8 @@ def _question_argv(question: str, query) -> list[str]:
         return ["systems"]
     if question == "systems_for_platform":
         return ["systems-for-platform", query["vocabulary"], query["value"]]
+    if question == "systems_for_platforms":
+        return ["systems-for-platforms"] + [part for pair in query["pairs"] for part in ("--pair", _pair_flag(pair))]
     if question == "platform_ids":
         return ["platform-ids", query["system"]]
     if question == "roots":
@@ -161,7 +169,7 @@ def _argv_for(key: str, query, expected, name: str) -> list[str]:
 
 # The two platform answers carry a translation, which the vectors assert in its
 # projection (vectors/README.md); the CLI prints the full contract.
-_PROJECTED = frozenset({"systems_for_platform", "platform_ids"})
+_PROJECTED = frozenset({"systems_for_platform", "systems_for_platforms", "platform_ids"})
 
 
 @pytest.mark.parametrize("vector", list(load_vectors()))

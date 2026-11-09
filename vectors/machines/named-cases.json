@@ -19662,8 +19662,6 @@
           }
         ],
         "systems_for_platform": {
-          "vocabulary": "igdb",
-          "value": "19",
           "translation": {
             "table_version": 1,
             "pairs": [
@@ -19721,6 +19719,10 @@
                     "keys": [
                       {
                         "key": "snes",
+                        "relation": "narrowMatch"
+                      },
+                      {
+                        "key": "sneshd",
                         "relation": "narrowMatch"
                       },
                       {
@@ -19900,6 +19902,10 @@
                 "keys": [
                   {
                     "key": "snes",
+                    "relation": "narrowMatch"
+                  },
+                  {
+                    "key": "sneshd",
                     "relation": "narrowMatch"
                   },
                   {
@@ -20399,8 +20405,6 @@
           }
         ],
         "systems_for_platform": {
-          "vocabulary": "esde-platform",
-          "value": "snes",
           "translation": {
             "table_version": 1,
             "pairs": [
@@ -20466,6 +20470,10 @@
                       },
                       {
                         "key": "snes",
+                        "relation": "narrowMatch"
+                      },
+                      {
+                        "key": "sneshd",
                         "relation": "narrowMatch"
                       },
                       {
@@ -20653,6 +20661,10 @@
                   },
                   {
                     "key": "snes",
+                    "relation": "narrowMatch"
+                  },
+                  {
+                    "key": "sneshd",
                     "relation": "narrowMatch"
                   },
                   {
@@ -21160,8 +21172,6 @@
           }
         ],
         "systems_for_platform": {
-          "vocabulary": "igdb",
-          "value": "xbox360",
           "translation": {
             "table_version": 1,
             "pairs": [
@@ -21773,8 +21783,6 @@
           }
         ],
         "systems_for_platform": {
-          "vocabulary": "igdb",
-          "value": "not-a-platform",
           "translation": {
             "table_version": 1,
             "pairs": [
@@ -21884,8 +21892,6 @@
           }
         ],
         "systems_for_platform": {
-          "vocabulary": "mobygames",
-          "value": "1",
           "translation": {
             "table_version": 1,
             "pairs": [
@@ -21905,7 +21911,22 @@
                 "code": "platform-source-unknown",
                 "data": {
                   "source": "mobygames",
-                  "sources": "esde, esde-platform, retrodeck, emudeck, romm, romm-folder, libretro, batocera, knulli, rocknix, igdb, screenscraper, thegamesdb"
+                  "key": "1",
+                  "sources": [
+                    "esde",
+                    "esde-platform",
+                    "retrodeck",
+                    "emudeck",
+                    "romm",
+                    "romm-folder",
+                    "libretro",
+                    "batocera",
+                    "knulli",
+                    "rocknix",
+                    "igdb",
+                    "screenscraper",
+                    "thegamesdb"
+                  ]
                 }
               }
             ]
@@ -21916,7 +21937,22 @@
               "code": "platform-source-unknown",
               "data": {
                 "source": "mobygames",
-                "sources": "esde, esde-platform, retrodeck, emudeck, romm, romm-folder, libretro, batocera, knulli, rocknix, igdb, screenscraper, thegamesdb"
+                "key": "1",
+                "sources": [
+                  "esde",
+                  "esde-platform",
+                  "retrodeck",
+                  "emudeck",
+                  "romm",
+                  "romm-folder",
+                  "libretro",
+                  "batocera",
+                  "knulli",
+                  "rocknix",
+                  "igdb",
+                  "screenscraper",
+                  "thegamesdb"
+                ]
               }
             }
           ]
@@ -21960,8 +21996,6 @@
           }
         ],
         "systems_for_platform": {
-          "vocabulary": "igdb",
-          "value": "ps4--1",
           "translation": {
             "table_version": 1,
             "pairs": [
@@ -22728,8 +22762,6 @@
           }
         ],
         "systems_for_platform": {
-          "vocabulary": "esde-platform",
-          "value": "ps4",
           "translation": {
             "table_version": 1,
             "pairs": [
@@ -23044,7 +23076,7 @@
     },
     {
       "name": "a-retrodeck-only-system-answers-through-retrodecks-own-column",
-      "rationale": "RetroDECK's catalogue declares systems ES-DE does not ship, such as primehack. The platform table knows it in RetroDECK's own column, so on a RetroDECK installation the question reads that column beside ES-DE's: retrodeck/primehack answers the declared primehack system, and platform_ids for primehack translates its RetroDECK name. Reading ES-DE's column alone would answer no system at all.",
+      "rationale": "RetroDECK's catalogue declares systems ES-DE does not ship, such as primehack. The platform table knows it in RetroDECK's own column, so on a RetroDECK installation the question reads that column beside ES-DE's: retrodeck/primehack answers the declared primehack system, and platform_ids for primehack translates its RetroDECK name. primehack is a content subset of the Wii, so the Wii's keys are broadMatch from it and ES-DE's wii, absent here, is named too (#784 D37); reading ES-DE's column alone would answer only that wii, never the primehack system the catalogue declares.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -23078,8 +23110,6 @@
           }
         ],
         "systems_for_platform": {
-          "vocabulary": "retrodeck",
-          "value": "primehack",
           "translation": {
             "table_version": 1,
             "pairs": [
@@ -23091,13 +23121,23 @@
                 "sources": [
                   {
                     "source": "esde",
-                    "status": "none",
-                    "keys": []
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "wii",
+                        "relation": "broadMatch"
+                      }
+                    ]
                   },
                   {
                     "source": "esde-platform",
-                    "status": "none",
-                    "keys": []
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "wii",
+                        "relation": "broadMatch"
+                      }
+                    ]
                   },
                   {
                     "source": "retrodeck",
@@ -23106,6 +23146,10 @@
                       {
                         "key": "primehack",
                         "relation": "exactMatch"
+                      },
+                      {
+                        "key": "wii",
+                        "relation": "broadMatch"
                       }
                     ]
                   },
@@ -23116,53 +23160,110 @@
                       {
                         "key": "primehacks",
                         "relation": "exactMatch"
+                      },
+                      {
+                        "key": "wii",
+                        "relation": "broadMatch"
                       }
                     ]
                   },
                   {
                     "source": "romm",
-                    "status": "none",
-                    "keys": []
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "wii",
+                        "relation": "broadMatch"
+                      }
+                    ]
                   },
                   {
                     "source": "romm-folder",
-                    "status": "none",
-                    "keys": []
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "wii",
+                        "relation": "broadMatch"
+                      }
+                    ]
                   },
                   {
                     "source": "libretro",
-                    "status": "none",
-                    "keys": []
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "Nintendo - Wii",
+                        "relation": "broadMatch"
+                      },
+                      {
+                        "key": "Nintendo - Wii (Digital)",
+                        "relation": "relatedMatch"
+                      }
+                    ]
                   },
                   {
                     "source": "batocera",
-                    "status": "none",
-                    "keys": []
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "wii",
+                        "relation": "broadMatch"
+                      }
+                    ]
                   },
                   {
                     "source": "knulli",
-                    "status": "none",
-                    "keys": []
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "wii",
+                        "relation": "broadMatch"
+                      }
+                    ]
                   },
                   {
                     "source": "rocknix",
-                    "status": "none",
-                    "keys": []
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "wii",
+                        "relation": "broadMatch"
+                      }
+                    ]
                   },
                   {
                     "source": "igdb",
-                    "status": "none",
-                    "keys": []
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "5",
+                        "relation": "broadMatch"
+                      },
+                      {
+                        "key": "wii",
+                        "relation": "broadMatch"
+                      }
+                    ]
                   },
                   {
                     "source": "screenscraper",
-                    "status": "none",
-                    "keys": []
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "16",
+                        "relation": "broadMatch"
+                      }
+                    ]
                   },
                   {
                     "source": "thegamesdb",
-                    "status": "none",
-                    "keys": []
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "9",
+                        "relation": "broadMatch"
+                      }
+                    ]
                   }
                 ]
               }
@@ -23171,13 +23272,23 @@
             "intersection": [
               {
                 "source": "esde",
-                "status": "none",
-                "keys": []
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "wii",
+                    "relation": "broadMatch"
+                  }
+                ]
               },
               {
                 "source": "esde-platform",
-                "status": "none",
-                "keys": []
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "wii",
+                    "relation": "broadMatch"
+                  }
+                ]
               },
               {
                 "source": "retrodeck",
@@ -23186,6 +23297,10 @@
                   {
                     "key": "primehack",
                     "relation": "exactMatch"
+                  },
+                  {
+                    "key": "wii",
+                    "relation": "broadMatch"
                   }
                 ]
               },
@@ -23196,53 +23311,110 @@
                   {
                     "key": "primehacks",
                     "relation": "exactMatch"
+                  },
+                  {
+                    "key": "wii",
+                    "relation": "broadMatch"
                   }
                 ]
               },
               {
                 "source": "romm",
-                "status": "none",
-                "keys": []
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "wii",
+                    "relation": "broadMatch"
+                  }
+                ]
               },
               {
                 "source": "romm-folder",
-                "status": "none",
-                "keys": []
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "wii",
+                    "relation": "broadMatch"
+                  }
+                ]
               },
               {
                 "source": "libretro",
-                "status": "none",
-                "keys": []
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "Nintendo - Wii",
+                    "relation": "broadMatch"
+                  },
+                  {
+                    "key": "Nintendo - Wii (Digital)",
+                    "relation": "relatedMatch"
+                  }
+                ]
               },
               {
                 "source": "batocera",
-                "status": "none",
-                "keys": []
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "wii",
+                    "relation": "broadMatch"
+                  }
+                ]
               },
               {
                 "source": "knulli",
-                "status": "none",
-                "keys": []
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "wii",
+                    "relation": "broadMatch"
+                  }
+                ]
               },
               {
                 "source": "rocknix",
-                "status": "none",
-                "keys": []
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "wii",
+                    "relation": "broadMatch"
+                  }
+                ]
               },
               {
                 "source": "igdb",
-                "status": "none",
-                "keys": []
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "5",
+                    "relation": "broadMatch"
+                  },
+                  {
+                    "key": "wii",
+                    "relation": "broadMatch"
+                  }
+                ]
               },
               {
                 "source": "screenscraper",
-                "status": "none",
-                "keys": []
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "16",
+                    "relation": "broadMatch"
+                  }
+                ]
               },
               {
                 "source": "thegamesdb",
-                "status": "none",
-                "keys": []
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "9",
+                    "relation": "broadMatch"
+                  }
+                ]
               }
             ],
             "conflict": [],
@@ -23256,6 +23428,14 @@
                 "wii"
               ],
               "tags_source": "catalogue"
+            },
+            {
+              "system": "wii",
+              "status": "absent",
+              "platforms": [
+                "wii"
+              ],
+              "tags_source": "vocabulary"
             }
           ],
           "caveats": []
@@ -23278,6 +23458,453 @@
                 "sources": [
                   {
                     "source": "esde",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "wii",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "esde-platform",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "wii",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "retrodeck",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "primehack",
+                        "relation": "exactMatch"
+                      },
+                      {
+                        "key": "wii",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "emudeck",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "primehacks",
+                        "relation": "exactMatch"
+                      },
+                      {
+                        "key": "wii",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "romm",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "wii",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "romm-folder",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "wii",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "libretro",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "Nintendo - Wii",
+                        "relation": "broadMatch"
+                      },
+                      {
+                        "key": "Nintendo - Wii (Digital)",
+                        "relation": "relatedMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "batocera",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "wii",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "knulli",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "wii",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "rocknix",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "wii",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "igdb",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "5",
+                        "relation": "broadMatch"
+                      },
+                      {
+                        "key": "wii",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "screenscraper",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "16",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "thegamesdb",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "9",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "intersection_status": "agreed",
+            "intersection": [
+              {
+                "source": "esde",
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "wii",
+                    "relation": "broadMatch"
+                  }
+                ]
+              },
+              {
+                "source": "esde-platform",
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "wii",
+                    "relation": "broadMatch"
+                  }
+                ]
+              },
+              {
+                "source": "retrodeck",
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "primehack",
+                    "relation": "exactMatch"
+                  },
+                  {
+                    "key": "wii",
+                    "relation": "broadMatch"
+                  }
+                ]
+              },
+              {
+                "source": "emudeck",
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "primehacks",
+                    "relation": "exactMatch"
+                  },
+                  {
+                    "key": "wii",
+                    "relation": "broadMatch"
+                  }
+                ]
+              },
+              {
+                "source": "romm",
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "wii",
+                    "relation": "broadMatch"
+                  }
+                ]
+              },
+              {
+                "source": "romm-folder",
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "wii",
+                    "relation": "broadMatch"
+                  }
+                ]
+              },
+              {
+                "source": "libretro",
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "Nintendo - Wii",
+                    "relation": "broadMatch"
+                  },
+                  {
+                    "key": "Nintendo - Wii (Digital)",
+                    "relation": "relatedMatch"
+                  }
+                ]
+              },
+              {
+                "source": "batocera",
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "wii",
+                    "relation": "broadMatch"
+                  }
+                ]
+              },
+              {
+                "source": "knulli",
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "wii",
+                    "relation": "broadMatch"
+                  }
+                ]
+              },
+              {
+                "source": "rocknix",
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "wii",
+                    "relation": "broadMatch"
+                  }
+                ]
+              },
+              {
+                "source": "igdb",
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "5",
+                    "relation": "broadMatch"
+                  },
+                  {
+                    "key": "wii",
+                    "relation": "broadMatch"
+                  }
+                ]
+              },
+              {
+                "source": "screenscraper",
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "16",
+                    "relation": "broadMatch"
+                  }
+                ]
+              },
+              {
+                "source": "thegamesdb",
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "9",
+                    "relation": "broadMatch"
+                  }
+                ]
+              }
+            ],
+            "conflict": [],
+            "caveats": []
+          },
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "an-emudeck-rom-folder-is-no-system-of-its-catalogue",
+      "rationale": "EmuDeck's ROM template holds folders ES-DE has no system for, such as cavestory, and the platform table lists them in EmuDeck's column; but EmuDeck's catalogue (ES-DE's own plus its custom_systems overlay, at the pinned template too) declares no system by those names. So an EmuDeck installation reads ES-DE's column alone, and a folder name its catalogue does not declare answers absent, unknown and platform-unmapped.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\ndoInstallESDE=true\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "status": "invalid-text",
+            "size": 119537664
+          },
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>atarijaguar</name>\n    <fullname>Atari Jaguar</fullname>\n    <path>%ROMPATH%/atarijaguar</path>\n    <extension>.j64 .J64 .rom .ROM .zip .ZIP</extension>\n    <command label=\"BigPEmu (Proton)\">/bin/bash /home/deck/Emulation/tools/launchers/bigpemu.sh %ROM%</command>\n    <command label=\"Virtual Jaguar\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/virtualjaguar_libretro.so %ROM%</command>\n    <platform>atarijaguar</platform>\n    <theme>atarijaguar</theme>\n  </system>\n</systemList>\n",
+          "/home/deck/ES-DE/settings/es_settings.xml": "<?xml version=\"1.0\"?>\n<string name=\"ROMDirectory\" value=\"/home/deck/Emulation/roms\" />\n<string name=\"ThemeSet\" value=\"es-epicnoir\" />\n",
+          "/home/deck/ES-DE/gamelists/atarijaguar/gamelist.xml": "<?xml version=\"1.0\"?>\n<alternativeEmulator>\n    <label>Virtual Jaguar</label>\n</alternativeEmulator>\n<gameList />"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/bios",
+          "/home/deck/Emulation/roms"
+        ],
+        "appimages": {
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "usr/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>gba</name><fullname>Game Boy Advance</fullname><path>%ROMPATH%/gba</path>\n    <extension>.gba</extension>\n    <command label=\"mGBA\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mgba_libretro.so %ROM%</command>\n    <platform>gba</platform>\n  </system>\n  <system><name>dreamcast</name><fullname>Sega Dreamcast</fullname><path>%ROMPATH%/dreamcast</path>\n    <extension>.chd</extension>\n    <command label=\"Flycast\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/flycast_libretro.so %ROM%</command>\n    <platform>dreamcast</platform>\n  </system>\n</systemList>\n"
+          }
+        },
+        "platform_ids_query": {
+          "installation": "emudeck",
+          "system": "cavestory"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "label": "EmuDeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "platform_ids": {
+          "system": "cavestory",
+          "status": "absent",
+          "tags_source": "vocabulary",
+          "platforms": [],
+          "translation": {
+            "table_version": 1,
+            "pairs": [
+              {
+                "source": "esde",
+                "key": "cavestory",
+                "version": null,
+                "status": "unknown",
+                "sources": []
+              }
+            ],
+            "intersection_status": "unknown",
+            "intersection": [],
+            "conflict": [],
+            "caveats": [
+              {
+                "code": "platform-unmapped",
+                "data": {
+                  "source": "esde",
+                  "key": "cavestory"
+                }
+              }
+            ]
+          },
+          "caveats": [
+            {
+              "code": "platform-unmapped",
+              "data": {
+                "source": "esde",
+                "key": "cavestory"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "an-emudeck-only-folder-key-is-known-to-the-table-and-names-no-system-here",
+      "rationale": "cavestory is a key of EmuDeck's ROM template, so the table knows it and the translation answers through EmuDeck's own column. No system of this installation corresponds: no system of this installation or of ES-DE's vocabulary is named cavestory, so the match list is empty — the machine half's statement that nothing here takes this content — while the pair itself is known.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\ndoInstallESDE=true\n",
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\n",
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "status": "invalid-text",
+            "size": 119537664
+          },
+          "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>atarijaguar</name>\n    <fullname>Atari Jaguar</fullname>\n    <path>%ROMPATH%/atarijaguar</path>\n    <extension>.j64 .J64 .rom .ROM .zip .ZIP</extension>\n    <command label=\"BigPEmu (Proton)\">/bin/bash /home/deck/Emulation/tools/launchers/bigpemu.sh %ROM%</command>\n    <command label=\"Virtual Jaguar\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/virtualjaguar_libretro.so %ROM%</command>\n    <platform>atarijaguar</platform>\n    <theme>atarijaguar</theme>\n  </system>\n</systemList>\n",
+          "/home/deck/ES-DE/settings/es_settings.xml": "<?xml version=\"1.0\"?>\n<string name=\"ROMDirectory\" value=\"/home/deck/Emulation/roms\" />\n<string name=\"ThemeSet\" value=\"es-epicnoir\" />\n",
+          "/home/deck/ES-DE/gamelists/atarijaguar/gamelist.xml": "<?xml version=\"1.0\"?>\n<alternativeEmulator>\n    <label>Virtual Jaguar</label>\n</alternativeEmulator>\n<gameList />"
+        },
+        "dirs": [
+          "/home/deck/Emulation/saves",
+          "/home/deck/Emulation/saves/retroarch/saves",
+          "/home/deck/Emulation/bios",
+          "/home/deck/Emulation/roms"
+        ],
+        "appimages": {
+          "/home/deck/Applications/ES-DE.AppImage": {
+            "usr/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>gba</name><fullname>Game Boy Advance</fullname><path>%ROMPATH%/gba</path>\n    <extension>.gba</extension>\n    <command label=\"mGBA\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mgba_libretro.so %ROM%</command>\n    <platform>gba</platform>\n  </system>\n  <system><name>dreamcast</name><fullname>Sega Dreamcast</fullname><path>%ROMPATH%/dreamcast</path>\n    <extension>.chd</extension>\n    <command label=\"Flycast\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/flycast_libretro.so %ROM%</command>\n    <platform>dreamcast</platform>\n  </system>\n</systemList>\n"
+          }
+        },
+        "platform_systems_query": {
+          "installation": "emudeck",
+          "vocabulary": "emudeck",
+          "value": "cavestory"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "emudeck",
+            "label": "EmuDeck",
+            "kinds": [
+              "emudeck",
+              "bare_retroarch_flatpak"
+            ],
+            "root": "/home/deck/Emulation",
+            "health": []
+          }
+        ],
+        "systems_for_platform": {
+          "translation": {
+            "table_version": 1,
+            "pairs": [
+              {
+                "source": "emudeck",
+                "key": "cavestory",
+                "version": null,
+                "status": "known",
+                "sources": [
+                  {
+                    "source": "esde",
                     "status": "none",
                     "keys": []
                   },
@@ -23288,20 +23915,15 @@
                   },
                   {
                     "source": "retrodeck",
-                    "status": "keys",
-                    "keys": [
-                      {
-                        "key": "primehack",
-                        "relation": "exactMatch"
-                      }
-                    ]
+                    "status": "none",
+                    "keys": []
                   },
                   {
                     "source": "emudeck",
                     "status": "keys",
                     "keys": [
                       {
-                        "key": "primehacks",
+                        "key": "cavestory",
                         "relation": "exactMatch"
                       }
                     ]
@@ -23318,18 +23940,33 @@
                   },
                   {
                     "source": "libretro",
-                    "status": "none",
-                    "keys": []
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "Cave Story",
+                        "relation": "exactMatch"
+                      }
+                    ]
                   },
                   {
                     "source": "batocera",
-                    "status": "none",
-                    "keys": []
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "cavestory",
+                        "relation": "exactMatch"
+                      }
+                    ]
                   },
                   {
                     "source": "knulli",
-                    "status": "none",
-                    "keys": []
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "cavestory",
+                        "relation": "exactMatch"
+                      }
+                    ]
                   },
                   {
                     "source": "rocknix",
@@ -23368,20 +24005,15 @@
               },
               {
                 "source": "retrodeck",
-                "status": "keys",
-                "keys": [
-                  {
-                    "key": "primehack",
-                    "relation": "exactMatch"
-                  }
-                ]
+                "status": "none",
+                "keys": []
               },
               {
                 "source": "emudeck",
                 "status": "keys",
                 "keys": [
                   {
-                    "key": "primehacks",
+                    "key": "cavestory",
                     "relation": "exactMatch"
                   }
                 ]
@@ -23398,18 +24030,33 @@
               },
               {
                 "source": "libretro",
-                "status": "none",
-                "keys": []
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "Cave Story",
+                    "relation": "exactMatch"
+                  }
+                ]
               },
               {
                 "source": "batocera",
-                "status": "none",
-                "keys": []
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "cavestory",
+                    "relation": "exactMatch"
+                  }
+                ]
               },
               {
                 "source": "knulli",
-                "status": "none",
-                "keys": []
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "cavestory",
+                    "relation": "exactMatch"
+                  }
+                ]
               },
               {
                 "source": "rocknix",
@@ -23435,7 +24082,2056 @@
             "conflict": [],
             "caveats": []
           },
+          "matches": [],
           "caveats": []
+        }
+      }
+    },
+    {
+      "name": "several-pairs-answer-through-their-intersection",
+      "rationale": "The multi-pair form (#784 D7, D9): RomM's genesis and the bare folder megadrivejp share one system, the Japanese Mega Drive, so the matches are the systems the intersection names, qualified by how firmly each is here.",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>snes</name><fullname>Nintendo SNES</fullname><path>%ROMPATH%/snes</path>\n    <extension>.sfc .smc</extension>\n    <command label=\"Snes9x - Current\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/snes9x_libretro.so %ROM%</command>\n    <platform>snes</platform>\n  </system>\n  <!-- RetroDECK ships systems it has no emulator for as commented blocks:\n  <system><name>xbox360</name><fullname>Microsoft Xbox 360</fullname><path>%ROMPATH%/xbox360</path>\n    <extension>.xex</extension>\n    <command label=\"Xenia (Proton)\">%EMULATOR_XENIA% %ROM%</command>\n    <platform>xbox360</platform>\n  </system>\n  -->\n</systemList>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "platform_pairs_query": {
+          "pairs": [
+            [
+              "romm",
+              "genesis"
+            ],
+            [
+              "folder",
+              "megadrivejp"
+            ]
+          ]
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "systems_for_platforms": {
+          "translation": {
+            "table_version": 1,
+            "pairs": [
+              {
+                "source": "romm",
+                "key": "genesis",
+                "version": null,
+                "status": "known",
+                "sources": [
+                  {
+                    "source": "esde",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "genesis",
+                        "relation": "narrowMatch"
+                      },
+                      {
+                        "key": "megadrive",
+                        "relation": "narrowMatch"
+                      },
+                      {
+                        "key": "megadrivejp",
+                        "relation": "narrowMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "esde-platform",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "genesis",
+                        "relation": "narrowMatch"
+                      },
+                      {
+                        "key": "megadrive",
+                        "relation": "narrowMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "retrodeck",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "genesis",
+                        "relation": "narrowMatch"
+                      },
+                      {
+                        "key": "megadrive",
+                        "relation": "narrowMatch"
+                      },
+                      {
+                        "key": "megadrivejp",
+                        "relation": "narrowMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "emudeck",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "genesis",
+                        "relation": "narrowMatch"
+                      },
+                      {
+                        "key": "genesiswide",
+                        "relation": "narrowMatch"
+                      },
+                      {
+                        "key": "megadrive",
+                        "relation": "narrowMatch"
+                      },
+                      {
+                        "key": "megadrivejp",
+                        "relation": "narrowMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "romm",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "genesis",
+                        "relation": "exactMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "romm-folder",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "genesis",
+                        "relation": "narrowMatch"
+                      },
+                      {
+                        "key": "megadrive",
+                        "relation": "narrowMatch"
+                      },
+                      {
+                        "key": "megadrive-msu",
+                        "relation": "narrowMatch"
+                      },
+                      {
+                        "key": "megadrivejp",
+                        "relation": "narrowMatch"
+                      },
+                      {
+                        "key": "msu-md",
+                        "relation": "narrowMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "libretro",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "Sega - Mega Drive - Genesis",
+                        "relation": "narrowMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "batocera",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "megadrive",
+                        "relation": "narrowMatch"
+                      },
+                      {
+                        "key": "megadrive-msu",
+                        "relation": "narrowMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "knulli",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "megadrive",
+                        "relation": "narrowMatch"
+                      },
+                      {
+                        "key": "msu-md",
+                        "relation": "narrowMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "rocknix",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "genesis",
+                        "relation": "narrowMatch"
+                      },
+                      {
+                        "key": "megadrive",
+                        "relation": "narrowMatch"
+                      },
+                      {
+                        "key": "megadrive-japan",
+                        "relation": "narrowMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "igdb",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "29",
+                        "relation": "exactMatch"
+                      },
+                      {
+                        "key": "genesis-slash-megadrive",
+                        "relation": "exactMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "screenscraper",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "1",
+                        "relation": "exactMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "thegamesdb",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "18",
+                        "relation": "narrowMatch"
+                      },
+                      {
+                        "key": "36",
+                        "relation": "narrowMatch"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "source": "folder",
+                "key": "megadrivejp",
+                "version": null,
+                "status": "known",
+                "sources": [
+                  {
+                    "source": "esde",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "megadrivejp",
+                        "relation": "exactMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "esde-platform",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "megadrive",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "retrodeck",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "megadrivejp",
+                        "relation": "exactMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "emudeck",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "megadrivejp",
+                        "relation": "exactMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "romm",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "genesis",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "romm-folder",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "megadrivejp",
+                        "relation": "exactMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "libretro",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "Sega - Mega Drive - Genesis",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "batocera",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "megadrive",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "knulli",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "megadrive",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "rocknix",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "megadrive",
+                        "relation": "broadMatch"
+                      },
+                      {
+                        "key": "megadrive-japan",
+                        "relation": "exactMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "igdb",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "29",
+                        "relation": "broadMatch"
+                      },
+                      {
+                        "key": "genesis-slash-megadrive",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "screenscraper",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "1",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "thegamesdb",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "36",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "intersection_status": "agreed",
+            "intersection": [
+              {
+                "source": "esde",
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "megadrivejp",
+                    "relation": "exactMatch"
+                  }
+                ]
+              },
+              {
+                "source": "esde-platform",
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "megadrive",
+                    "relation": "broadMatch"
+                  }
+                ]
+              },
+              {
+                "source": "retrodeck",
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "megadrivejp",
+                    "relation": "exactMatch"
+                  }
+                ]
+              },
+              {
+                "source": "emudeck",
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "megadrivejp",
+                    "relation": "exactMatch"
+                  }
+                ]
+              },
+              {
+                "source": "romm",
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "genesis",
+                    "relation": "broadMatch"
+                  }
+                ]
+              },
+              {
+                "source": "romm-folder",
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "megadrivejp",
+                    "relation": "exactMatch"
+                  }
+                ]
+              },
+              {
+                "source": "libretro",
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "Sega - Mega Drive - Genesis",
+                    "relation": "broadMatch"
+                  }
+                ]
+              },
+              {
+                "source": "batocera",
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "megadrive",
+                    "relation": "broadMatch"
+                  }
+                ]
+              },
+              {
+                "source": "knulli",
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "megadrive",
+                    "relation": "broadMatch"
+                  }
+                ]
+              },
+              {
+                "source": "rocknix",
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "megadrive",
+                    "relation": "broadMatch"
+                  },
+                  {
+                    "key": "megadrive-japan",
+                    "relation": "exactMatch"
+                  }
+                ]
+              },
+              {
+                "source": "igdb",
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "29",
+                    "relation": "broadMatch"
+                  },
+                  {
+                    "key": "genesis-slash-megadrive",
+                    "relation": "broadMatch"
+                  }
+                ]
+              },
+              {
+                "source": "screenscraper",
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "1",
+                    "relation": "broadMatch"
+                  }
+                ]
+              },
+              {
+                "source": "thegamesdb",
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "36",
+                    "relation": "broadMatch"
+                  }
+                ]
+              }
+            ],
+            "conflict": [],
+            "caveats": []
+          },
+          "matches": [
+            {
+              "system": "megadrivejp",
+              "status": "absent",
+              "platforms": [
+                "megadrive"
+              ],
+              "tags_source": "vocabulary"
+            }
+          ],
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "pairs-that-share-no-system-match-nothing",
+      "rationale": "The Super Game Boy and the Game Boy Color share no system, so the known pairs are a conflict and nothing matches: atlas picks neither (#784 D9). The third pair, RomM's excluded bubble, is unknown, and its platform-excluded caveat is lifted onto the answer as the translation states it (D35).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>snes</name><fullname>Nintendo SNES</fullname><path>%ROMPATH%/snes</path>\n    <extension>.sfc .smc</extension>\n    <command label=\"Snes9x - Current\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/snes9x_libretro.so %ROM%</command>\n    <platform>snes</platform>\n  </system>\n  <!-- RetroDECK ships systems it has no emulator for as commented blocks:\n  <system><name>xbox360</name><fullname>Microsoft Xbox 360</fullname><path>%ROMPATH%/xbox360</path>\n    <extension>.xex</extension>\n    <command label=\"Xenia (Proton)\">%EMULATOR_XENIA% %ROM%</command>\n    <platform>xbox360</platform>\n  </system>\n  -->\n</systemList>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "platform_pairs_query": {
+          "pairs": [
+            [
+              "esde",
+              "sgb"
+            ],
+            [
+              "esde",
+              "gbc"
+            ],
+            [
+              "romm",
+              "bubble"
+            ]
+          ]
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "systems_for_platforms": {
+          "translation": {
+            "table_version": 1,
+            "pairs": [
+              {
+                "source": "esde",
+                "key": "sgb",
+                "version": null,
+                "status": "known",
+                "sources": [
+                  {
+                    "source": "esde",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "sgb",
+                        "relation": "exactMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "esde-platform",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "sgb",
+                        "relation": "exactMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "retrodeck",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "sgb",
+                        "relation": "exactMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "emudeck",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "sgb",
+                        "relation": "exactMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "romm",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "gbc",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "romm-folder",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "sgb",
+                        "relation": "exactMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "libretro",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "Nintendo - Game Boy",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "batocera",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "sgb",
+                        "relation": "exactMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "knulli",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "sgb",
+                        "relation": "exactMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "rocknix",
+                    "status": "none",
+                    "keys": []
+                  },
+                  {
+                    "source": "igdb",
+                    "status": "none",
+                    "keys": []
+                  },
+                  {
+                    "source": "screenscraper",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "127",
+                        "relation": "exactMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "thegamesdb",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "4",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "source": "esde",
+                "key": "gbc",
+                "version": null,
+                "status": "known",
+                "sources": [
+                  {
+                    "source": "esde",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "gbc",
+                        "relation": "exactMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "esde-platform",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "gbc",
+                        "relation": "exactMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "retrodeck",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "gbc",
+                        "relation": "exactMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "emudeck",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "gbc",
+                        "relation": "exactMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "romm",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "gbc",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "romm-folder",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "gbc",
+                        "relation": "exactMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "libretro",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "Nintendo - Game Boy Color",
+                        "relation": "exactMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "batocera",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "gbc",
+                        "relation": "exactMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "knulli",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "gbc",
+                        "relation": "exactMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "rocknix",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "gbc",
+                        "relation": "exactMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "igdb",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "22",
+                        "relation": "broadMatch"
+                      },
+                      {
+                        "key": "gbc",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "screenscraper",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "10",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "thegamesdb",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "41",
+                        "relation": "exactMatch"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "source": "romm",
+                "key": "bubble",
+                "version": null,
+                "status": "unknown",
+                "sources": []
+              }
+            ],
+            "intersection_status": "conflict",
+            "intersection": [],
+            "conflict": [
+              {
+                "source": "esde",
+                "key": "sgb",
+                "version": null
+              },
+              {
+                "source": "esde",
+                "key": "gbc",
+                "version": null
+              }
+            ],
+            "caveats": [
+              {
+                "code": "platform-excluded",
+                "data": {
+                  "source": "romm",
+                  "key": "bubble",
+                  "reason": "no included source states what this is (looked in: RomM's IGDB, ScreenScraper and LaunchBox tables; only its MobyGames table names it, moby_handler.py:428, and MobyGames is not shipped)"
+                }
+              }
+            ]
+          },
+          "matches": [],
+          "caveats": [
+            {
+              "code": "platform-excluded",
+              "data": {
+                "source": "romm",
+                "key": "bubble",
+                "reason": "no included source states what this is (looked in: RomM's IGDB, ScreenScraper and LaunchBox tables; only its MobyGames table names it, moby_handler.py:428, and MobyGames is not shipped)"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "a-version-on-a-bare-folder-pair-is-not-applied",
+      "rationale": "The bare folder megadrivejp states a version, but a folder name is matched against every folder vocabulary and names no single source, so the version is not applied: the union stands, the answer is the one without it, and platform-version-unapplied says so (#784 D32).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>snes</name><fullname>Nintendo SNES</fullname><path>%ROMPATH%/snes</path>\n    <extension>.sfc .smc</extension>\n    <command label=\"Snes9x - Current\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/snes9x_libretro.so %ROM%</command>\n    <platform>snes</platform>\n  </system>\n  <!-- RetroDECK ships systems it has no emulator for as commented blocks:\n  <system><name>xbox360</name><fullname>Microsoft Xbox 360</fullname><path>%ROMPATH%/xbox360</path>\n    <extension>.xex</extension>\n    <command label=\"Xenia (Proton)\">%EMULATOR_XENIA% %ROM%</command>\n    <platform>xbox360</platform>\n  </system>\n  -->\n</systemList>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "platform_pairs_query": {
+          "pairs": [
+            [
+              "romm",
+              "genesis"
+            ],
+            [
+              "folder",
+              "megadrivejp",
+              "1.0"
+            ]
+          ]
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "systems_for_platforms": {
+          "translation": {
+            "table_version": 1,
+            "pairs": [
+              {
+                "source": "romm",
+                "key": "genesis",
+                "version": null,
+                "status": "known",
+                "sources": [
+                  {
+                    "source": "esde",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "genesis",
+                        "relation": "narrowMatch"
+                      },
+                      {
+                        "key": "megadrive",
+                        "relation": "narrowMatch"
+                      },
+                      {
+                        "key": "megadrivejp",
+                        "relation": "narrowMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "esde-platform",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "genesis",
+                        "relation": "narrowMatch"
+                      },
+                      {
+                        "key": "megadrive",
+                        "relation": "narrowMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "retrodeck",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "genesis",
+                        "relation": "narrowMatch"
+                      },
+                      {
+                        "key": "megadrive",
+                        "relation": "narrowMatch"
+                      },
+                      {
+                        "key": "megadrivejp",
+                        "relation": "narrowMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "emudeck",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "genesis",
+                        "relation": "narrowMatch"
+                      },
+                      {
+                        "key": "genesiswide",
+                        "relation": "narrowMatch"
+                      },
+                      {
+                        "key": "megadrive",
+                        "relation": "narrowMatch"
+                      },
+                      {
+                        "key": "megadrivejp",
+                        "relation": "narrowMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "romm",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "genesis",
+                        "relation": "exactMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "romm-folder",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "genesis",
+                        "relation": "narrowMatch"
+                      },
+                      {
+                        "key": "megadrive",
+                        "relation": "narrowMatch"
+                      },
+                      {
+                        "key": "megadrive-msu",
+                        "relation": "narrowMatch"
+                      },
+                      {
+                        "key": "megadrivejp",
+                        "relation": "narrowMatch"
+                      },
+                      {
+                        "key": "msu-md",
+                        "relation": "narrowMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "libretro",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "Sega - Mega Drive - Genesis",
+                        "relation": "narrowMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "batocera",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "megadrive",
+                        "relation": "narrowMatch"
+                      },
+                      {
+                        "key": "megadrive-msu",
+                        "relation": "narrowMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "knulli",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "megadrive",
+                        "relation": "narrowMatch"
+                      },
+                      {
+                        "key": "msu-md",
+                        "relation": "narrowMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "rocknix",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "genesis",
+                        "relation": "narrowMatch"
+                      },
+                      {
+                        "key": "megadrive",
+                        "relation": "narrowMatch"
+                      },
+                      {
+                        "key": "megadrive-japan",
+                        "relation": "narrowMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "igdb",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "29",
+                        "relation": "exactMatch"
+                      },
+                      {
+                        "key": "genesis-slash-megadrive",
+                        "relation": "exactMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "screenscraper",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "1",
+                        "relation": "exactMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "thegamesdb",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "18",
+                        "relation": "narrowMatch"
+                      },
+                      {
+                        "key": "36",
+                        "relation": "narrowMatch"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "source": "folder",
+                "key": "megadrivejp",
+                "version": "1.0",
+                "status": "known",
+                "sources": [
+                  {
+                    "source": "esde",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "megadrivejp",
+                        "relation": "exactMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "esde-platform",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "megadrive",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "retrodeck",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "megadrivejp",
+                        "relation": "exactMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "emudeck",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "megadrivejp",
+                        "relation": "exactMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "romm",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "genesis",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "romm-folder",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "megadrivejp",
+                        "relation": "exactMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "libretro",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "Sega - Mega Drive - Genesis",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "batocera",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "megadrive",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "knulli",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "megadrive",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "rocknix",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "megadrive",
+                        "relation": "broadMatch"
+                      },
+                      {
+                        "key": "megadrive-japan",
+                        "relation": "exactMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "igdb",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "29",
+                        "relation": "broadMatch"
+                      },
+                      {
+                        "key": "genesis-slash-megadrive",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "screenscraper",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "1",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "thegamesdb",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "36",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "intersection_status": "agreed",
+            "intersection": [
+              {
+                "source": "esde",
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "megadrivejp",
+                    "relation": "exactMatch"
+                  }
+                ]
+              },
+              {
+                "source": "esde-platform",
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "megadrive",
+                    "relation": "broadMatch"
+                  }
+                ]
+              },
+              {
+                "source": "retrodeck",
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "megadrivejp",
+                    "relation": "exactMatch"
+                  }
+                ]
+              },
+              {
+                "source": "emudeck",
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "megadrivejp",
+                    "relation": "exactMatch"
+                  }
+                ]
+              },
+              {
+                "source": "romm",
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "genesis",
+                    "relation": "broadMatch"
+                  }
+                ]
+              },
+              {
+                "source": "romm-folder",
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "megadrivejp",
+                    "relation": "exactMatch"
+                  }
+                ]
+              },
+              {
+                "source": "libretro",
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "Sega - Mega Drive - Genesis",
+                    "relation": "broadMatch"
+                  }
+                ]
+              },
+              {
+                "source": "batocera",
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "megadrive",
+                    "relation": "broadMatch"
+                  }
+                ]
+              },
+              {
+                "source": "knulli",
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "megadrive",
+                    "relation": "broadMatch"
+                  }
+                ]
+              },
+              {
+                "source": "rocknix",
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "megadrive",
+                    "relation": "broadMatch"
+                  },
+                  {
+                    "key": "megadrive-japan",
+                    "relation": "exactMatch"
+                  }
+                ]
+              },
+              {
+                "source": "igdb",
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "29",
+                    "relation": "broadMatch"
+                  },
+                  {
+                    "key": "genesis-slash-megadrive",
+                    "relation": "broadMatch"
+                  }
+                ]
+              },
+              {
+                "source": "screenscraper",
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "1",
+                    "relation": "broadMatch"
+                  }
+                ]
+              },
+              {
+                "source": "thegamesdb",
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "36",
+                    "relation": "broadMatch"
+                  }
+                ]
+              }
+            ],
+            "conflict": [],
+            "caveats": [
+              {
+                "code": "platform-version-unapplied",
+                "data": {
+                  "source": "folder",
+                  "key": "megadrivejp",
+                  "version": "1.0"
+                }
+              }
+            ]
+          },
+          "matches": [
+            {
+              "system": "megadrivejp",
+              "status": "absent",
+              "platforms": [
+                "megadrive"
+              ],
+              "tags_source": "vocabulary"
+            }
+          ],
+          "caveats": []
+        }
+      }
+    },
+    {
+      "name": "a-part-and-a-content-subset-share-their-system-unestablished",
+      "rationale": "libretro's Wii (Digital) covers part of the Wii and RetroDECK's primehack is a content subset of it, so the two pairs share the Wii only through different parts of it, and the table cannot know whether those parts overlap: the intersection is agreed on the Wii, both part keys are relatedMatch to it, and platform-parts-unestablished names both pairs, inside the translation and lifted onto the answer (#784 D40).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>snes</name><fullname>Nintendo SNES</fullname><path>%ROMPATH%/snes</path>\n    <extension>.sfc .smc</extension>\n    <command label=\"Snes9x - Current\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/snes9x_libretro.so %ROM%</command>\n    <platform>snes</platform>\n  </system>\n  <!-- RetroDECK ships systems it has no emulator for as commented blocks:\n  <system><name>xbox360</name><fullname>Microsoft Xbox 360</fullname><path>%ROMPATH%/xbox360</path>\n    <extension>.xex</extension>\n    <command label=\"Xenia (Proton)\">%EMULATOR_XENIA% %ROM%</command>\n    <platform>xbox360</platform>\n  </system>\n  -->\n</systemList>\n"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "platform_pairs_query": {
+          "pairs": [
+            [
+              "libretro",
+              "Nintendo - Wii (Digital)"
+            ],
+            [
+              "retrodeck",
+              "primehack"
+            ]
+          ]
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "systems_for_platforms": {
+          "translation": {
+            "table_version": 1,
+            "pairs": [
+              {
+                "source": "libretro",
+                "key": "Nintendo - Wii (Digital)",
+                "version": null,
+                "status": "known",
+                "sources": [
+                  {
+                    "source": "esde",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "wii",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "esde-platform",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "wii",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "retrodeck",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "primehack",
+                        "relation": "relatedMatch"
+                      },
+                      {
+                        "key": "wii",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "emudeck",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "primehacks",
+                        "relation": "relatedMatch"
+                      },
+                      {
+                        "key": "wii",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "romm",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "wii",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "romm-folder",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "wii",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "libretro",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "Nintendo - Wii",
+                        "relation": "broadMatch"
+                      },
+                      {
+                        "key": "Nintendo - Wii (Digital)",
+                        "relation": "exactMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "batocera",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "wii",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "knulli",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "wii",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "rocknix",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "wii",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "igdb",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "5",
+                        "relation": "broadMatch"
+                      },
+                      {
+                        "key": "wii",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "screenscraper",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "16",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "thegamesdb",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "9",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "source": "retrodeck",
+                "key": "primehack",
+                "version": null,
+                "status": "known",
+                "sources": [
+                  {
+                    "source": "esde",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "wii",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "esde-platform",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "wii",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "retrodeck",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "primehack",
+                        "relation": "exactMatch"
+                      },
+                      {
+                        "key": "wii",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "emudeck",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "primehacks",
+                        "relation": "exactMatch"
+                      },
+                      {
+                        "key": "wii",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "romm",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "wii",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "romm-folder",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "wii",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "libretro",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "Nintendo - Wii",
+                        "relation": "broadMatch"
+                      },
+                      {
+                        "key": "Nintendo - Wii (Digital)",
+                        "relation": "relatedMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "batocera",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "wii",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "knulli",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "wii",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "rocknix",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "wii",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "igdb",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "5",
+                        "relation": "broadMatch"
+                      },
+                      {
+                        "key": "wii",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "screenscraper",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "16",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  },
+                  {
+                    "source": "thegamesdb",
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "9",
+                        "relation": "broadMatch"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "intersection_status": "agreed",
+            "intersection": [
+              {
+                "source": "esde",
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "wii",
+                    "relation": "broadMatch"
+                  }
+                ]
+              },
+              {
+                "source": "esde-platform",
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "wii",
+                    "relation": "broadMatch"
+                  }
+                ]
+              },
+              {
+                "source": "retrodeck",
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "primehack",
+                    "relation": "relatedMatch"
+                  },
+                  {
+                    "key": "wii",
+                    "relation": "broadMatch"
+                  }
+                ]
+              },
+              {
+                "source": "emudeck",
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "primehacks",
+                    "relation": "relatedMatch"
+                  },
+                  {
+                    "key": "wii",
+                    "relation": "broadMatch"
+                  }
+                ]
+              },
+              {
+                "source": "romm",
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "wii",
+                    "relation": "broadMatch"
+                  }
+                ]
+              },
+              {
+                "source": "romm-folder",
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "wii",
+                    "relation": "broadMatch"
+                  }
+                ]
+              },
+              {
+                "source": "libretro",
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "Nintendo - Wii",
+                    "relation": "broadMatch"
+                  },
+                  {
+                    "key": "Nintendo - Wii (Digital)",
+                    "relation": "relatedMatch"
+                  }
+                ]
+              },
+              {
+                "source": "batocera",
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "wii",
+                    "relation": "broadMatch"
+                  }
+                ]
+              },
+              {
+                "source": "knulli",
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "wii",
+                    "relation": "broadMatch"
+                  }
+                ]
+              },
+              {
+                "source": "rocknix",
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "wii",
+                    "relation": "broadMatch"
+                  }
+                ]
+              },
+              {
+                "source": "igdb",
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "5",
+                    "relation": "broadMatch"
+                  },
+                  {
+                    "key": "wii",
+                    "relation": "broadMatch"
+                  }
+                ]
+              },
+              {
+                "source": "screenscraper",
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "16",
+                    "relation": "broadMatch"
+                  }
+                ]
+              },
+              {
+                "source": "thegamesdb",
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "9",
+                    "relation": "broadMatch"
+                  }
+                ]
+              }
+            ],
+            "conflict": [],
+            "caveats": [
+              {
+                "code": "platform-parts-unestablished",
+                "data": {
+                  "sources": [
+                    "libretro",
+                    "retrodeck"
+                  ],
+                  "keys": [
+                    "Nintendo - Wii (Digital)",
+                    "primehack"
+                  ]
+                }
+              }
+            ]
+          },
+          "matches": [
+            {
+              "system": "primehack",
+              "status": "absent",
+              "platforms": [
+                "wii"
+              ],
+              "tags_source": "vocabulary"
+            },
+            {
+              "system": "wii",
+              "status": "absent",
+              "platforms": [
+                "wii"
+              ],
+              "tags_source": "vocabulary"
+            }
+          ],
+          "caveats": [
+            {
+              "code": "platform-parts-unestablished",
+              "data": {
+                "sources": [
+                  "libretro",
+                  "retrodeck"
+                ],
+                "keys": [
+                  "Nintendo - Wii (Digital)",
+                  "primehack"
+                ]
+              }
+            }
+          ]
         }
       }
     },
@@ -23472,8 +26168,6 @@
           }
         ],
         "systems_for_platform": {
-          "vocabulary": "screenscraper",
-          "value": "6",
           "translation": {
             "table_version": 1,
             "pairs": [
@@ -23809,8 +26503,6 @@
           }
         ],
         "systems_for_platform": {
-          "vocabulary": "screenscraper",
-          "value": "75",
           "translation": {
             "table_version": 1,
             "pairs": [
@@ -25555,8 +28247,6 @@
           }
         ],
         "systems_for_platform": {
-          "vocabulary": "screenscraper",
-          "value": "290",
           "translation": {
             "table_version": 1,
             "pairs": [
@@ -25572,7 +28262,7 @@
                     "keys": [
                       {
                         "key": "doom",
-                        "relation": "narrowMatch"
+                        "relation": "exactMatch"
                       }
                     ]
                   },
@@ -25582,11 +28272,11 @@
                     "keys": [
                       {
                         "key": "pc",
-                        "relation": "relatedMatch"
+                        "relation": "broadMatch"
                       },
                       {
                         "key": "pcwindows",
-                        "relation": "relatedMatch"
+                        "relation": "broadMatch"
                       }
                     ]
                   },
@@ -25596,7 +28286,7 @@
                     "keys": [
                       {
                         "key": "doom",
-                        "relation": "narrowMatch"
+                        "relation": "exactMatch"
                       }
                     ]
                   },
@@ -25606,7 +28296,7 @@
                     "keys": [
                       {
                         "key": "doom",
-                        "relation": "narrowMatch"
+                        "relation": "exactMatch"
                       }
                     ]
                   },
@@ -25626,7 +28316,7 @@
                     "keys": [
                       {
                         "key": "doom",
-                        "relation": "narrowMatch"
+                        "relation": "exactMatch"
                       },
                       {
                         "key": "gzdoom",
@@ -25644,7 +28334,7 @@
                     "keys": [
                       {
                         "key": "DOOM",
-                        "relation": "narrowMatch"
+                        "relation": "exactMatch"
                       }
                     ]
                   },
@@ -25682,7 +28372,7 @@
                     "keys": [
                       {
                         "key": "doom",
-                        "relation": "narrowMatch"
+                        "relation": "exactMatch"
                       }
                     ]
                   },
@@ -25697,11 +28387,11 @@
                     "keys": [
                       {
                         "key": "135",
-                        "relation": "relatedMatch"
+                        "relation": "broadMatch"
                       },
                       {
                         "key": "138",
-                        "relation": "relatedMatch"
+                        "relation": "broadMatch"
                       },
                       {
                         "key": "290",
@@ -25715,7 +28405,7 @@
                     "keys": [
                       {
                         "key": "1",
-                        "relation": "relatedMatch"
+                        "relation": "broadMatch"
                       }
                     ]
                   }
@@ -25730,7 +28420,7 @@
                 "keys": [
                   {
                     "key": "doom",
-                    "relation": "narrowMatch"
+                    "relation": "exactMatch"
                   }
                 ]
               },
@@ -25740,11 +28430,11 @@
                 "keys": [
                   {
                     "key": "pc",
-                    "relation": "relatedMatch"
+                    "relation": "broadMatch"
                   },
                   {
                     "key": "pcwindows",
-                    "relation": "relatedMatch"
+                    "relation": "broadMatch"
                   }
                 ]
               },
@@ -25754,7 +28444,7 @@
                 "keys": [
                   {
                     "key": "doom",
-                    "relation": "narrowMatch"
+                    "relation": "exactMatch"
                   }
                 ]
               },
@@ -25764,7 +28454,7 @@
                 "keys": [
                   {
                     "key": "doom",
-                    "relation": "narrowMatch"
+                    "relation": "exactMatch"
                   }
                 ]
               },
@@ -25784,7 +28474,7 @@
                 "keys": [
                   {
                     "key": "doom",
-                    "relation": "narrowMatch"
+                    "relation": "exactMatch"
                   },
                   {
                     "key": "gzdoom",
@@ -25802,7 +28492,7 @@
                 "keys": [
                   {
                     "key": "DOOM",
-                    "relation": "narrowMatch"
+                    "relation": "exactMatch"
                   }
                 ]
               },
@@ -25840,7 +28530,7 @@
                 "keys": [
                   {
                     "key": "doom",
-                    "relation": "narrowMatch"
+                    "relation": "exactMatch"
                   }
                 ]
               },
@@ -25855,11 +28545,11 @@
                 "keys": [
                   {
                     "key": "135",
-                    "relation": "relatedMatch"
+                    "relation": "broadMatch"
                   },
                   {
                     "key": "138",
-                    "relation": "relatedMatch"
+                    "relation": "broadMatch"
                   },
                   {
                     "key": "290",
@@ -25873,7 +28563,7 @@
                 "keys": [
                   {
                     "key": "1",
-                    "relation": "relatedMatch"
+                    "relation": "broadMatch"
                   }
                 ]
               }
@@ -25929,8 +28619,6 @@
           }
         ],
         "systems_for_platform": {
-          "vocabulary": "libretro",
-          "value": "ScummVM",
           "translation": {
             "table_version": 1,
             "pairs": [
@@ -26214,8 +28902,8 @@
       }
     },
     {
-      "name": "an-igdb-keyword-id-stays-unmapped",
-      "rationale": "IGDB 50501 is what RomM carries for ScummVM, and RomM's own note says it is an IGDB keyword id, not a platform id. The table lists the key and excludes it with that reason, so it names no system: no matches, platform-unmapped — even on a catalogue that declares scummvm.",
+      "name": "an-igdb-keyword-id-is-excluded-with-its-reason",
+      "rationale": "IGDB 50501 is what RomM carries for ScummVM, and RomM's own note says it is an IGDB keyword id, not a platform id. The table lists the key and excludes it with that reason, so it names no system: no matches, and platform-excluded with the recorded reason (#784 D35) — even on a catalogue that declares scummvm.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -26246,8 +28934,6 @@
           }
         ],
         "systems_for_platform": {
-          "vocabulary": "igdb",
-          "value": "50501",
           "translation": {
             "table_version": 1,
             "pairs": [
@@ -26264,10 +28950,11 @@
             "conflict": [],
             "caveats": [
               {
-                "code": "platform-unmapped",
+                "code": "platform-excluded",
                 "data": {
                   "source": "igdb",
-                  "key": "50501"
+                  "key": "50501",
+                  "reason": "not an IGDB platform id: RomM's own note on its ScummVM record says 50501 is an IGDB keyword id (romm:backend/adapters/services/igdb.py:2165)"
                 }
               }
             ]
@@ -26275,10 +28962,11 @@
           "matches": [],
           "caveats": [
             {
-              "code": "platform-unmapped",
+              "code": "platform-excluded",
               "data": {
                 "source": "igdb",
-                "key": "50501"
+                "key": "50501",
+                "reason": "not an IGDB platform id: RomM's own note on its ScummVM record says 50501 is an IGDB keyword id (romm:backend/adapters/services/igdb.py:2165)"
               }
             }
           ]
@@ -26318,8 +29006,6 @@
           }
         ],
         "systems_for_platform": {
-          "vocabulary": "screenscraper",
-          "value": "8",
           "translation": {
             "table_version": 1,
             "pairs": [
@@ -26655,8 +29341,6 @@
           }
         ],
         "systems_for_platform": {
-          "vocabulary": "libretro",
-          "value": "DOOM",
           "translation": {
             "table_version": 1,
             "pairs": [
@@ -26716,7 +29400,7 @@
                     "keys": [
                       {
                         "key": "doom",
-                        "relation": "broadMatch"
+                        "relation": "exactMatch"
                       }
                     ]
                   },
@@ -26727,6 +29411,14 @@
                       {
                         "key": "doom",
                         "relation": "exactMatch"
+                      },
+                      {
+                        "key": "gzdoom",
+                        "relation": "narrowMatch"
+                      },
+                      {
+                        "key": "prboom",
+                        "relation": "narrowMatch"
                       }
                     ]
                   },
@@ -26756,8 +29448,17 @@
                   },
                   {
                     "source": "knulli",
-                    "status": "none",
-                    "keys": []
+                    "status": "keys",
+                    "keys": [
+                      {
+                        "key": "gzdoom",
+                        "relation": "narrowMatch"
+                      },
+                      {
+                        "key": "prboom",
+                        "relation": "narrowMatch"
+                      }
+                    ]
                   },
                   {
                     "source": "rocknix",
@@ -26788,7 +29489,7 @@
                       },
                       {
                         "key": "290",
-                        "relation": "broadMatch"
+                        "relation": "exactMatch"
                       }
                     ]
                   },
@@ -26857,7 +29558,7 @@
                 "keys": [
                   {
                     "key": "doom",
-                    "relation": "broadMatch"
+                    "relation": "exactMatch"
                   }
                 ]
               },
@@ -26868,6 +29569,14 @@
                   {
                     "key": "doom",
                     "relation": "exactMatch"
+                  },
+                  {
+                    "key": "gzdoom",
+                    "relation": "narrowMatch"
+                  },
+                  {
+                    "key": "prboom",
+                    "relation": "narrowMatch"
                   }
                 ]
               },
@@ -26897,8 +29606,17 @@
               },
               {
                 "source": "knulli",
-                "status": "none",
-                "keys": []
+                "status": "keys",
+                "keys": [
+                  {
+                    "key": "gzdoom",
+                    "relation": "narrowMatch"
+                  },
+                  {
+                    "key": "prboom",
+                    "relation": "narrowMatch"
+                  }
+                ]
               },
               {
                 "source": "rocknix",
@@ -26929,7 +29647,7 @@
                   },
                   {
                     "key": "290",
-                    "relation": "broadMatch"
+                    "relation": "exactMatch"
                   }
                 ]
               },

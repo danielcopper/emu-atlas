@@ -111,6 +111,10 @@ _QUESTIONS: dict[str, tuple[_Ask, _Serialize]] = {
         lambda target, args: target.systems_for_platform(args.vocabulary, args.value),
         platform_systems_contract,
     ),
+    "systems-for-platforms": (
+        lambda target, args: target.systems_for_platforms(args.pair),
+        platform_systems_contract,
+    ),
     "platform-ids": (
         lambda target, args: target.platform_ids(args.system),
         system_platforms_contract,
@@ -191,6 +195,15 @@ def _absolute_argument(value: str) -> str:
     if not os.path.isabs(value):
         raise argparse.ArgumentTypeError(f"must be an absolute path, got {value!r}")
     return value
+
+
+def _pair_argument(value: str) -> tuple[str, ...]:
+    """``SOURCE:KEY`` or ``SOURCE:KEY@VERSION`` as the pair the library takes — anything else is a usage error."""
+    source, colon, rest = value.partition(":")
+    key, at, version = rest.partition("@")
+    if not colon or not source or not key or (at and not version):
+        raise argparse.ArgumentTypeError(f"a pair is SOURCE:KEY or SOURCE:KEY@VERSION, got {value!r}")
+    return (source, key, version) if at else (source, key)
 
 
 def _appendconfig_argument(value: str) -> str:
@@ -326,6 +339,23 @@ def build_parser() -> argparse.ArgumentParser:
     )
     for_platform.add_argument(
         "value", help="the key in that source, e.g. a RomM slug or a ScreenScraper id"
+    )
+
+    for_platforms = commands.add_parser(
+        "systems-for-platforms",
+        parents=[common, selecting],
+        help="which systems here answer to several (source, key) pairs together, and what they share",
+    )
+    for_platforms.add_argument(
+        "--pair",
+        action="append",
+        required=True,
+        type=_pair_argument,
+        metavar="SOURCE:KEY[@VERSION]",
+        help=(
+            f"one pair, e.g. romm:genesis, {FOLDER_SOURCE}:megadrive or romm:genesis@5.4.1; repeat it for "
+            "every pair. No source or key of the platform table contains ':' or '@', so each splits once"
+        ),
     )
 
     platform_ids = commands.add_parser(

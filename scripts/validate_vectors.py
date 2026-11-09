@@ -67,6 +67,7 @@ INPUT_FIELDS_OPTIONAL = {
     "firmware_query",
     "identify_query",
     "platform_systems_query",
+    "platform_pairs_query",
     "platform_ids_query",
     "roots_query",
 }
@@ -135,6 +136,8 @@ QUERY_FAMILY_FIELDS: dict[str, frozenset[str]] = {
     # The platform questions (issue #68): forward takes a public vocabulary and
     # a value in it, reverse takes one system.
     "platform_systems_query": frozenset({"installation", "vocabulary", "value"}),
+    # The multi-pair form (#784 D7, D9) takes the pairs, each [source, key] or [source, key, version].
+    "platform_pairs_query": frozenset({"installation", "pairs"}),
     "platform_ids_query": frozenset({"installation", "system"}),
     # The roots question (issue #612) is always asked of one arrangement by
     # name, as its CLI form asks it.
@@ -233,10 +236,27 @@ LAUNCHER_STEP_ORDER = (
 # atlas.platforms / atlas.installations — closed sets.
 PLATFORM_TABLE = REPO_ROOT / "atlas" / "data" / "platform_table.json"
 PLATFORM_SOURCES = list(json.loads(PLATFORM_TABLE.read_text(encoding="utf-8"))["sources"])
-# Why a pair answers unknown: a key its source lacks, or a source the table lacks (#784 D31).
-PLATFORM_UNKNOWN_PAIR_CODES = frozenset({"platform-unmapped", "platform-source-unknown"})
-# The columns a handle reads system names from (a match names one of their keys).
-PLATFORM_CATALOGUE_COLUMNS = frozenset({"esde", "retrodeck", "emudeck"})
+# The keys the table places on no row on purpose, with the reason each pair's caveat repeats (#784 D35).
+PLATFORM_EXCLUDED = {
+    (entry["source"], entry["key"]): entry["reason"]
+    for entry in json.loads((REPO_ROOT / "atlas" / "data" / "platform_excluded.json").read_text(encoding="utf-8"))[
+        "excluded"
+    ]
+}
+# The pseudo-source of a bare folder name and the folder vocabularies it is the union of (#784 D14).
+PLATFORM_FOLDER_SOURCE = "folder"
+PLATFORM_FOLDER_SOURCES = ("esde", "retrodeck", "emudeck", "romm-folder", "batocera", "knulli", "rocknix")
+# Why a pair answers unknown, one code per cause: a source the table lacks (#784 D31), a key the table
+# excludes on purpose (D35), a key its source lacks.
+PLATFORM_UNKNOWN_PAIR_CODES = frozenset({"platform-unmapped", "platform-source-unknown", "platform-excluded"})
+# The pairs share a system only through different parts or overlaps of it (#784 D40).
+PLATFORM_PARTS_UNESTABLISHED = "platform-parts-unestablished"
+# The translation's caveats a handle answer repeats: why a pair is unknown, and that pairs meet through parts or
+# overlaps.
+PLATFORM_LIFTED_CODES = PLATFORM_UNKNOWN_PAIR_CODES | {PLATFORM_PARTS_UNESTABLISHED}
+# The columns a handle reads system names from (a match names one of their keys): ES-DE's on every
+# handle, RetroDECK's own on a RetroDECK.
+PLATFORM_CATALOGUE_COLUMNS = frozenset({"esde", "retrodeck"})
 KNOWN_PLATFORM_RELATIONS = {"exactMatch", "broadMatch", "narrowMatch", "relatedMatch"}
 KNOWN_PLATFORM_PAIR_STATUSES = {"known", "unknown"}
 KNOWN_PLATFORM_INTERSECTION_STATUSES = {"agreed", "conflict", "unknown"}
@@ -806,6 +826,9 @@ KNOWN_CAVEAT_CODES = {
     "frontend-name-unscanned",
     "platform-unmapped",
     "platform-source-unknown",
+    "platform-excluded",
+    "platform-version-unapplied",
+    "platform-parts-unestablished",
     "platform-source-version-differs",
     "platform-unknown",
     "platform-scraping-ignored",
@@ -1110,6 +1133,13 @@ def _validate_platform_systems_query(name: str, query: Any) -> None:
     _validate_handle_selector(name, "platform_systems_query", query)
 
 
+def _validate_platform_pairs_query(name: str, query: Any) -> None:
+    if not isinstance(query, dict) or not {"pairs"} <= set(query) <= QUERY_FAMILY_FIELDS["platform_pairs_query"]:
+        fail(f"{name}: input.platform_pairs_query must carry 'pairs' plus optional 'installation'")
+    _validate_pairs(f"{name}: input.platform_pairs_query", query["pairs"])
+    _validate_handle_selector(name, "platform_pairs_query", query)
+
+
 def _validate_platform_ids_query(name: str, query: Any) -> None:
     if not isinstance(query, dict) or not {"system"} <= set(query) <= QUERY_FAMILY_FIELDS["platform_ids_query"]:
         fail(
@@ -1365,6 +1395,7 @@ _OWN_QUERY_VALIDATORS = {
     "firmware_query": _validate_firmware_query,
     "identify_query": _validate_identify_query,
     "platform_systems_query": _validate_platform_systems_query,
+    "platform_pairs_query": _validate_platform_pairs_query,
     "platform_ids_query": _validate_platform_ids_query,
     "roots_query": _validate_roots_query,
 }
@@ -2045,8 +2076,10 @@ def _data_words(value: Any) -> list[str]:
 # which map an option key to the value read for it. Three are the BIOS search's
 # listing, which says one thing about each of several files, keyed by the path
 # it is about. One is a save part's verdict per cartridge kind, keyed by the
-# kind (#577 D15).
+# kind (#577 D15). One is the pinned version of each project a platform
+# table column is read from, keyed by the project (#784 D42).
 OBJECT_VALUED_KEYS = {
+    ("platform-source-version-differs", "pins"),
     ("per-game-alternative-emulator", "emulators"),
     ("core-mode-unestablished", "options"),
     ("firmware-search-candidates", "readings"),
@@ -3774,34 +3807,37 @@ def _validate_catalogue(name: str, catalogue: Any) -> None:
     _validate_declared_indexes(name, catalogue["entries"], derived=derived)
 
 
-def _validate_platform_systems(name: str, answer: Any) -> None:
+def _validate_platform_systems(name: str, answer: Any, label: str = "systems_for_platform") -> None:
     """A forward platform answer: the projected translation, matches with status and provenance."""
-    fields = {"vocabulary", "value", "translation", "matches", "caveats"}
+    # The asked pairs are read from translation.pairs, never echoed beside it (#784 D41).
+    fields = {"translation", "matches", "caveats"}
     if not isinstance(answer, dict) or set(answer) != fields:
-        fail(f"{name}: expected.systems_for_platform must carry exactly {sorted(fields)}")
-    if not isinstance(answer["vocabulary"], str) or not answer["vocabulary"]:
-        fail(f"{name}: expected.systems_for_platform.vocabulary must be a non-empty string")
-    if not isinstance(answer["value"], str) or not answer["value"]:
-        fail(f"{name}: expected.systems_for_platform.value must be a non-empty string")
-    validate_translation_projection(f"{name}: expected.systems_for_platform.translation", answer["translation"])
+        fail(f"{name}: expected.{label} must carry exactly {sorted(fields)}")
+    validate_translation_projection(f"{name}: expected.{label}.translation", answer["translation"])
     if not isinstance(answer["matches"], list):
-        fail(f"{name}: expected.systems_for_platform.matches must be a list")
+        fail(f"{name}: expected.{label}.matches must be a list")
     for match in answer["matches"]:
         _validate_platform_match(name, match)
     _validate_caveats(name, answer["caveats"])
-    unknown = answer["translation"]["pairs"][0]["status"] == "unknown"
-    unmapped = any(c["code"] in PLATFORM_UNKNOWN_PAIR_CODES for c in answer["caveats"])
-    if unknown != unmapped:
+    _validate_lifted(f"{name}: expected.{label}", answer)
+    if answer["translation"]["intersection_status"] != "agreed" and answer["matches"]:
+        fail(f"{name}: expected.{label} matches nothing unless the pairs agree on a system")
+    _validate_platform_match_reasons(name, answer, label)
+
+
+def _validate_lifted(where: str, answer: dict[str, Any]) -> None:
+    """The outer answer states why a pair is unknown, and that pairs meet only through parts or overlaps, exactly as
+    the translation does — lifted, never restated."""
+    inner = [c for c in answer["translation"]["caveats"] if c["code"] in PLATFORM_LIFTED_CODES]
+    outer = [c for c in answer["caveats"] if c["code"] in PLATFORM_LIFTED_CODES]
+    if inner != outer:
         fail(
-            f"{name}: expected.systems_for_platform states platform-unmapped or platform-source-unknown exactly "
-            "when its pair is unknown"
+            f"{where} states the translation's own caveat for every unknown pair and for pairs meeting "
+            "through parts or overlaps, and no other"
         )
-    if unknown and answer["matches"]:
-        fail(f"{name}: expected.systems_for_platform matches nothing for an unknown pair")
-    _validate_platform_match_reasons(name, answer)
 
 
-def _validate_platform_match_reasons(name: str, answer: dict[str, Any]) -> None:
+def _validate_platform_match_reasons(name: str, answer: dict[str, Any], label: str) -> None:
     """Each match is a system the translation names, or a declared system carrying an exact platform tag of it."""
     intersection = answer["translation"]["intersection"]
     named = {k["key"] for s in intersection if s["source"] in PLATFORM_CATALOGUE_COLUMNS for k in s["keys"]}
@@ -3814,7 +3850,7 @@ def _validate_platform_match_reasons(name: str, answer: dict[str, Any]) -> None:
         if match["status"] == "declared" and exact & set(match["platforms"]):
             continue
         fail(
-            f"{name}: expected.systems_for_platform matches {match['system']!r}, which the translation does not name "
+            f"{name}: expected.{label} matches {match['system']!r}, which the translation does not name "
             "and which is no declared system carrying an exact platform tag of it"
         )
 
@@ -3893,6 +3929,69 @@ def validate_translation_projection(where: str, projection: Any) -> None:
     if (status == "conflict") != bool(conflict):
         fail(f"{where}: conflict names pairs exactly when the intersection is a conflict")
     _validate_caveats(where, projection["caveats"])
+    _validate_pair_caveats(where, projection)
+
+
+def _unknown_pair_caveat(source: str, key: str) -> tuple[str, dict[str, Any]]:
+    """The one caveat an unknown pair states, by its cause (#784 D31, D35): its code and its data."""
+    if source != PLATFORM_FOLDER_SOURCE and source not in PLATFORM_SOURCES:
+        return "platform-source-unknown", {"source": source, "key": key, "sources": PLATFORM_SOURCES}
+    folders = PLATFORM_FOLDER_SOURCES if source == PLATFORM_FOLDER_SOURCE else (source,)
+    reasons = [PLATFORM_EXCLUDED[(f, key)] for f in folders if (f, key) in PLATFORM_EXCLUDED]
+    if reasons:
+        return "platform-excluded", {"source": source, "key": key, "reason": reasons[0]}
+    return "platform-unmapped", {"source": source, "key": key}
+
+
+def _validate_pair_caveats(where: str, projection: dict[str, Any]) -> None:
+    """Each unknown pair states its cause once, and a version on a bare folder pair says it was not applied."""
+    expected = []
+    unapplied = []
+    for pair in projection["pairs"]:
+        if pair["status"] == "unknown":
+            code, data = _unknown_pair_caveat(pair["source"], pair["key"])
+            expected.append({"code": code, "data": data})
+        if pair["source"] == PLATFORM_FOLDER_SOURCE and pair["version"] is not None:
+            unapplied.append(
+                {"code": "platform-version-unapplied", "data": {k: pair[k] for k in ("source", "key", "version")}}
+            )
+    stated = [c for c in projection["caveats"] if c["code"] in PLATFORM_UNKNOWN_PAIR_CODES]
+    if stated != expected:
+        fail(f"{where}: every unknown pair states the one caveat of its cause, in pair order: {expected}")
+    if [c for c in projection["caveats"] if c["code"] == "platform-version-unapplied"] != unapplied:
+        fail(f"{where}: a version on a bare folder pair is stated as not applied, and only there: {unapplied}")
+    _validate_parts_caveat(where, projection)
+
+
+def _validate_parts_caveat(where: str, projection: dict[str, Any]) -> None:
+    """Pairs that share a system only through parts or overlaps of it say so once, naming at least two known pairs
+    in order.
+
+    A pair is the same index in the data's two lists, ``sources`` and ``keys``.
+    """
+    stated = [c for c in projection["caveats"] if c["code"] == PLATFORM_PARTS_UNESTABLISHED]
+    if not stated:
+        return
+    if len(stated) > 1 or projection["intersection_status"] != "agreed":
+        fail(f"{where}: {PLATFORM_PARTS_UNESTABLISHED} is stated once, and only for pairs that agree on a system")
+    data = stated[0]["data"]
+    known = [{"source": p["source"], "key": p["key"]} for p in projection["pairs"] if p["status"] == "known"]
+    named = (
+        [{"source": s, "key": k} for s, k in zip(data["sources"], data["keys"])]
+        if set(data) == {"sources", "keys"} and len(data["sources"]) == len(data["keys"])
+        else []
+    )
+    if len(named) < 2 or not _in_order(named, known):
+        fail(
+            f"{where}: {PLATFORM_PARTS_UNESTABLISHED} names, as {{sources, keys}}, at least two known pairs "
+            "in pair order"
+        )
+
+
+def _in_order(named: list[Any], known: list[dict[str, str]]) -> bool:
+    """*named* is *known* with some pairs left out, none added and none moved."""
+    rest = iter(known)
+    return all(any(pair == candidate for candidate in rest) for pair in named)
 
 
 def _validate_platform_match(name: str, match: Any) -> None:
@@ -3931,10 +4030,7 @@ def _validate_platform_ids(name: str, answer: Any) -> None:
         fail(f"{name}: expected.platform_ids.platforms must be a list of non-empty strings")
     validate_translation_projection(f"{name}: expected.platform_ids.translation", answer["translation"])
     _validate_caveats(name, answer["caveats"])
-    unknown = answer["translation"]["intersection_status"] == "unknown"
-    unmapped = any(c["code"] in PLATFORM_UNKNOWN_PAIR_CODES for c in answer["caveats"])
-    if unknown != unmapped:
-        fail(f"{name}: expected.platform_ids states platform-unmapped exactly when its translation is unknown")
+    _validate_lifted(f"{name}: expected.platform_ids", answer)
 
 
 def _validate_launchable(name: str, answer: Any) -> None:
@@ -4336,6 +4432,7 @@ _EXPECTED_KEYS = {
     "firmware",
     "identification",
     "systems_for_platform",
+    "systems_for_platforms",
     "platform_ids",
     "roots",
 }
@@ -4347,6 +4444,7 @@ _EXPECTATION_PAIRINGS = (
     ("catalogue", "catalogue_query"),
     ("systems", "systems_query"),
     ("systems_for_platform", "platform_systems_query"),
+    ("systems_for_platforms", "platform_pairs_query"),
     ("platform_ids", "platform_ids_query"),
     ("roots", "roots_query"),
     ("launchable", "launchable_query"),
@@ -4394,6 +4492,7 @@ _RESOLVER_EXPECTATIONS = {
     "firmware",
     "identification",
     "systems_for_platform",
+    "systems_for_platforms",
     "platform_ids",
     "roots",
 }
@@ -4447,6 +4546,10 @@ def _block_checks(expected: dict[str, Any], inp: dict[str, Any]) -> tuple[_Block
         _BlockCheck("rom_locations", _validate_rom_locations),
         _BlockCheck("systems", _validate_systems),
         _BlockCheck("systems_for_platform", _validate_platform_systems),
+        _BlockCheck(
+            "systems_for_platforms",
+            lambda name, block: _validate_platform_systems(name, block, "systems_for_platforms"),
+        ),
         _BlockCheck("platform_ids", _validate_platform_ids),
         _BlockCheck("roots", _validate_roots),
         _BlockCheck("launchable", _validate_launchable),

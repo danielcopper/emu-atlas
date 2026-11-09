@@ -903,13 +903,13 @@ def platform_translation_contract(translation: PlatformTranslation) -> dict[str,
     order, each with its status (``keys`` or ``none``) and its keys; every key
     carries its relation to what was asked and its citations. An ``unknown``
     pair carries no sources. ``conflict`` names the known pairs that share no
-    system. The table version and each source's pinned version ride along
-    (#784 D11).
+    system. The table version and the pinned version of every project each
+    source's column is read from ride along (#784 D11, D42).
     """
     return {
         "table_version": translation.table_version,
         "source_versions": [
-            {"source": v.source, "version": v.version} for v in translation.source_versions
+            {"source": v.source, "upstream": v.upstream, "version": v.version} for v in translation.source_versions
         ],
         "pairs": [
             {
@@ -933,16 +933,16 @@ def platform_translation_contract(translation: PlatformTranslation) -> dict[str,
 def platform_systems_contract(answer: PlatformSystemsAnswer) -> dict[str, Any]:
     """The stable form of a forward platform answer — the translation, the matches, their statuses.
 
-    ``translation`` is the table's answer for the asked pair; ``matches`` is
-    this installation's half. An empty ``matches`` under a known pair is the
-    statement that nothing on this machine answers to a real system; an
-    unknown pair states the translation's own ``platform-unmapped`` or
-    ``platform-source-unknown``. Every match carries its status
-    and where its tags came from — the two fields a consumer branches on.
+    Both forms serialize here, in one shape: one pair (``systems_for_platform``)
+    and several (``systems_for_platforms``). ``translation`` is the table's
+    answer for the asked pairs, and its ``pairs`` name them in the order asked;
+    ``matches`` is this installation's half. An empty ``matches`` under agreed pairs is the statement that
+    nothing on this machine answers to a real system; every unknown pair
+    states the translation's own ``platform-unmapped``, ``platform-excluded``
+    or ``platform-source-unknown``. Every match carries its status and where
+    its tags came from — the two fields a consumer branches on.
     """
     return {
-        "vocabulary": answer.vocabulary,
-        "value": answer.value,
         "translation": platform_translation_contract(answer.translation),
         "matches": [
             {
@@ -961,7 +961,8 @@ def system_platforms_contract(answer: SystemPlatformsAnswer) -> dict[str, Any]:
     """The stable form of a reverse platform answer — the tags and the table's translation.
 
     ``translation`` is the table's answer for the system (by its catalogue
-    name, or by its exact platform tags); the tags that name no ES-DE platform id are stated by the ``platform-unknown`` /
+    name, or by its platform tags that each name one system); the tags that
+    name no ES-DE platform id are stated by the ``platform-unknown`` /
     ``platform-scraping-ignored`` caveats. ``status`` and ``tags_source``
     qualify the whole answer: whether the system is here, and whether its tags
     were read off the machine or taken from the vocabulary snapshot.

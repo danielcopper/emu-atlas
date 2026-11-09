@@ -320,6 +320,9 @@ def _answers(handle) -> dict[str, tuple[str, ...]]:
         "systems_for_platform": tuple(
             c.code for c in handle.systems_for_platform("igdb", "gb").caveats
         ),
+        "systems_for_platforms": tuple(
+            c.code for c in handle.systems_for_platforms([("igdb", "gb"), ("folder", "gb")]).caveats
+        ),
         "platform_ids": tuple(c.code for c in handle.platform_ids(SYSTEM).caveats),
         "emulators_for": tuple(c.code for c in handle.emulators_for(SYSTEM).caveats),
         "launchable": tuple(c.code for c in handle.launchable(SYSTEM, "/roms/gb/Game.gb").caveats),

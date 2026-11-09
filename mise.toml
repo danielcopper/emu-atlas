@@ -40,6 +40,12 @@ description = "Regenerate docs/research/coverage-matrix.md from this tree and fo
 # last command, `deno fmt`, not to the script.
 run = "python scripts/generate_coverage_matrix.py && deno fmt docs/research/coverage-matrix.md"
 
+[tasks.snapshot-platforms]
+description = "Re-record the projection of every single-key platform answer in tests/data/platform_projection.json"
+# Renewing is a statement that every key the snapshot test names was meant to
+# move, so this runs by hand after reading that list, never as part of a gate.
+run = "python scripts/snapshot_platform_projection.py"
+
 [tasks.test-oldest]
 description = "Run the tests on the oldest supported interpreter (the floor `test` does not cover)"
 # Pre-push and pre-release, not part of `test`: this one needs its own venv and, the
