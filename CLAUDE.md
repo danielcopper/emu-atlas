@@ -112,6 +112,7 @@ basedpyright atlas tests scripts   # type-check (CI-enforced; pinned in the dev 
 mise run complexity  # cognitive complexity per function, over 15 fails; runs locally and must stay green, not a CI gate
 mise run contract    # regenerate and format docs/contract-reference.md from this tree
 mise run matrix      # regenerate and format docs/research/coverage-matrix.md from this tree
+mise run snapshot-platforms  # re-record every single-key platform answer; by hand, once each moved key is meant
 ```
 
 `mise run complexity` moves the first complexity measurement to before the push; the Sonar gate on the pull request is

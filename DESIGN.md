@@ -454,7 +454,7 @@ not a data set to re-ship — and each release publishes them as a versioned art
 
 **The ids the questions about a system take are ES-DE's system names**, packaged and cited
 (`atlas/data/system_ids.json`, read by `atlas.systems`) — one column of the platform table below, not a canonical id of
-atlas's own, and the pair `("esde", name)` once every question takes a pair (#786). ES-DE's names are the ones the
+atlas's own, and the pair `("esde", name)` once every question takes a pair (#792). ES-DE's names are the ones the
 questions take because they are the vocabulary a frontend catalogue on the machine actually declares — the questions
 answer about names that exist there, not about names atlas invented — and the id set is pinned to the `es_systems.xml`
 of a stated build, so membership is checkable rather than an opinion. A test parses that build's file and asserts
@@ -473,30 +473,39 @@ relation of one source's key to the asked one follows from the row sets and thos
 the SKOS mapping names: `exactMatch` for the asked key itself and for a key covering the same systems whole,
 `broadMatch` when the other key wholly covers the asked one and more (its vocabulary is coarser there), `narrowMatch`
 when the asked key wholly covers the other (finer — several keys are a fact about that vocabulary, never uncertainty),
-and `relatedMatch` otherwise: an overlap, as a romset has with a system, or two parts of one system. Each relation is
-the inverse of the way back. A question takes `(source, key)` pairs; the answer gives, per pair and for the intersection
-of all pairs, every source's keys with relation and citation, or `none`; a pair the table does not hold is `unknown`,
-and pairs that share no system are a `conflict` naming them — atlas picks none. A bare folder name is the union of what
-every folder vocabulary means by it.
+and `relatedMatch` otherwise: an overlap, as a romset has with a system, or two parts of one system. A row an override
+declares a content subset of another (EmuDeck's `sneshd` of the SNES) is a part of that row in every answer. Each
+relation is the inverse of the way back. A question takes `(source, key)` pairs; the answer gives, per pair and for the
+intersection of all pairs, every source's keys with relation and citation, or `none`. The intersection carries how much
+of each shared row the pairs cover together — whole only where every pair covers it whole — and its keys relate to that
+composite by the same rule, so a whole key over a part the pairs mean is `broadMatch`. A pair the table does not hold is
+`unknown`, stated with why: a key the source lacks, a key the table excludes on purpose with its recorded reason, or a
+source the table does not include; keys compare exactly as their source spells them. Pairs that share no system are a
+`conflict` naming them — atlas picks none. A bare folder name is the union of what every folder vocabulary means by it,
+so a version stated with one is not applied, and the answer says so.
 
 The sources are cited columns, each a pinned upstream with its licence and the owner's decision to ship it recorded in
-`atlas/data/SOURCES.md`: ES-DE's system names and platform ids, RetroDECK's and EmuDeck's catalogues, RomM's slugs and
-folder aliases, the libretro database names the cores' `.info` files declare, Batocera, KNULLI and ROCKNIX, and the
-IGDB, ScreenScraper and TheGamesDB ids. A server product's slugs are a source like any other — versioned and cited, no
-longer an excluded namespace. Identifiers come only from projects that already republish them under MIT or AGPL, never
-from the providers — the scraper ids from ES-DE's own scraper maps and RomM's ScreenScraper list (which adds the ids
-ES-DE's map lacks, such as Doom and the CPS boards), the IGDB ids and slugs from RomM's IGDB platform list — with their
-notices, and Wikidata (CC0) is a cross-check and a second citation, not the origin. `scripts/generate_platform_table.py`
-derives every mechanical join from the pins and names its rule on each mapping; the hand judgements sit in
-`atlas/data/platform_overrides.json`, each with a reason and anchored on a `(source, key)` pair, and the loader applies
-them, citing each by its anchors' own citations and whatever further evidence it states.
-`scripts/check_platform_table.py` is the release check: every key placed or excluded with a reason, every row classified
-by kind; the loader itself refuses an uncited mapping and a relation other than its key's row count implies.
+`atlas/data/SOURCES.md`: ES-DE's system names and platform ids, RetroDECK's catalogue and EmuDeck's ROM folders, RomM's
+slugs and folder aliases, the libretro database names the cores' `.info` files declare, Batocera, KNULLI and ROCKNIX,
+and the IGDB, ScreenScraper and TheGamesDB ids. A server product's slugs are a source like any other — versioned and
+cited, no longer an excluded namespace. Identifiers come only from projects that already republish them under MIT or
+AGPL, never from the providers — the scraper ids from ES-DE's own scraper maps and RomM's ScreenScraper list (which adds
+the ids ES-DE's map lacks, such as Doom and the CPS boards), the IGDB ids and slugs from RomM's IGDB platform list —
+with their notices, and Wikidata (CC0) is a cross-check and a second citation, not the origin.
+`scripts/generate_platform_table.py` derives every mechanical join from the pins and names its rule on each mapping; the
+hand judgements sit in `atlas/data/platform_overrides.json`, each with a reason and anchored on a `(source, key)` pair,
+and the loader applies them, citing a merge or a map by its anchors' own citations and whatever further evidence it
+states. `scripts/check_platform_table.py` is the release check: every key placed or excluded with a reason, every row
+classified by kind; the loader itself refuses an uncited mapping and a generated relation other than its key's row count
+implies. Every single-key answer is recorded in a committed snapshot of its projection, so a regeneration that moves any
+key's mapping fails until the snapshot is renewed in the same change.
 
 Stability is promised for the sources' keys as they stand at the pinned versions and for the table version, nothing
-else: every answer states the table version and each source's pinned version, and a pair whose stated source version
-differs carries a caveat. The machine half of the platform question — which of the named systems this installation
-declares — stays read live (`systems_for_platform`, `platform_ids`).
+else: every answer states the table version and, per source, the pinned version of each project its column is read from;
+a pair's stated source version matches when it is one of them, and otherwise carries a caveat naming them. The table
+version stays 1 until the first release that carries the table and counts every content change after it. The machine
+half of the platform question — which of the named systems this installation declares — stays read live
+(`systems_for_platform`, `systems_for_platforms`, `platform_ids`).
 
 _Settled (item 20b):_ the firmware route speaks the same ids everywhere. The `systemname` map's values are ES-DE ids
 (map version 2, `atlas/firmware.py` — per-entry citations into the deployed `es_systems.xml` and the shipped `.info`

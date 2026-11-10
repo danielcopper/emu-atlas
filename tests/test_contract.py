@@ -18,7 +18,7 @@ import atlas
 from atlas.machine import FixtureMachine
 from atlas.contract import health_contract, installation_contract
 from tests.answers import placed, state_placed
-from tests.corpus import caveat_blocks, expected_blocks, vector_files
+from tests.corpus import CORPORA, caveat_blocks, caveat_data, vector_files
 
 _VECTOR_DIR = Path(__file__).resolve().parents[1] / "vectors" / "machines"
 
@@ -333,23 +333,25 @@ class TestOneKeyHasOneShape:
     """
 
     @staticmethod
-    def _shapes(vectors_dir: Path) -> dict[tuple[str, str], dict[str, list[str]]]:
-        """``(code, key)`` → JSON type name → where the corpus shows it."""
+    def _shapes(root: Path) -> dict[tuple[str, str], dict[str, list[str]]]:
+        """``(code, key)`` → JSON type name → where the corpora under *root* show it."""
         shapes: dict[tuple[str, str], dict[str, list[str]]] = {}
-        for where, expected in expected_blocks(vectors_dir):
-            for code, data in caveat_blocks(expected):
-                for key, value in data.items():
-                    seen = shapes.setdefault((code, key), {})
-                    seen.setdefault(_json_type(value), []).append(where)
+        for where, code, key, value in caveat_data(root):
+            shapes.setdefault((code, key), {}).setdefault(_json_type(value), []).append(where)
         return shapes
 
     def test_no_pair_carries_two_shapes(self):
         mixed = {
             f"{code}.{key}": {name: sorted(set(where))[:2] for name, where in seen.items()}
-            for (code, key), seen in self._shapes(_VECTOR_DIR).items()
+            for (code, key), seen in self._shapes(_VECTOR_DIR.parent).items()
             if len(seen) > 1
         }
         assert mixed == {}
+
+    def test_it_walks_every_vector_family(self):
+        shapes = self._shapes(_VECTOR_DIR.parent)
+        walked = {where.split("/")[0] for seen in shapes.values() for wheres in seen.values() for where in wheres}
+        assert walked == {path.name for path in _VECTOR_DIR.parent.iterdir() if path.is_dir()}
 
     def test_it_catches_a_single_disagreeing_emitter(self, tmp_path):
         """The probe: one value flipped inside a COPY of the real corpus.
@@ -369,10 +371,70 @@ class TestOneKeyHasOneShape:
         assert flipped == 1, "no list-valued caveat data left in the corpus to mutate"
         mixed = {
             f"{code}.{key}"
-            for (code, key), seen in self._shapes(copied).items()
+            for (code, key), seen in self._shapes(tmp_path).items()
             if len(seen) > 1
         }
         assert mixed, "the injected string went unnoticed"
+
+
+class TestOneKeyNameKeepsItsShapeAcrossCodes:
+    """No new key takes a name another code already gives a different shape.
+
+    The shape is fixed per ``(code, key)`` (:class:`TestOneKeyHasOneShape`),
+    so a name may mean different things under different codes — but a client
+    that learned ``pinned`` as a list is surprised by a ``pinned`` object, and
+    a new key has a free choice of name. The names that already carry two
+    shapes are listed here with the shape fewer codes give them and those
+    codes, or with both shapes where as many codes give each, so neither a
+    fifth name nor a code joining a listed name's rarer shape slips in
+    unnamed. The walk covers every vector family the validator knows, and it
+    sees the codes those vectors state, not every emitter in the package.
+    """
+
+    ALREADY_TWO_SHAPES = {
+        "options": {"object": {"core-mode-unestablished"}},
+        "key": {"array": {"per-game-build-layer-unread", "per-game-layer-unread", "per-game-overrides-present"}},
+        "declared": {"array": {"firmware-declaration-unread"}},
+        "names": {"array": {"frontend-name-unscanned"}, "string": {"savestate-inside-image"}},
+    }
+
+    @staticmethod
+    def _names(root: Path) -> dict[str, dict[str, set[str]]]:
+        """Key name → JSON type name → the codes that give it that type."""
+        names: dict[str, dict[str, set[str]]] = {}
+        for _, code, key, value in caveat_data(root):
+            names.setdefault(key, {}).setdefault(_json_type(value), set()).add(code)
+        return names
+
+    @classmethod
+    def _two_shapes(cls, root: Path) -> dict[str, dict[str, set[str]]]:
+        """Each name with more than one shape → its rarer shapes with their codes (every shape on a tie)."""
+        rarer: dict[str, dict[str, set[str]]] = {}
+        for name, shapes in cls._names(root).items():
+            if len(shapes) < 2:
+                continue
+            most = max(len(codes) for codes in shapes.values())
+            tie = sum(len(codes) == most for codes in shapes.values()) > 1
+            rarer[name] = {shape: codes for shape, codes in shapes.items() if tie or len(codes) < most}
+        return rarer
+
+    def test_only_the_named_keys_carry_two_shapes(self):
+        assert self._two_shapes(_VECTOR_DIR.parent) == self.ALREADY_TWO_SHAPES
+
+    def test_it_catches_a_new_key_named_like_one_of_another_shape(self, tmp_path):
+        # The probe: the version caveat's object spelled `pinned`, beside save-format-build-unconfirmed's list.
+        planted = 0
+        for corpus in CORPORA:
+            (tmp_path / corpus).mkdir()
+            for path in vector_files(_VECTOR_DIR.parent / corpus):
+                doc = json.loads(path.read_text(encoding="utf-8"))
+                for code, data in caveat_blocks(doc):
+                    if code == "platform-source-version-differs" and "pins" in data:
+                        data["pinned"] = data.pop("pins")
+                        planted += 1
+                (tmp_path / corpus / path.name).write_text(json.dumps(doc), encoding="utf-8")
+        assert planted
+        assert set(self._two_shapes(tmp_path)) == {*self.ALREADY_TWO_SHAPES, "pinned"}
 
 
 def _json_type(value: Any) -> str:

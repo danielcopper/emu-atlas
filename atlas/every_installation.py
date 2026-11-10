@@ -267,6 +267,13 @@ class EveryInstallation:
             lambda installation: installation.systems_for_platform(vocabulary, value)
         )
 
+    def systems_for_platforms(
+        self, pairs: Sequence[Sequence[str | None]]
+    ) -> tuple[InstallationAnswer[PlatformSystemsAnswer], ...]:
+        """Which of each installation's systems answer to several ``(source, key)`` pairs together."""
+        asked = tuple(pairs)  # one frozen copy, so every installation is asked the same pairs
+        return self._ask(lambda installation: installation.systems_for_platforms(asked))
+
     def platform_ids(self, system: str) -> tuple[InstallationAnswer[SystemPlatformsAnswer], ...]:
         """Each installation's platform tags for *system*, with every source's keys for it."""
         return self._ask(lambda installation: installation.platform_ids(system))

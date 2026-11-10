@@ -54,14 +54,17 @@ class TestTheSourcesFile:
         import json
 
         table = json.loads((ROOT / "atlas" / "data" / "platform_table.json").read_text(encoding="utf-8"))
-        # A column fed by two upstreams (screenscraper) lists both, comma-separated, in one order.
-        pinned = {u.block: u.revision for u in generator.UPSTREAMS}
+        # A column fed by two upstreams (screenscraper) lists one entry per project (#784 D42).
+        pinned = {u.block: (u.version, u.revision) for u in generator.UPSTREAMS}
         stated = {
-            (column, upstream): revision
-            for column, entry in table["sources"].items()
-            for upstream, revision in zip(entry["upstream"].split(", "), entry["revision"].split(", "), strict=True)
+            (column, entry["upstream"]): (entry["version"], entry["revision"])
+            for column, entries in table["sources"].items()
+            for entry in entries
         }
         assert stated == {(column, upstream): pinned[upstream] for column, upstream in stated}
+        assert {column: [e["upstream"] for e in entries] for column, entries in table["sources"].items()} == {
+            column: [u.block for u in upstreams] for column, upstreams in generator.COLUMNS.items()
+        }
 
     def test_an_upstream_without_a_block_stops_the_generator(self):
         text = _sources().replace("## `knulli`", "## `knulli-old`")
@@ -404,37 +407,46 @@ class TestTheFetcher:
 class TestTheEmudeckFolders:
     class _Fetcher:
         def json(self, url: str) -> object:
-            return [{"name": "snes", "type": "dir"}, {"name": "gb", "type": "dir"}, {"name": "README.md", "type": "file"}]
+            return [
+                {"name": "snes", "type": "dir"},
+                {"name": "gb", "type": "dir"},
+                {"name": "nocolon", "type": "dir"},
+                {"name": "README.md", "type": "file"},
+            ]
 
         def text(self, url: str) -> str:
-            return "snes: Super Nintendo: SFC\n:no folder\nno colon here\ngb:Game Boy\n"
+            return "snes: Super Nintendo: SFC\n:no folder\nnocolon\ngb:Game Boy\n"
 
     def test_a_systems_line_names_its_folder_up_to_the_first_colon(self):
         keys = generator.emudeck_folders(self._Fetcher())  # type: ignore[arg-type]
         assert [(k.key, k.name, k.citation) for k in keys] == [
             ("gb", "Game Boy", f"emudeck:roms/gb/; emudeck:{generator.EMUDECK_SYSTEMS_TXT}:4"),
+            # A line without a colon names no folder, even one spelled as a listed folder.
+            ("nocolon", "", "emudeck:roms/nocolon/"),
             ("snes", "Super Nintendo: SFC", f"emudeck:roms/snes/; emudeck:{generator.EMUDECK_SYSTEMS_TXT}:1"),
         ]
 
 
 class TestTheCommandLinePaths:
-    """The two roots are set here, so the cases do not depend on where pytest keeps tmp_path."""
+    """The three roots are set here, so the cases do not depend on where pytest keeps tmp_path."""
 
     @pytest.fixture
     def roots(self, tmp_path, monkeypatch):
-        repository, temporary, outside = (tmp_path / name for name in ("repository", "temporary", "outside"))
-        for directory in (repository, temporary, outside):
+        repository, home, temporary, outside = (tmp_path / n for n in ("repository", "home", "temporary", "outside"))
+        for directory in (repository, home, temporary, outside):
             directory.mkdir()
         monkeypatch.setattr(generator, "ROOT", repository)
+        monkeypatch.setenv("HOME", str(home))
         monkeypatch.setattr(generator.tempfile, "tempdir", str(temporary))
         monkeypatch.chdir(repository)
-        return repository, temporary, outside
+        return repository, home, temporary, outside
 
-    def test_a_path_inside_the_repository_or_the_temporary_directory_is_taken(self, roots):
-        repository, temporary, _ = roots
-        assert generator.allowed_path(str(repository / "build" / "cache"), "--cache") == repository / "build" / "cache"
-        assert generator.allowed_path("build/cache", "--cache") == repository / "build" / "cache"
-        assert generator.allowed_path(str(temporary / "findings.json"), "--findings") == temporary / "findings.json"
+    def test_a_path_inside_the_repository_the_home_or_the_temporary_directory_is_taken(self, roots):
+        repository, home, temporary, _ = roots
+        assert generator.resolve_path(str(repository / "build" / "cache"), "--cache") == repository / "build" / "cache"
+        assert generator.resolve_path("build/cache", "--cache") == repository / "build" / "cache"
+        assert generator.resolve_path(str(home / "scratch" / "cache"), "--cache") == home / "scratch" / "cache"
+        assert generator.resolve_path(str(temporary / "findings.json"), "--findings") == temporary / "findings.json"
 
     @pytest.mark.parametrize(
         "raw",
@@ -442,27 +454,40 @@ class TestTheCommandLinePaths:
             lambda repository, outside: str(outside / "findings.json"),
             lambda repository, outside: "../outside/findings.json",
             lambda repository, outside: str(repository / ".." / ".." / "etc" / "x.json"),
+            lambda repository, outside: str(repository / "escape" / "findings.json"),
         ],
-        ids=["absolute", "relative", "dot-dot-inside-the-repository"],
+        ids=["absolute", "relative", "climbs-out-of-the-repository", "through-a-symlink"],
     )
-    def test_a_path_anywhere_else_stops_the_generator(self, roots, raw):
-        repository, _, outside = roots
+    def test_a_path_anywhere_else_is_refused(self, roots, raw):
+        repository, _, _, outside = roots
+        (repository / "escape").symlink_to(outside)
         path = raw(repository, outside)
-        with pytest.raises(SystemExit, match="--findings .* lies outside the repository and the temporary directory"):
-            generator.allowed_path(path, "--findings")
+        with pytest.raises(ValueError, match="--findings .* lies outside the repository, the home directory and"):
+            generator.resolve_path(path, "--findings")
 
     @pytest.mark.parametrize("option", ["--cache", "--findings"])
-    def test_main_refuses_an_outside_path_before_it_reads_or_writes_anything(self, roots, monkeypatch, option):
-        _, _, outside = roots
+    @pytest.mark.parametrize("repin", [False, True], ids=["generate", "repin-wikidata"])
+    def test_main_refuses_an_outside_path_before_it_reads_fetches_or_writes(
+        self, roots, monkeypatch, capsys, option, repin
+    ):
+        _, _, _, outside = roots
+
+        class _Unread:
+            def read_text(self, *_args, **_kwargs):
+                raise AssertionError("reached")
 
         def reached(*_args, **_kwargs):
             raise AssertionError("reached")
 
+        monkeypatch.setattr(generator, "SOURCES_MD", _Unread())
         monkeypatch.setattr(generator, "check_sources", reached)
         monkeypatch.setattr(generator, "build", reached)
-        argv = [option, str(outside / "x")]
-        with pytest.raises(SystemExit, match=f"{option} .* lies outside"):
+        monkeypatch.setattr(generator, "repin_wikidata", reached)
+        argv = [option, str(outside / "x"), *(["--repin-wikidata"] if repin else [])]
+        with pytest.raises(SystemExit) as stopped:
             generator.main(argv)
+        assert stopped.value.code == 2
+        assert f"{option} " in capsys.readouterr().err
 
 
 def test_every_run_prints_a_count_per_kind_of_finding():

@@ -36,6 +36,8 @@ import pytest
 
 import atlas
 from atlas import installations
+from atlas.installations import _CatalogueQueries  # pyright: ignore[reportPrivateUsage] - the handles' common base
+from atlas.platforms import LIFTED_CODES, UNKNOWN_PAIR_CODES
 from scripts import validate_vectors
 from scripts.validate_vectors import VectorError, validate_machines_vector
 from scripts.validate_vectors import (
@@ -69,6 +71,11 @@ INSTALLATION = {
     "health": [],
 }
 FINDING = {"code": "root-missing", "data": {"path": "/mnt/sd/retrodeck"}}
+
+
+def _handle_classes(base: type) -> set[type]:
+    """*base* and every class that derives from it."""
+    return {base, *(handle for sub in base.__subclasses__() for handle in _handle_classes(sub))}
 
 
 def _vector(expected=None, *, installed=False, **input_keys) -> Vector:
@@ -411,14 +418,13 @@ def _with_exact_tag(tag: str) -> dict[str, Any]:
     return projection
 
 
+MATCHES_CPS1 = [{"system": "cps1", "status": "declared", "platforms": ["arcade"], "tags_source": "catalogue"}]
+
+
 def _base_platform_systems(**overrides) -> Vector:
     block = {
-        "vocabulary": "screenscraper",
-        "value": "6",
         "translation": _projection(),
-        "matches": [
-            {"system": "cps1", "status": "declared", "platforms": ["arcade"], "tags_source": "catalogue"}
-        ],
+        "matches": MATCHES_CPS1,
         "caveats": [],
         **overrides,
     }
@@ -589,8 +595,7 @@ def _base_platform_systems_by_tag() -> Vector:
 
 def _base_platform_systems_source_unknown() -> Vector:
     """A pair in a source the table does not include: unknown, stated with platform-source-unknown (#784 D31)."""
-    caveat = {"code": "platform-source-unknown", "data": {"source": "mobygames", "sources": "esde, romm"}}
-    return _base_platform_systems(translation=_projection("unknown"), matches=[], caveats=[caveat])
+    return _unknown_pair("mobygames", "1", "platform-source-unknown", sources=validate_vectors.PLATFORM_SOURCES)
 
 
 BASES = {
@@ -1486,11 +1491,11 @@ PLATFORM_SYSTEMS_CASES = [
     case(_base_platform_systems(translation=_projection(conflict=[{"source": "esde", "key": "gb", "version": None}])),
          "conflict names pairs exactly when", id="platform-systems-conflict-without-status"),
     case(_base_platform_systems(caveats=[UNMAPPED]),
-         "platform-unmapped or platform-source-unknown exactly when its pair is unknown", id="platform-systems-known-and-unmapped"),
+         "states the translation's own caveat for every unknown pair", id="platform-systems-known-and-unmapped"),
     case(_base_platform_systems(translation=_projection("unknown")),
-         "platform-unmapped or platform-source-unknown exactly when its pair is unknown", id="platform-systems-unknown-not-unmapped"),
-    case(_base_platform_systems(translation=_projection("unknown"), caveats=[UNMAPPED]),
-         "matches nothing for an unknown pair", id="platform-systems-unknown-with-matches"),
+         "every unknown pair states the one caveat of its cause", id="platform-systems-unknown-not-unmapped"),
+    case(_base_platform_systems(translation=_projection("unknown", caveats=[UNMAPPED]), caveats=[UNMAPPED]),
+         "matches nothing unless the pairs agree on a system", id="platform-systems-unknown-with-matches"),
     case(_base_platform_systems(translation=_projection(intersection=[{"source": "esde", "status": "keys", "keys": [{"key": "cps1", "relation": "closeMatch"}]}])),
          "relation one of", id="platform-systems-foreign-relation"),
     case(_base_platform_systems(translation=_projection(intersection=[{"source": "mobygames", "status": "none", "keys": []}])),
@@ -1502,10 +1507,88 @@ PLATFORM_SYSTEMS_CASES = [
     case(_base_platform_systems(translation=_with_exact_tag("cps1"), matches=[{"system": "cps1-hack", "status": "disabled", "platforms": ["cps1"], "tags_source": "catalogue"}]),
          "matches 'cps1-hack', which the translation does not name", id="platform-systems-disabled-match-by-tag"),
     case(_base_platform_ids(caveats=[{"code": "platform-unmapped", "data": {"source": "esde", "key": "cps1"}}]),
-         "platform-unmapped exactly when its translation is unknown", id="platform-ids-known-and-unmapped"),
+         "states the translation's own caveat for every unknown pair", id="platform-ids-known-and-unmapped"),
     case(_base_platform_ids(translation=_projection("unknown")),
-         "platform-unmapped exactly when its translation is unknown", id="platform-ids-unknown-not-unmapped"),
+         "every unknown pair states the one caveat of its cause", id="platform-ids-unknown-not-unmapped"),
 ]
+
+def _unknown_pair(
+    source: str, key: str, code: str, version: str | None = None, stated_key: str | None = None, **data: Any
+) -> Vector:
+    """A forward answer to one unknown pair, stating *code* as its cause inside the translation and outside it.
+
+    The caveat names *stated_key* where one is given, and the pair's own key otherwise.
+    """
+    projection = _projection("unknown")
+    projection["pairs"][0].update(source=source, key=key, version=version)
+    caveat = {"code": code, "data": {"source": source, "key": key if stated_key is None else stated_key, **data}}
+    projection["caveats"] = [caveat]
+    return _base_platform_systems(translation=projection, matches=[], caveats=[caveat])
+
+
+SS_6 = {"source": "screenscraper", "key": "6"}
+ESDE_CPS1 = {"source": "esde", "key": "cps1"}
+
+
+def _meeting_through_parts(
+    named: Any, *, lifted: bool = True, conflict: bool = False, data: Any = None, times: int = 1
+) -> Vector:
+    """A forward answer to two known pairs, screenscraper/6 and esde/cps1, stating that they meet through parts or
+    overlaps.
+
+    The caveat names *named* (or carries *data*), is lifted onto the answer unless *lifted* is false, and rides
+    a conflict instead of an agreed intersection where *conflict* is true.
+    """
+    projection = _projection()
+    first = projection["pairs"][0]
+    projection["pairs"] = [first, {**first, **ESDE_CPS1}]
+    if conflict:
+        conflicting = [{k: pair[k] for k in ("source", "key", "version")} for pair in projection["pairs"]]
+        projection.update(intersection_status="conflict", intersection=[], conflict=conflicting)
+    pairs = {"sources": [p["source"] for p in named or ()], "keys": [p["key"] for p in named or ()]}
+    caveat = {"code": "platform-parts-unestablished", "data": pairs if data is None else data}
+    projection["caveats"] = [caveat] * times
+    return _base_platform_systems(
+        translation=projection, matches=[] if conflict else MATCHES_CPS1, caveats=[caveat] * times if lifted else []
+    )
+
+
+# #784 D31, D32, D35: each unknown pair states the one caveat of its cause, and a version on a bare
+# folder pair says it was not applied.
+CAUSE = "every unknown pair states the one caveat of its cause"
+PLATFORM_CAUSE_CASES = [
+    case(_unknown_pair("romm", "bubble", "platform-unmapped"), CAUSE, id="platform-excluded-key-stated-unmapped"),
+    case(_unknown_pair("romm", "dc", "platform-excluded", reason="r"), CAUSE, id="platform-unmapped-key-stated-excluded"),
+    case(_unknown_pair("mobygames", "1", "platform-unmapped"), CAUSE, id="platform-unknown-source-stated-unmapped"),
+    case(_unknown_pair("mobygames", "1", "platform-source-unknown", stated_key="2", sources=validate_vectors.PLATFORM_SOURCES),
+         CAUSE, id="platform-unknown-source-stated-for-another-key"),
+    case(_unknown_pair("folder", "nowhere", "platform-unmapped", version="1.0"),
+         "a version on a bare folder pair is stated as not applied", id="platform-folder-version-unstated"),
+    case(_base_platform_systems(vocabulary="screenscraper", value="6"),
+         "must carry exactly", id="platform-asked-pair-echoed-beside-the-translation"),
+]
+
+# #784 D40: pairs that meet only through parts or overlaps say so once, naming the known pairs that do, in pair order,
+# and the outer answer repeats it.
+PARTS = "platform-parts-unestablished names, as {sources, keys}, at least two known pairs"
+PLATFORM_PARTS_CASES = [
+    case(_meeting_through_parts([SS_6]), PARTS, id="platform-parts-name-one-pair"),
+    case(_meeting_through_parts([ESDE_CPS1, SS_6]), PARTS, id="platform-parts-out-of-pair-order"),
+    case(_meeting_through_parts([SS_6, {"source": "esde", "key": "gb"}]), PARTS, id="platform-parts-name-an-unasked-pair"),
+    # Zipped, the first two would name both pairs; the third source has no key, so the lists do not pair up.
+    case(_meeting_through_parts(None, data={"sources": ["screenscraper", "esde", "esde"], "keys": ["6", "cps1"]}),
+         PARTS, id="platform-parts-lists-of-two-lengths"),
+    case(_meeting_through_parts(None, data={"sources": ["screenscraper", "esde"], "keys": ["6", "cps1"], "rows": []}),
+         PARTS, id="platform-parts-carry-more-than-the-pairs"),
+    case(_meeting_through_parts([SS_6, ESDE_CPS1], times=2),
+         "is stated once, and only for pairs that agree on a system", id="platform-parts-stated-twice"),
+    case(_meeting_through_parts([SS_6, ESDE_CPS1], conflict=True),
+         "is stated once, and only for pairs that agree on a system", id="platform-parts-on-a-conflict"),
+    case(_meeting_through_parts([SS_6, ESDE_CPS1], lifted=False),
+         "states the translation's own caveat for every unknown pair and for pairs meeting through parts or overlaps",
+         id="platform-parts-not-lifted"),
+]
+
 
 AGGREGATE_CASES = [
     case(_base_aggregate(answers={}), "expected.aggregate must be a list", id="aggregate-not-list"),
@@ -2091,6 +2174,8 @@ ALL_CASES = [
     *SYSTEMS_CASES,
     *ROM_LOCATIONS_CASES,
     *PLATFORM_SYSTEMS_CASES,
+    *PLATFORM_CAUSE_CASES,
+    *PLATFORM_PARTS_CASES,
     *AGGREGATE_CASES,
     *FIRMWARE_SHAPE_CASES,
     *FIRMWARE_CORE_CASES,
@@ -2107,6 +2192,11 @@ def test_the_validator_refuses(vector, message):
     """One invalid vector, and the rule that must be the one to catch it."""
     with pytest.raises(VectorError, match=re.escape(message)):
         validate_machines_vector(vector)
+
+
+def test_pairs_that_meet_through_parts_and_say_so_pass():
+    # #784 D40: the two known pairs named in pair order, inside the translation and lifted outside it.
+    validate_machines_vector(_meeting_through_parts([SS_6, ESDE_CPS1]))
 
 
 def test_a_group_whose_slots_are_not_established_passes():
@@ -2473,6 +2563,7 @@ class TestTheQueryRegistryIsWhatTheValidatorAccepts:
         "verify": True,
         "size": 1,
         "vocabulary": "igdb",
+        "pairs": [["romm", "genesis"]],
         # The two entries a save-portability query compares are two labels,
         # and one entry named twice is refused on its own.
         "source": "Source",
@@ -2595,6 +2686,17 @@ class TestTheVocabularyIsOneVocabulary:
 
     def test_the_validator_knows_every_code_atlas_can_emit(self):
         assert sorted(self._caveat_codes() - validate_vectors.KNOWN_CAVEAT_CODES) == []
+
+    def test_the_platform_mirrors_are_atlas_own(self):
+        # The validator spells the folder vocabularies and the unknown-pair codes without importing atlas.
+        assert validate_vectors.PLATFORM_FOLDER_SOURCES == atlas.FOLDER_SOURCES
+        assert validate_vectors.PLATFORM_FOLDER_SOURCE == atlas.FOLDER_SOURCE
+        assert validate_vectors.PLATFORM_UNKNOWN_PAIR_CODES == UNKNOWN_PAIR_CODES
+        assert validate_vectors.PLATFORM_PARTS_UNESTABLISHED == atlas.CAVEAT_PLATFORM_PARTS_UNESTABLISHED
+        assert validate_vectors.PLATFORM_LIFTED_CODES == LIFTED_CODES
+        assert validate_vectors.PLATFORM_CATALOGUE_COLUMNS == {
+            column for handle in _handle_classes(_CatalogueQueries) for column in handle.catalogue_columns
+        }
 
     def test_the_validator_knows_no_code_atlas_cannot_emit(self):
         assert sorted(validate_vectors.KNOWN_CAVEAT_CODES - self._caveat_codes()) == []

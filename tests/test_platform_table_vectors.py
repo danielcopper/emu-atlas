@@ -37,7 +37,10 @@ def test_platform_table_vector(vector):
 
 CONTRACT = {
     "table_version": 2,
-    "source_versions": [{"source": "esde", "version": "v1"}, {"source": "romm", "version": "m1"}],
+    "source_versions": [
+        {"source": "esde", "upstream": "es-de", "version": "v1"},
+        {"source": "romm", "upstream": "romm", "version": "m1"},
+    ],
     "pairs": [
         {
             "source": "romm",
@@ -82,7 +85,7 @@ class TestTheProjection:
         }
 
     def test_a_machine_answer_keeps_everything_but_its_translation(self):
-        answer = {"vocabulary": "romm", "value": "genesis", "translation": CONTRACT, "matches": [], "caveats": []}
+        answer = {"translation": CONTRACT, "matches": [], "caveats": []}
         projected = with_projected_translation(answer)
         assert {k: v for k, v in projected.items() if k != "translation"} == {
             k: v for k, v in answer.items() if k != "translation"

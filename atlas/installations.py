@@ -85,14 +85,15 @@ from .evidence import arrangement_caveats
 from .platforms import (
     CAVEAT_PLATFORM_SCRAPING_IGNORED,
     CAVEAT_PLATFORM_UNKNOWN,
-    CAVEAT_PLATFORM_SOURCE_UNKNOWN,
-    CAVEAT_PLATFORM_UNMAPPED,
     ESDE_PLATFORM_SOURCE,
     ESDE_SOURCE,
     INTERSECTION_UNKNOWN,
-    PAIR_UNKNOWN,
+    LIFTED_CODES,
+    PAIR_KNOWN,
+    RETRODECK_SOURCE,
     PlatformTranslation,
     exact_platform_tags,
+    names_one_system,
     platform_table,
     systems_named,
     translate,
@@ -19631,32 +19632,27 @@ class PlatformSystemMatch:
 
 @dataclass(frozen=True, slots=True)
 class PlatformSystemsAnswer:
-    """Which of this installation's systems answer to a ``(source, key)`` pair.
+    """Which of this installation's systems answer to one ``(source, key)`` pair or several together.
 
-    ``translation`` is the platform table's answer for the pair (world
-    knowledge, pinned and cited); ``matches`` is this installation's half —
+    ``translation`` is the platform table's answer for the asked pairs (world
+    knowledge, pinned and cited), and ``translation.pairs`` names them, in the
+    order asked; ``matches`` is this installation's half —
     every system the translation names in this installation's catalogue
-    columns (ES-DE's, and RetroDECK's or EmuDeck's own on those handles), plus
-    a declared system whose live ``<platform>`` tag is an exact ES-DE platform
-    key of the translation. ``matches`` is ordered: declared systems first,
-    then disabled, then absent, each alphabetical. An empty match list under a
-    known pair is a statement about this machine — the system is real and
-    nothing here answers to it; an unknown pair states the translation's
-    ``platform-unmapped`` or ``platform-source-unknown``.
+    columns (ES-DE's, and RetroDECK's own on a RetroDECK), plus a declared
+    system whose live ``<platform>`` tag is an exact ES-DE platform key of the
+    translation. ``matches`` is ordered: declared systems first, then
+    disabled, then absent, each alphabetical. An empty match list under agreed
+    pairs is a statement about this machine — the system is real and nothing
+    here answers to it; every unknown pair states the translation's own
+    ``platform-unmapped``, ``platform-excluded`` or ``platform-source-unknown``,
+    and pairs that share a system only through different parts or overlaps of it
+    state ``platform-parts-unestablished``.
     """
 
-    vocabulary: str
-    """The source the pair was asked in, as given — a column of the platform table
-    (:func:`~atlas.platforms.known_platform_vocabularies`), ``folder``, or any other name,
-    which answers ``unknown``.
-    """
-    value: str
-    """The key the pair was asked with, surrounding whitespace stripped as the table matches
-    it — a numeric id passes as its decimal string.
-    """
     translation: PlatformTranslation
-    """The platform table's answer for the pair: every source's keys with relation and
-    citation, the table version and every source's pinned version.
+    """The platform table's answer for the asked pairs: each pair as asked, every source's
+    keys with relation and citation per pair and for their intersection, the table version
+    and the pinned version of every project each source's column is read from.
     """
     matches: tuple[PlatformSystemMatch, ...] = ()
     """Every system the translation names in this installation's catalogue columns, and
@@ -19666,8 +19662,8 @@ class PlatformSystemsAnswer:
     """
     sources: tuple[str, ...] = ()
     caveats: tuple[Caveat, ...] = ()
-    """Every degradation of this answer, including the statement that the table holds no
-    such key.
+    """Every degradation of this answer, including why each unknown pair is unknown and
+    that pairs share a system only through different parts or overlaps of it.
     """
 
 
@@ -19677,9 +19673,9 @@ class SystemPlatformsAnswer:
 
     ``translation`` is the table's answer for the system's name in this
     installation's first catalogue column that holds it (ES-DE's, then
-    RetroDECK's or EmuDeck's own); for a declared system the table knows by
-    no name, it is the answer for its live tags that are exact ES-DE platform
-    keys, and where neither reaches the table the answer is ``unknown`` and
+    RetroDECK's own on a RetroDECK); for a declared system the table knows by
+    no name, it is the answer for its live tags that each name one system,
+    and where neither reaches the table the answer is ``unknown`` and
     states ``platform-unmapped``. A tag the table's ES-DE platform column does
     not hold states ``platform-unknown``, and the ``ignore`` sentinel states
     ``platform-scraping-ignored``. An empty ``platforms``
@@ -23102,6 +23098,12 @@ def _entry_mod_with_caveats(
     return cast(ModPlacement, _dc_replace(outcome, caveats=(*outcome.caveats, *extra)))
 
 
+# The platform questions' machine half. A declared system the table knows by no
+# name answers through its live <platform> tags, by two rules for two questions:
+# forward, a system belongs to what a pair asks for when one of its tags is
+# exactMatch to the asked systems (exact_platform_tags); reverse, a system's tag
+# stands for the one system it names, placed on one row it covers whole, and a
+# tag on several rows names none alone (names_one_system).
 _PLATFORM_TABLE_SOURCE = (
     "platform table (platform_table.json with platform_overrides.json; pins and licences in SOURCES.md)"
 )
@@ -23147,11 +23149,11 @@ def _platform_matches(
 
     A system answers by its name when the translation names it in one of this
     installation's catalogue columns (*named*: ES-DE's system names, and
-    RetroDECK's or EmuDeck's own on those handles), whatever its status. A *declared* system answers through its live
-    ``<platform>`` tag too, when that tag is an exact ES-DE platform key of the
-    translation: the table does not know the name of a system the user added
-    by hand, but it knows the tag that system carries, and a tag that covers
-    exactly the asked systems names nothing else. A tag that covers more
+    RetroDECK's own on a RetroDECK), whatever its status. A *declared* system
+    answers through its live ``<platform>`` tag too, when that tag is an exact
+    ES-DE platform key of the translation: the table does not know the name of
+    a system the user added by hand, but it knows the tag that system carries,
+    and a tag that covers exactly the asked systems names nothing else. A tag that covers more
     (``arcade``) is never exact, so it lets no other system in. Declared first,
     then disabled, then absent, each group alphabetical.
     """
@@ -23185,34 +23187,33 @@ def _platform_matches(
 def _system_translation(
     system: str, tags: tuple[str, ...], columns: tuple[str, ...], status: str
 ) -> PlatformTranslation:
-    """The table's answer for a system: by its name in the first column holding it, else by its exact tags.
+    """The table's answer for a system: by its name in the first column holding it, else by its tags.
 
-    Only a declared system answers through its tags — the same rule the
-    forward question keeps (:func:`_platform_matches`): a tag that covers one
-    row names that row, a tag that covers more (``arcade``) names none alone.
+    Only a declared system answers through its tags, and only through the
+    ones that name one system (:func:`atlas.platforms.names_one_system`): a
+    tag that covers more (``arcade``) names none of its systems alone.
     """
-    table = platform_table()
     for column in columns:
-        if (column, system) in table.placements:
-            return translate(((column, system),))
+        answer = translate(((column, system),))
+        if answer.pairs[0].status == PAIR_KNOWN:
+            return answer
     exact = [
         (ESDE_PLATFORM_SOURCE, tag)
         for tag in tags
-        if status == PLATFORM_STATUS_DECLARED and len(table.placements.get((ESDE_PLATFORM_SOURCE, tag), {})) == 1
+        if status == PLATFORM_STATUS_DECLARED and names_one_system(ESDE_PLATFORM_SOURCE, tag)
     ]
     return translate(exact or ((columns[0], system),))
 
 
-def _why_unknown(translation: PlatformTranslation) -> tuple[Caveat, ...]:
-    """The translation's own statements of why a pair answered unknown, lifted onto the outer answer.
+def _lifted(translation: PlatformTranslation) -> tuple[Caveat, ...]:
+    """The translation's own statements the outer answer repeats: why a pair answered unknown, and that
+    pairs share a system only through different parts or overlaps of it (#784 D40).
 
     One code and one data shape inside the translation and outside it: the
     outer answer repeats what the table said rather than saying it again in
     other words.
     """
-    return tuple(
-        c for c in translation.caveats if c.code in (CAVEAT_PLATFORM_UNMAPPED, CAVEAT_PLATFORM_SOURCE_UNKNOWN)
-    )
+    return tuple(c for c in translation.caveats if c.code in LIFTED_CODES)
 
 
 def _tag_notes(system: str, tags: tuple[str, ...]) -> tuple[Caveat, ...]:
@@ -23283,7 +23284,9 @@ class _CatalogueQueries:
     kind: str
     # The catalogue columns of the platform table this installation deploys —
     # the names its catalogue gives systems. ES-DE's for every arrangement;
-    # RetroDECK and EmuDeck add their own (RetroDECK's primehack, portmaster).
+    # RetroDECK adds its own (primehack, portmaster). EmuDeck's catalogue
+    # declares ES-DE's names only, at the pinned template too: its ROM folders
+    # (sneshd, primehacks) are folders, not systems its catalogue declares.
     catalogue_columns: tuple[str, ...] = (ESDE_SOURCE,)
 
     @one_question
@@ -23368,15 +23371,16 @@ class _CatalogueQueries:
         or ``folder`` for a bare folder name; *value* is that source's key, a
         string — a numeric id passes as its decimal string, and a non-string
         value raises rather than being coerced. A pair the table holds no key
-        for answers no matches and the ``platform-unmapped`` caveat, a source
-        the table does not include ``platform-source-unknown`` (#784 D31) —
+        for answers no matches and the ``platform-unmapped`` caveat, a key the
+        table excludes on purpose ``platform-excluded`` (#784 D35), a source
+        the table does not include ``platform-source-unknown`` (D31) —
         each the translation's own statement, lifted onto the answer: "no
         system corresponds" is an answer, and inventing a folder name out of
         the raw key is exactly the failure this question exists to prevent.
 
         A system matches when the translation names it in a catalogue column
         this installation deploys (:attr:`catalogue_columns`: ES-DE's names,
-        and RetroDECK's or EmuDeck's own where the handle is one); a
+        and RetroDECK's own on a RetroDECK); a
         declared system matches through its live ``<platform>`` tag too, when
         that tag is an exact ES-DE platform key of the translation (see
         :func:`_platform_matches`). Each match's status says what the
@@ -23386,17 +23390,35 @@ class _CatalogueQueries:
         ``tags_source`` states whether its tags were read off the machine or
         taken from the stated build's snapshot column.
         """
+        return self._systems_for_pairs(((vocabulary, value),))
+
+    @one_question
+    def systems_for_platforms(self, pairs: Sequence[Sequence[str | None]]) -> PlatformSystemsAnswer:
+        """Which systems here answer to several ``(source, key)`` pairs together, and how firmly.
+
+        The multi-pair form of :meth:`systems_for_platform` (#784 D7, D9): each
+        pair is ``(source, key)`` or ``(source, key, version)``, as
+        :func:`atlas.platforms.translate` takes them, and the translation
+        answers per pair and for their intersection. ``matches`` are the
+        systems the intersection names, qualified the same way; pairs that
+        share no system are a ``conflict`` and match nothing, because atlas
+        picks none. Every unknown pair's own caveat is lifted onto the answer,
+        and so is ``platform-parts-unestablished`` where the pairs share a
+        system only through different parts or overlaps of it (#784 D40). The
+        answer has the single-pair form's shape; ``translation.pairs`` names the
+        asked pairs in order (D41). At least one pair is asked; a malformed pair
+        raises.
+        """
+        return self._systems_for_pairs(pairs)
+
+    def _systems_for_pairs(self, pairs: Sequence[Sequence[str | None]]) -> PlatformSystemsAnswer:
         view, version = self._platform_view()
         tail = arrangement_caveats(self.kind, observed_version=version)
-        translation = translate(((vocabulary, value),))
-        value = translation.pairs[0].key
-        if translation.pairs[0].status == PAIR_UNKNOWN:
-            return PlatformSystemsAnswer(
-                vocabulary, value, translation, caveats=(*view.caveats, *_why_unknown(translation), *tail)
-            )
+        translation = translate(pairs)
+        caveats = (*view.caveats, *_lifted(translation), *tail)
+        if translation.intersection_status == INTERSECTION_UNKNOWN:
+            return PlatformSystemsAnswer(translation, caveats=caveats)
         return PlatformSystemsAnswer(
-            vocabulary,
-            value,
             translation,
             matches=_platform_matches(
                 view,
@@ -23404,7 +23426,7 @@ class _CatalogueQueries:
                 frozenset(exact_platform_tags(translation)),
             ),
             sources=(*view.sources, _PLATFORM_TABLE_SOURCE),
-            caveats=(*view.caveats, *tail),
+            caveats=caveats,
         )
 
     @one_question
@@ -23415,13 +23437,14 @@ class _CatalogueQueries:
         answer for the system's name in the first catalogue column this
         installation deploys that holds it (:attr:`catalogue_columns`), or,
         for a declared system the table does not know by name (one the user
-        added by hand), for its live ``<platform>`` tags that are exact ES-DE
-        platform keys. The tags are read from the system's own ``<platform>``
-        text where this installation declares it (a commented block
-        included), and from the stated build's snapshot column where it does
-        not (``tags_source`` says which). A system the table knows neither
-        way answers an ``unknown`` translation and the ``platform-unmapped``
-        caveat, as does a name neither this machine nor the vocabulary knows.
+        added by hand), for its live ``<platform>`` tags that each name one
+        system (:func:`atlas.platforms.names_one_system`). The tags are read
+        from the system's own ``<platform>`` text where this installation
+        declares it (a commented block included), and from the stated build's
+        snapshot column where it does not (``tags_source`` says which). A
+        system the table knows neither way answers an ``unknown`` translation
+        and the ``platform-unmapped`` caveat, as does a name neither this
+        machine nor the vocabulary knows.
         """
         view, version = self._platform_view()
         tail = arrangement_caveats(self.kind, observed_version=version)
@@ -23442,14 +23465,16 @@ class _CatalogueQueries:
         else:
             snapshot = vocabulary_platform_tags(system)
             if snapshot is None:
-                # Neither this installation's catalogue nor the vocabulary knows the name.
-                translation = translate(((self.catalogue_columns[0], system),))
+                # This installation's catalogue does not declare the name and the snapshot column holds no
+                # tags for it; the table may still know it in a catalogue column this installation deploys.
+                translation = _system_translation(system, (), self.catalogue_columns, PLATFORM_STATUS_ABSENT)
                 return SystemPlatformsAnswer(
                     system,
                     PLATFORM_STATUS_ABSENT,
                     PLATFORM_TAGS_VOCABULARY,
                     translation,
-                    caveats=(*view.caveats, *_why_unknown(translation), *tail),
+                    sources=(*view.sources, _PLATFORM_TABLE_SOURCE),
+                    caveats=(*view.caveats, *_lifted(translation), *tail),
                 )
             status, tags, tags_source = (
                 PLATFORM_STATUS_ABSENT,
@@ -23457,9 +23482,7 @@ class _CatalogueQueries:
                 PLATFORM_TAGS_VOCABULARY,
             )
         translation = _system_translation(system, tags, self.catalogue_columns, status)
-        notes = _tag_notes(system, tags)
-        if translation.intersection_status == INTERSECTION_UNKNOWN:
-            notes += _why_unknown(translation)
+        notes = (*_tag_notes(system, tags), *_lifted(translation))
         return SystemPlatformsAnswer(
             system,
             status,
@@ -24011,7 +24034,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
 
     kind = "retrodeck"
     kinds = ("retrodeck",)
-    catalogue_columns = (ESDE_SOURCE, "retrodeck")
+    catalogue_columns = (ESDE_SOURCE, RETRODECK_SOURCE)
     _APP_ID = RETRODECK_APP_ID
 
     def __init__(self, home: str, machine: Machine, *, detected_by_deploy: bool = False) -> None:
@@ -26296,7 +26319,6 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
     """
 
     kind = "emudeck"
-    catalogue_columns = (ESDE_SOURCE, "emudeck")
     kinds = ("emudeck", "bare_retroarch_flatpak")
     _RA_APP_ID = RETROARCH_FLATPAK_APP_ID
 
@@ -29526,6 +29548,8 @@ class Installation(Protocol):
     def systems(self) -> SystemsAnswer: ...
 
     def systems_for_platform(self, vocabulary: str, value: str) -> PlatformSystemsAnswer: ...
+
+    def systems_for_platforms(self, pairs: Sequence[Sequence[str | None]]) -> PlatformSystemsAnswer: ...
 
     def platform_ids(self, system: str) -> SystemPlatformsAnswer: ...
 
