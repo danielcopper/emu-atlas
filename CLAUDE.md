@@ -120,6 +120,24 @@ unchanged and still decides. Its number is Sonar's S3776 number, but its scope i
 `sonar-project.properties` and Sonar has never reported an S3776 finding under `tests/` here, while the local gate
 measures them — so a clean Sonar page does not mean a green gate.
 
+## Pipeline
+
+- **Gate**, one command at a time from the worktree root: `mise run test`, `mise run validate`, `mise run complexity`,
+  `mise run contract`, `mise run matrix`, `deno fmt --check`, `basedpyright atlas tests scripts` (as "Commands"
+  describes them), and `PR_TITLE=<title> PR_BODY=<body> python3 scripts/check_vector_breaking_change.py origin/main`
+  with the PR's text, as CI runs it.
+- **Review checks**: `basedpyright <files>`, `deno fmt --check <files>`
+- **Worktree task**: `mise run worktree-new` (a global mise task from the owner's dotfiles, not in this repository)
+- **Agent rules**:
+  - Each agent uses its own scratch subdirectory under the session scratchpad and never passes a host path as a script
+    argument.
+  - Gate steps run one at a time, never in parallel.
+  - Never run emulators, RetroArch, cores, launchers or `flatpak run`; read the deployed RetroDECK under
+    `/var/lib/flatpak/app/net.retrodeck.retrodeck/` with `ls`, `cat`, `find` and `grep` only; never open a database.
+  - No `git status` on the main checkout; absolute paths into the worktree (`mise -C <wt>`, `git -C <wt>`,
+    `<wt>/.venv/bin/…`).
+  - No device values or ROM titles in committed text; describe data shapes.
+
 ## Pitfalls
 
 - **Worktrees**: fresh worktrees need `mise trust && mise run setup` (per-directory venvs). The harness LSP diagnostics
