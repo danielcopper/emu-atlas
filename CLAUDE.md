@@ -122,8 +122,8 @@ measures them — so a clean Sonar page does not mean a green gate.
 
 ## Pipeline
 
-- **Gate** (as "Commands" describes them): `mise run test` (it runs `validate` first), `mise run complexity`,
-  `mise run contract`, `mise run matrix`, `deno fmt --check`, `basedpyright atlas tests scripts`, and
+- **Gate**: `mise run test` (it runs `validate` first), `mise run complexity`, `mise run contract`, `mise run matrix`,
+  `deno fmt --check`, `basedpyright atlas tests scripts` (as "Commands" describes them), and
   `PR_TITLE=<title> PR_BODY=<body> python3 scripts/check_vector_breaking_change.py origin/main` with the PR's text, as
   CI runs it.
 - **Review checks**: `basedpyright <files>`, `deno fmt --check <files>`
