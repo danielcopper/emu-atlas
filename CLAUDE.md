@@ -120,6 +120,22 @@ unchanged and still decides. Its number is Sonar's S3776 number, but its scope i
 `sonar-project.properties` and Sonar has never reported an S3776 finding under `tests/` here, while the local gate
 measures them — so a clean Sonar page does not mean a green gate.
 
+## Pipeline
+
+- **Gate**: `mise run test` (it runs `validate` first), `mise run complexity`, `mise run contract`, `mise run matrix`,
+  `deno fmt --check`, `basedpyright atlas tests scripts` (as "Commands" describes them), and
+  `PR_TITLE=<title> PR_BODY=<body> python3 scripts/check_vector_breaking_change.py origin/main` with the PR's text, as
+  CI runs it.
+- **Review checks**: `basedpyright <files>`, `deno fmt --check <files>`
+- **Worktree task**: `mise run worktree-new` (a global mise task from the owner's dotfiles, not in this repository)
+- **Agent rules**:
+  - Gate steps run one at a time, never in parallel.
+  - Each agent uses its own subdirectory of the session scratchpad.
+  - Never launch an emulator, RetroArch, a launcher or `flatpak run`; read the deployed RetroDECK only through atlas's
+    own probes, the repo's scripts and tests, or by reading its files; never open a database.
+  - Stop only your own processes, by PID; never `pkill` or `killall`.
+  - No device values or ROM titles in committed text; describe data shapes.
+
 ## Pitfalls
 
 - **Worktrees**: fresh worktrees need `mise trust && mise run setup` (per-directory venvs). The harness LSP diagnostics
