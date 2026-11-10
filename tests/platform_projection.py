@@ -36,3 +36,24 @@ def translation_projection(contract: dict[str, Any]) -> dict[str, Any]:
 def with_projected_translation(answer: dict[str, Any]) -> dict[str, Any]:
     """A serialized machine answer whose ``translation`` field is projected."""
     return {**answer, "translation": translation_projection(answer["translation"])}
+
+
+def single_key_entry(projection: dict[str, Any]) -> dict[str, Any]:
+    """One single-key answer's projection as the snapshot records it, losing nothing.
+
+    The table version is recorded once for the whole snapshot; a source without
+    a key for the pair is left out (every source is listed, so it is ``none``);
+    and a single pair's intersection is its own sources or nothing, so it is not
+    repeated. Both are asserted here rather than assumed.
+    """
+    (pair,) = projection["pairs"]
+    agreed = projection["intersection_status"] == "agreed"
+    assert projection["intersection"] == (pair["sources"] if agreed else []), "one pair's intersection is its own"
+    assert projection["conflict"] == [] and agreed == (pair["status"] == "known"), "one pair is never a conflict"
+    entry: dict[str, Any] = {"status": pair["status"]}
+    keys = {s["source"]: {k["key"]: k["relation"] for k in s["keys"]} for s in pair["sources"] if s["keys"]}
+    if keys:
+        entry["keys"] = keys
+    if projection["caveats"]:
+        entry["caveats"] = projection["caveats"]
+    return entry

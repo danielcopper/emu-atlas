@@ -63,9 +63,8 @@ mapped-or-excluded (D17). Every entry is open-ended at its source's pinned
 version (D15): ``valid_from`` is that version, ``valid_to`` is ``null``.
 
 A maintainer tool, not part of the library: it fetches the pinned revisions
-from the network (``--cache DIR``, inside the repository or the temporary
-directory, keeps them between runs) and rewrites the data file. stdlib only,
-like everything else in the tree.
+from the network (``--cache DIR`` keeps them between runs) and rewrites the
+data file. stdlib only, like everything else in the tree.
 """
 
 from __future__ import annotations
@@ -96,6 +95,7 @@ sys.path.insert(0, str(ROOT))
 # same tokens, the same core a command loads — so a key the table places is
 # the key a question on the machine asks with.
 from atlas.esde import core_so, parse_es_systems, platform_tokens  # noqa: E402
+from atlas.platforms import runs_from  # noqa: E402
 
 OUTPUT = ROOT / "atlas" / "data" / "platform_table.json"
 SOURCES_MD = ROOT / "atlas" / "data" / "SOURCES.md"
@@ -180,29 +180,29 @@ WIKIDATA = Upstream("wikidata", *_wikidata_pin(), "https://query.wikidata.org/sp
 
 UPSTREAMS = (ESDE, RETRODECK, EMUDECK, ROMM, CORE_INFO, BATOCERA, KNULLI, ROCKNIX, WIKIDATA)
 
-# Column → the upstream block it is read from. The column names are the
-# vocabulary names a question takes.
-COLUMNS: dict[str, Upstream] = {
-    "esde": ESDE,
-    "esde-platform": ESDE,
-    "retrodeck": RETRODECK,
-    "emudeck": EMUDECK,
-    "romm": ROMM,
-    "romm-folder": ROMM,
-    "libretro": CORE_INFO,
-    "batocera": BATOCERA,
-    "knulli": KNULLI,
-    "rocknix": ROCKNIX,
-    "igdb": ROMM,
+# Column → the upstream blocks it is read from, one per project (#784 D42).
+# The column names are the vocabulary names a question takes.
+COLUMNS: dict[str, tuple[Upstream, ...]] = {
+    "esde": (ESDE,),
+    "esde-platform": (ESDE,),
+    "retrodeck": (RETRODECK,),
+    "emudeck": (EMUDECK,),
+    "romm": (ROMM,),
+    "romm-folder": (ROMM,),
+    "libretro": (CORE_INFO,),
+    "batocera": (BATOCERA,),
+    "knulli": (KNULLI,),
+    "rocknix": (ROCKNIX,),
+    "igdb": (ROMM,),
     # Two republishers fill this column: ES-DE's scraper map and RomM's table.
-    "screenscraper": Upstream(
-        "es-de, romm",
-        f"es-de {ESDE.version}, romm {ROMM.version}",
-        f"{ESDE.revision}, {ROMM.revision}",
-        "",
-    ),
-    "thegamesdb": ESDE,
+    "screenscraper": (ESDE, ROMM),
+    "thegamesdb": (ESDE,),
 }
+
+
+def column_runs_from(column: str) -> str:
+    """The version a column's mappings run from, as the loader reads it back (:func:`atlas.platforms.runs_from`)."""
+    return runs_from(tuple((u.block, u.version) for u in COLUMNS[column]))
 
 ESDE_SYSTEMS_PATH = "resources/systems/linux/es_systems.xml"
 ESDE_PLATFORM_CPP = "es-app/src/PlatformId.cpp"
@@ -643,8 +643,8 @@ def rocknix_systems(files: dict[str, str], cite: str) -> list[SourceKey]:
 def core_databases(archive: bytes) -> dict[str, tuple[tuple[str, ...], int]]:
     """Core short name → (its ``.info`` ``database`` names, the line), over every ``.info``.
 
-    A core whose ``.info`` declares no database is listed too, with no names
-    and line 0, so a core missing from the result has no ``.info`` at the pin.
+    A core whose ``.info`` declares no database is listed too, with no names,
+    so a core missing from the result has no ``.info`` at the pin.
     """
     found: dict[str, tuple[tuple[str, ...], int]] = {}
     with tarfile.open(fileobj=io.BytesIO(archive)) as tar:
@@ -1073,7 +1073,7 @@ def mappings(table: Table) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
     for (column, key), placements in sorted(table.placements.items()):
         relation = "exactMatch" if len(placements) == 1 else "broadMatch"
-        version = COLUMNS[column].version
+        version = column_runs_from(column)
         for placement in sorted(placements, key=lambda p: p.row):
             out.append(
                 {
@@ -1103,12 +1103,11 @@ def payload(table: Table) -> dict[str, Any]:
         ),
         "table_version": TABLE_VERSION,
         "sources": {
-            column: {
-                "upstream": upstream.block,
-                "version": upstream.version,
-                "revision": upstream.revision,
-            }
-            for column, upstream in COLUMNS.items()
+            column: [
+                {"upstream": upstream.block, "version": upstream.version, "revision": upstream.revision}
+                for upstream in upstreams
+            ]
+            for column, upstreams in COLUMNS.items()
         },
         "rows": sorted(row for row in table.rows if row in used),
         "kinds": {column: dict(sorted(table.kinds[column].items())) for column in BATOCERA_FAMILY},
@@ -1176,7 +1175,7 @@ def build(fetcher: Fetcher) -> Table:
 
 
 def emudeck_folders(fetcher: Fetcher) -> list[SourceKey]:
-    """The ``roms/`` template folders, each cited to its folder and its ``systems.txt`` line."""
+    """The ``roms/`` template folders, each cited to its folder and to its ``systems.txt`` line where it has one."""
     listing = fetcher.json(EMUDECK_ROMS_API)
     lines: dict[str, tuple[str, int]] = {}
     text = fetcher.text(f"{EMUDECK.raw}/{EMUDECK_SYSTEMS_TXT}")
@@ -1205,40 +1204,48 @@ def rocknix_files(fetcher: Fetcher) -> dict[str, str]:
     }
 
 
-def allowed_path(raw: str, what: str) -> Path:
-    """*raw* resolved, refused unless it lies inside the repository or the system's temporary directory.
+def resolve_path(raw: str, what: str) -> Path:
+    """*raw* resolved, symlinks followed, and refused unless it lies under one of three roots.
 
     The generator writes the cache and the findings where the command line
-    says; bounding both to the checkout and the temporary directory (``TMPDIR``
-    moves it) keeps a mistyped or hostile argument from writing anywhere else.
+    says, so both are bounded to three roots: the repository, the user's home
+    directory, and the system's temporary directory as ``tempfile`` names it
+    (``TMPDIR`` moves it). A mistyped argument cannot write anywhere else.
+    Raises ``ValueError`` for the caller to report as an argument error.
     """
     path = Path(raw).resolve()
-    roots = (ROOT.resolve(), Path(tempfile.gettempdir()).resolve())
+    roots = (ROOT.resolve(), Path.home().resolve(), Path(tempfile.gettempdir()).resolve())
     if not any(path.is_relative_to(root) for root in roots):
-        raise SystemExit(f"{what} {path} lies outside the repository and the temporary directory")
+        raise ValueError(f"{what} {path} lies outside the repository, the home directory and the temporary directory")
     return path
 
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=(__doc__ or "").splitlines()[0])
     parser.add_argument(
-        "--cache", help="keep fetched files here between runs (inside the repository or the temporary directory)"
+        "--cache",
+        help="keep fetched files here between runs (inside the repository, the home or the temporary directory)",
     )
     parser.add_argument(
-        "--findings", help="write the join findings here (inside the repository or the temporary directory)"
+        "--findings",
+        help="write the join findings here (inside the repository, the home or the temporary directory)",
     )
     parser.add_argument(
         "--repin-wikidata", action="store_true", help="pin Wikidata's current item revisions, then stop"
     )
     args = parser.parse_args(argv)
+    # Resolved before anything runs, in every mode: a path is refused whether or not this run writes to it.
+    try:
+        cache = resolve_path(args.cache, "--cache") if args.cache else None
+        findings = resolve_path(args.findings, "--findings") if args.findings else None
+    except ValueError as error:
+        parser.error(str(error))
     if args.repin_wikidata:
         text = json.dumps(repin_wikidata(Fetcher(None)), indent=1) + "\n"
         WIKIDATA_PINS.write_text(text, encoding="utf-8")
         digest = hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
         print(f"pinned {WIKIDATA_PINS.name}; record revision {digest} in SOURCES.md's wikidata block")
         return
-    cache = allowed_path(args.cache, "--cache") if args.cache else None
-    findings = allowed_path(args.findings, "--findings") if args.findings else None
     check_sources(SOURCES_MD.read_text(encoding="utf-8"))
     table = build(Fetcher(cache))
     data = payload(table)

@@ -908,32 +908,6 @@
    "citation": null
   },
   {
-   "source": "batocera",
-   "key": "gzdoom",
-   "rows": [
-    {
-     "source": "esde",
-     "key": "doom"
-    }
-   ],
-   "relation": "narrowMatch",
-   "reason": "a Doom engine's folder: it holds the games ES-DE's doom system holds, but only those its engine runs",
-   "citation": null
-  },
-  {
-   "source": "batocera",
-   "key": "prboom",
-   "rows": [
-    {
-     "source": "esde",
-     "key": "doom"
-    }
-   ],
-   "relation": "narrowMatch",
-   "reason": "a Doom engine's folder: it holds the games ES-DE's doom system holds, but only those its engine runs",
-   "citation": null
-  },
-  {
    "source": "rocknix",
    "key": "neocd",
    "rows": [
@@ -5567,6 +5541,32 @@
   },
   {
    "row_of": {
+    "source": "batocera",
+    "key": "gzdoom"
+   },
+   "kind": "content-subset",
+   "subset_of": {
+    "source": "esde",
+    "key": "doom"
+   },
+   "reason": "a Doom engine's folder: it holds the games ES-DE's doom system holds, but only those its engine runs",
+   "citation": null
+  },
+  {
+   "row_of": {
+    "source": "batocera",
+    "key": "prboom"
+   },
+   "kind": "content-subset",
+   "subset_of": {
+    "source": "esde",
+    "key": "doom"
+   },
+   "reason": "a Doom engine's folder: it holds the games ES-DE's doom system holds, but only those its engine runs",
+   "citation": null
+  },
+  {
+   "row_of": {
     "source": "emudeck",
     "key": "mame-mame4all"
    },
@@ -5822,7 +5822,7 @@
    },
    "kind": "fantasy-console",
    "subset_of": null,
-   "reason": "Batocera and KNULLI state hardware 'console', ROCKNIX states 'game engine'; neither fits: ES-DE's full name calls it a fantasy or virtual console, a machine specification with no hardware of its own",
+   "reason": "Batocera and KNULLI state hardware 'console', ROCKNIX states 'game engine'; neither fits: ES-DE's full name calls it a fantasy computer, a machine specification with no hardware of its own",
    "citation": null
   },
   {

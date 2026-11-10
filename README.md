@@ -191,9 +191,9 @@ data, never free text alone and never silence.
   `screenshot_location(...)` keeps screenshots out of every sync's file set.
 - **The platform table** — `translate(pairs)` answers, for `(source, key)` pairs in any included vocabulary (ES-DE,
   RetroDECK, EmuDeck, RomM, libretro, Batocera, KNULLI, ROCKNIX, IGDB, ScreenScraper, TheGamesDB), every source's keys —
-  the asked one's included — with relation and citation; `systems_for_platform(vocabulary, value)` and
-  `platform_ids(system)` qualify that by the machine — which named systems this installation declares, read live off its
-  catalogue.
+  the asked one's included — with relation and citation; `systems_for_platform(vocabulary, value)`,
+  `systems_for_platforms(pairs)` and `platform_ids(system)` qualify that by the machine — which named systems this
+  installation declares, read live off its catalogue.
 
 Answers are frozen value objects. [`atlas/contract.py`](atlas/contract.py) is their canonical JSON-shaped serialization
 — the same code the conformance run asserts with exact equality, and the same bytes the CLI writes.

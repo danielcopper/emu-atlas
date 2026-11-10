@@ -7927,9 +7927,9 @@ def _duckstation_candidate_listing(
             "token": card.token,
             "readings": listing.readings,
             "images": listing.images,
-            # Not ``regions``: three codes already spell that key as a list of
-            # the regions an answer speaks for, and one key name may not carry
-            # two shapes. This one is a region per image, keyed by its path.
+            # Not ``regions``: other codes spell that key as a list of the
+            # regions an answer speaks for. This one is a region per image,
+            # keyed by its path.
             "image_regions": listing.image_regions,
         },
     )

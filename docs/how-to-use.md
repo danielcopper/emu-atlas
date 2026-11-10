@@ -638,23 +638,41 @@ answer = atlas.translate([("romm", "genesis")])
 #   batocera megadrive, megadrive-msu         — narrowMatch
 #   romm     genesis                          — exactMatch
 # a source with no key for those systems states 'none'
-answer.table_version, answer.source_versions   # the table's version and every source's pinned version
+answer.table_version, answer.source_versions   # the table's version; per source, each project it is read from at its pinned version
 ```
 
 Several keys in one source are a fact about that source being finer, never uncertainty: the answer states the set, and
-your rules (or your user) decide. Each key carries its citations — the pinned file and line, a Wikidata statement that
-agrees, or the reviewed hand judgement that placed it.
+your rules (or your user) decide. Each key carries its citations — the pinned file and line (or folder), a Wikidata
+statement that agrees, or the evidence a reviewed hand judgement adds — each line named once. A folder that holds a
+content subset of a system, such as EmuDeck's `sneshd` for the SNES, answers as a part of it: the SNES keys are
+`broadMatch` from it, and it is `narrowMatch` from them.
 
 Ask with more than one pair and the answer adds their **intersection**:
-`[("folder", "megadrive"), ("esde",
-"megadrive")]` narrows to ES-DE's `megadrive` alone. A bare folder name — the source
-`"folder"` — means the union of what every folder vocabulary means by it, and only another pair narrows it. Pairs that
-share no system are a `conflict` naming them (`[("esde", "sgb"), ("esde", "gbc")]`), and atlas picks neither. A pair the
-table does not hold is `unknown`: an unknown key is stated with `platform-unmapped`, and a source the table does not
-carry with `platform-source-unknown`, which names the table's sources. A pair may carry the version of its source,
-`("romm", "genesis", "5.3.0")`; where that is not the version the table holds, the answer is the pinned meaning plus the
-`platform-source-version-differs` caveat. Keys are strings — a numeric id passes as its decimal string — and a
-non-string raises `ValueError` rather than being coerced.
+`[("romm", "genesis"), ("folder",
+"megadrivejp")]` narrows RomM's slug, which covers three ES-DE systems, to the
+Japanese Mega Drive alone. A bare folder name — the source `"folder"` — means the union of what every folder vocabulary
+means by it, and only another pair narrows it. The intersection says how much of each shared system the pairs cover
+together: where one pair means only a part of it, a key covering the whole system is `broadMatch` there — an asked key
+too, once another pair narrows it — and the key whose part it is stays `exactMatch`. Pairs that meet on a system only
+through different parts or overlaps of it — two part keys, two overlap keys, a part and an overlap, a part key and a
+content subset, or two content subsets of one system, such as
+`[("libretro", "Nintendo - Wii (Digital)"), ("retrodeck", "primehack")]` or libretro's `MAME` and `MAME 2000` — still
+share it, but the table cannot know whether those share content: their keys are `relatedMatch`, and
+`platform-parts-unestablished` names the pairs that meet through a part or an overlap, as two lists of one length,
+`sources` and `keys`. Pairs that share no system are a `conflict` naming them (`[("esde", "sgb"), ("esde", "gbc")]`),
+and atlas picks neither.
+
+A pair the table does not hold is `unknown`, and one caveat says why: `platform-unmapped` for a key its source does not
+have, `platform-excluded` for a key the table places on no system on purpose (with the recorded `reason`), and
+`platform-source-unknown` for a source the table does not carry, which names the asked `key` too and lists the table's
+`sources`. Keys compare exactly as their source spells them, case included: `("igdb", "SNES")` is unknown while
+`("igdb", "snes")` is known. A pair may carry the version of its source, `("romm", "genesis", "5.3.0")`. A column read
+from several projects is pinned once per project — `screenscraper` at ES-DE `v3.5.0` and at RomM `5.4.1` — and a stated
+version matches when it is one of them. Where it matches none, the answer is the pinned meaning plus the
+`platform-source-version-differs` caveat, whose `pins` maps each project of that column to its version. A version on a
+bare folder pair names no single source, so it is not applied and `platform-version-unapplied` says so — ask the folder
+vocabulary by name (`romm-folder`, `batocera`, …) to have it applied. Keys are strings — a numeric id passes as its
+decimal string — and a non-string raises `ValueError` rather than being coerced.
 
 The table's sources, their pins, licences and the decision to ship each are in `atlas/data/SOURCES.md`. The
 ScreenScraper and TheGamesDB ids come from ES-DE's own scraper maps (RomM's ScreenScraper table adds the boards and
@@ -672,10 +690,10 @@ answer = inst.systems_for_platform("romm", "dc")
 ```
 
 A system matches when the translation names it in a catalogue column this installation deploys — ES-DE's system names,
-and RetroDECK's or EmuDeck's own on those installations — and a declared system also matches through its live
-`<platform>` tag when that tag is an exact ES-DE platform key of the translation — the table does not know the name of a
-system the user added by hand, but it knows the tag that system carries. Each match's `status` says what your next step
-is, and the three never collapse:
+and RetroDECK's own on a RetroDECK (EmuDeck's catalogue declares ES-DE's names only; its ROM folders are a folder
+vocabulary) — and a declared system also matches through its live `<platform>` tag when that tag is an exact ES-DE
+platform key of the translation — the table does not know the name of a system the user added by hand, but it knows the
+tag that system carries. Each match's `status` says what your next step is, and the three never collapse:
 
 - **`declared`** — this installation's catalogue lists it: place content now.
 - **`disabled`** — the catalogue's text carries it only inside an XML comment (RetroDECK 0.10.9b shipped 31 systems that
@@ -684,14 +702,19 @@ is, and the three never collapse:
 
 `tags_source` says where the tags came from: `catalogue` is a live read; `vocabulary` is the stated build's snapshot
 column (what backs an `absent` system, and a sealed catalogue's derived systems). A pair the table does not hold answers
-no matches and the translation's own caveat, `platform-unmapped` or `platform-source-unknown` — placing content under
-the raw key would name a folder no catalogue declares, which is exactly the quiet failure this question exists to
-prevent.
+no matches and the translation's own caveat, `platform-unmapped`, `platform-excluded` or `platform-source-unknown` —
+placing content under the raw key would name a folder no catalogue declares, which is exactly the quiet failure this
+question exists to prevent.
+
+Several pairs go to `inst.systems_for_platforms([("romm", "genesis"), ("folder", "megadrivejp")])`: the same answer, its
+matches the systems the intersection names, and nothing at all for a conflict. Both forms give one answer shape: the
+asked pairs are `translation.pairs`, in the order asked, and every unknown pair's own caveat is lifted onto the answer,
+as is `platform-parts-unestablished`.
 
 The reverse direction reads the system's own tags and gives the table's answer for the system's name in the first
 catalogue column this installation deploys that holds it; for a declared system the table knows by no name (one added by
-hand), it gives the answer for its live tags that are exact ES-DE platform keys, and where neither reaches the table the
-answer is `unknown` with `platform-unmapped`:
+hand), it gives the answer for its live tags that each name one system, and where neither reaches the table the answer
+is `unknown` with `platform-unmapped`:
 
 ```python
 answer = inst.platform_ids("sfc")
@@ -1348,6 +1371,9 @@ answer names the folder with `file-names-unestablished` and no file names.
 | `emulator-list-derived`                    | the entries/systems come from the installed cores' own `.info`, not a catalogue — no launch command                                                              |
 | `platform-unmapped`                        | the asked id or system corresponds to no platform knowledge — don't invent a folder from the raw id                                                              |
 | `platform-source-unknown`                  | the asked pair names a source the platform table does not include — check the source name against the listed ones                                                |
+| `platform-excluded`                        | the source has the asked key and the table places it on no system on purpose — `reason` says why                                                                 |
+| `platform-parts-unestablished`             | the pairs share the system only through different parts or overlaps of it, which the table cannot compare — `sources` and `keys` name those pairs                |
+| `platform-version-unapplied`               | a version on a bare folder pair names no single source and was not applied — ask the folder vocabulary by name                                                   |
 | `platform-unknown`                         | a catalogue's `<platform>` token is outside the platform vocabulary — ES-DE warns and drops it too                                                               |
 | `platform-scraping-ignored`                | the catalogue tags this system `ignore` — a deliberate opt-out, not a missing tag                                                                                |
 
@@ -1371,12 +1397,15 @@ then read the key. A test holds this: every `(code, key)` in the conformance cor
 
 - **a string** — one value, e.g. `dir`, `core`, `count`;
 - **a list** — several values, in the order this answer states them;
-- **an object** — one string said about each of several subjects, at five pairs and only there:
+- **an object** — one string said about each of several subjects, at seven pairs and only there:
   `per-game-alternative-emulator`'s `emulators` (each selected emulator label to how many games select it),
-  `core-mode-unestablished`'s `options` (each option key to the value read for it), and `firmware-search-candidates`'s
-  `readings`, `images` and `image_regions`, each keyed by the path of a file the BIOS search kept. That last key is not
-  spelled `regions` precisely because three codes already spell `regions` as a list, and one key name never carries two
-  shapes.
+  `core-mode-unestablished`'s `options` (each option key to the value read for it), `firmware-search-candidates`'s
+  `readings`, `images` and `image_regions`, each keyed by the path of a file the BIOS search kept,
+  `save-part-unestablished`'s `cartridges` (each cartridge kind to the verdict for it), and
+  `platform-source-version-differs`'s `pins` (each project a platform table column is read from to its pinned version).
+  `image_regions` is not spelled `regions` precisely because other codes already spell `regions` as a list: no new key
+  takes a name another code already gives a different shape. The names that already do are listed in the test that holds
+  this.
 
 A list is a JSON array, never a string you split on `", "`, and a one-element list is still an array — MAME's
 `per-game-layer-unread.key` names a single ini setting and spells it `["state_directory"]`, because its siblings under
@@ -4913,12 +4942,13 @@ emu-atlas health
 ```
 
 Every question above has a subcommand under its own name (`savestate-location`, `screenshot-location`,
-`texture-pack-location`, `mod-location`, `soft-patch-candidates`, `systems`, `systems-for-platform`, `platform-ids`,
-`rom-location`, `rom-locations`, `firmware-for-system`, `firmware-inventory`); `emu-atlas --help` lists them. Two answer
-forms, both from the sections above: without `--installation` every detected installation answers and the output is the
-labelled list (`installation_answers_contract`); with `--installation <kind>` the first handle of that kind answers
-alone, in the question's bare shape. `--home` asks about another home directory. `--cwd` is `cwd=` on the save,
-savestate and firmware questions; a value that is not an absolute path is a usage error.
+`texture-pack-location`, `mod-location`, `soft-patch-candidates`, `systems`, `systems-for-platform`,
+`systems-for-platforms` (one `--pair SOURCE:KEY[@VERSION]` per pair), `platform-ids`, `rom-location`, `rom-locations`,
+`firmware-for-system`, `firmware-inventory`); `emu-atlas --help` lists them. Two answer forms, both from the sections
+above: without `--installation` every detected installation answers and the output is the labelled list
+(`installation_answers_contract`); with `--installation <kind>` the first handle of that kind answers alone, in the
+question's bare shape. `--home` asks about another home directory. `--cwd` is `cwd=` on the save, savestate and firmware
+questions; a value that is not an absolute path is a usage error.
 
 The exit code separates answering from asking. `0` is an answer — an `unresolved` payload and an empty list are answers,
 exactly as in the library. `2` is a question that could not be put: a usage error, or an `--installation` kind this

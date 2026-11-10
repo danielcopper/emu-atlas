@@ -73,6 +73,7 @@ classDiagram
         +soft_patch_candidates(content_path, core_so) SoftPatchAnswer
         +systems() SystemsAnswer
         +systems_for_platform(vocabulary, value) PlatformSystemsAnswer
+        +systems_for_platforms(pairs) PlatformSystemsAnswer
         +platform_ids(system) SystemPlatformsAnswer
         +emulators_for(system, content_path) CatalogueAnswer
         +rom_location(system) RomPlacement
@@ -243,7 +244,6 @@ classDiagram
         +caveats: tuple~Caveat~
     }
     class PlatformSystemsAnswer {
-        +vocabulary / value
         +translation: PlatformTranslation
         +matches: tuple~PlatformSystemMatch~
         +caveats: tuple~Caveat~

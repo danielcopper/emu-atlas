@@ -254,6 +254,7 @@ Each expectation is paired with the input key that asks it. Several may appear i
 | `catalogue_query`        | `catalogue`                   | which emulators can launch this system                      |
 | `systems_query`          | `systems`                     | which systems does the frontend declare                     |
 | `platform_systems_query` | `systems_for_platform`        | which systems here a (source, key) pair names               |
+| `platform_pairs_query`   | `systems_for_platforms`       | which systems here several pairs name together              |
 | `platform_ids_query`     | `platform_ids`                | every source's keys for this system                         |
 | `launchable_query`       | `launchable`                  | does this file launch as this system's content, and why not |
 | `rom_location_query`     | `rom_location`                | where do this system's ROMs live                            |
@@ -311,7 +312,10 @@ records for that file can decide which entry comes first.
 `platform_systems_query` carries `vocabulary` and `value`: the vocabulary is a source of the platform table, or `folder`
 for a bare folder name — any other string is a legal question, answered `unknown` with `platform-source-unknown`; the
 value is that source's key as a string, and a numeric id is written as its decimal string, never as a JSON number.
-`platform_ids_query` asks the reverse direction and carries `system` alone.
+`platform_pairs_query` asks the same question with several pairs and carries `pairs`, each `[source, key]` or
+`[source, key, version]` as the platform-table family's input writes them; its answer has the shape of
+`systems_for_platform`'s, and in both the asked pairs are `translation.pairs`. `platform_ids_query` asks the reverse
+direction and carries `system` alone.
 
 `cwd` — the working folder the launch will use, an absolute path — may ride only the questions whose answer can depend
 on it: `savefile_query`, `entry_savefile_query`, `savestate_query`, `entry_savestate_query`, `save_portability_query`,
@@ -374,8 +378,10 @@ atlas's own exports in both directions.
 
 `vectors/platform-table/*.json` (family `platform-table`, schema **1**, counted apart from the machines' schema) pins
 the packaged platform table itself, without a machine: a client that vendors the table runs these against its own
-reading of it (#784 D27), and a release that moved, added or dropped a mapping shows up here as a changed expectation. A
-vector is `{name, rationale?, input, expected}`:
+reading of it (#784 D27). A release that moved, added or dropped a mapping of a key these vectors ask shows up here as a
+changed expectation; one of any other key is caught by the projection snapshot, `tests/data/platform_projection.json`,
+which holds every single-key answer in this projection and fails the suite until it is renewed (#784 D33). A vector is
+`{name, rationale?, input, expected}`:
 
 - `input` is `{"pairs": [[source, key] | [source, key, version], …]}` — the pairs `atlas.translate` is asked with, every
   part a non-empty string;
