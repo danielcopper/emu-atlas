@@ -73,5 +73,6 @@ class TestTheEntry:
         assert single_key_entry(self._projection()) == {"status": "known", "keys": {"esde": {"a": "exactMatch"}}}
 
     def test_an_intersection_other_than_the_pairs_own_is_refused(self):
+        projection = self._projection(intersection=[])
         with pytest.raises(AssertionError, match="one pair's intersection is its own"):
-            single_key_entry(self._projection(intersection=[]))
+            single_key_entry(projection)

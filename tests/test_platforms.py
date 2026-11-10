@@ -1349,7 +1349,8 @@ class TestTheMultiPairQuestion:
 
     @pytest.mark.parametrize("raw", ["romm", ":genesis", "romm:", "romm:genesis@"])
     def test_a_malformed_pair_on_the_command_line_is_a_usage_error(self, raw, capsys):
+        machine = _retrodeck_machine()
         with pytest.raises(SystemExit) as stopped:
-            run(["systems-for-platforms", "--pair", raw], home="/home/deck", machine=_retrodeck_machine())
+            run(["systems-for-platforms", "--pair", raw], home="/home/deck", machine=machine)
         assert stopped.value.code == 2
         assert "a pair is SOURCE:KEY or SOURCE:KEY@VERSION" in capsys.readouterr().err
