@@ -266,6 +266,12 @@ Each expectation is paired with the input key that asks it. Several may appear i
 | `identify_query`         | `identification`              | what is this content, by `md5` / `sha1` / `size`            |
 | `aggregate_query`        | `aggregate`                   | one question put to **every** detected installation         |
 
+Every `system` a query carries — in `catalogue_query`, `launchable_query`, `launch_command_query`,
+`save_portability_query`, `rom_location_query`, `platform_ids_query`, `firmware_query`, the entry families and an
+`emulators_for` aggregate — takes one of three forms (#784 D10, D49): a non-empty string, the installation's own name
+for the system; one pair `[source, key]` or `[source, key, version]`; or a non-empty list of such pairs, asked together.
+Every part of a pair is a non-empty string.
+
 `soft_patch_query` is the one family whose `content_path` is required rather than optional: the content is that
 question's subject — the patch files are named after it — so a vector asking it without one asks about no file at all.
 
@@ -298,10 +304,11 @@ emulator, and one without a system has no entry to judge — and may name the en
 
 `savefile_query`, `savestate_query`, `screenshot_query`, `texture_query`, `mod_query` and `soft_patch_query` carry a
 non-empty subset of `content_path` (the content the launch is for), `core_so` (the core's `.so` file name) and
-`installation`. The four entry families — `entry_savefile_query`, `entry_savestate_query`, `entry_texture_query` and
-`entry_mod_query` — ask the same placement of a catalogue entry instead of a core: they carry the `system` whose
-catalogue holds the entry and may carry its `label`, without which the first entry answers, plus `content_path` and
-`installation`; they take no `core_so`.
+`installation`. `savefile_query` may also carry the content's `system`, in any of the three forms above: it keys the
+core's recorded file set, and the placement states what resolving it said. The four entry families —
+`entry_savefile_query`, `entry_savestate_query`, `entry_texture_query` and `entry_mod_query` — ask the same placement of
+a catalogue entry instead of a core: they carry the `system` whose catalogue holds the entry and may carry its `label`,
+without which the first entry answers, plus `content_path` and `installation`; they take no `core_so`.
 
 `catalogue_query` carries `system` and may carry `content_path`: given one, a per-game emulator choice the frontend
 records for that file can decide which entry comes first.
@@ -363,11 +370,28 @@ installation — the marker, root, saves root, BIOS folder and companion config 
 `catalogue-invalid` on the answers that read the catalogue, while `content-tree-unwired` and the ROM root findings stay
 in `installations[].health` alone. They keep their own codes in both places — nothing wraps them.
 
-The two platform answers carry a `translation`, and it is asserted in the **projection** the platform-table family uses:
-the serialized translation with every key's `citations` and the `source_versions` list removed. Everything else stays —
-the table version, per pair its echo, status and every source's `{source, status, keys}` in table order, each key
-`{key, relation}`, the intersection status and its sources, the conflict pairs, the caveats. The citations are held by
-the loader, which refuses an uncited mapping; the pinned versions by the reference suite.
+Every answer about a system carries `resolution` — `catalogue`, `launchable`, `launch_command`, `save_portability`,
+`rom_location` (and each `rom_locations` placement), `platform_ids`, and `firmware`, where it is `null` unless the
+query's `kind` is `system`, and never `null` elsewhere. It is `{status, system, relation, candidates, translation}`:
+`status` how the resolution ended — `resolved`, `unknown`, `ambiguous` or `conflict`; `system` the `{source, key}` the
+answer is about, set exactly where the status is `resolved`; `relation` the tier that named it (`exactMatch`,
+`broadMatch` or `narrowMatch`), `null` exactly when `system` is; `candidates` the systems the asked pairs named alike —
+one pair can name several — each `{system, status}` and each system once, two or more exactly where the status is
+`ambiguous`; `translation` the platform table's answer for the asked pairs that went through it, in the projection
+below, or `null` where every pair was read live — and then a relation, where there is one, is `exactMatch` and there are
+no candidates, since only the table names those, and a translation whose intersection is a `conflict` names no system.
+Every status but `resolved` stands beside the caveat that states its reason in the answer's own caveats:
+`system-unknown`, `system-ambiguous` or `system-pairs-conflict`. A `savefile_query` that names a `system` answers a
+placement, which carries no `resolution`: the caveats resolving it stated lead the placement's own. Every other field
+that names a system is a `{source, key}` object, a firmware requirement's `system` may instead be `_unknown`, and caveat
+data names a system flat as `source` and `key`, or several as the parallel lists `sources` and `keys`.
+
+The two platform answers carry a `translation`, and so does every `resolution`; both are asserted in the **projection**
+the platform-table family uses: the serialized translation with every key's `citations` and the `source_versions` list
+removed. Everything else stays — the table version, per pair its echo, status and every source's
+`{source, status, keys}` in table order, each key `{key, relation}`, the intersection status and its sources, the
+conflict pairs, the caveats. The citations are held by the loader, which refuses an uncited mapping; the pinned versions
+by the reference suite.
 
 Caveats are `{code, data}` with `data` a flat object of strings. The codes are a closed vocabulary; so are root kinds,
 granularities, file-set states, holes (`needs`), emulator kinds, declaration states, system sources, path kinds and

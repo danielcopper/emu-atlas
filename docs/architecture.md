@@ -308,7 +308,7 @@ classDiagram
 | writing a test or a fixture         | `from atlas.machine import FixtureMachine`                                                               |
 | porting the resolver                | the Tier-2 modules, as the reference for what each parser reads                                          |
 | reading a cfg / catalogue alone     | `from atlas.retroarch_cfg import …`, `from atlas.esde import parse_es_systems`                           |
-| validating your own system map      | `import atlas` — `from_esde_system`, `known_systems`                                                     |
+| naming a system                     | a bare name or `(source, key)` pairs on any handle; `known_systems` lists one catalogue's system names   |
 | arriving from a platform id         | `atlas.translate(pairs)`, or the two platform questions on any handle for the machine half               |
 | checking packaged knowledge         | `from atlas.oddities import lookup_card`, `from atlas.textures import …`, `from atlas.evidence import …` |
 

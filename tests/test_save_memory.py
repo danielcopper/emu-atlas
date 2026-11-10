@@ -125,7 +125,7 @@ class TestLoader:
             }
         }
         text = _doc(systems)
-        with pytest.raises(ValueError, match="not atlas system ids"):
+        with pytest.raises(ValueError, match="are not system names known_systems\\(\\) lists"):
             load_save_memory(text)
 
     def test_a_record_without_systems_is_refused(self):

@@ -478,7 +478,7 @@ class TestTheProseTheAnswerTypesCarry:
             attributes=3, docstrings=2, commented=0
         )
         assert reference.attribute_prose([CoreDeclarations]) == reference.AttributeProse(
-            attributes=12, docstrings=0, commented=1
+            attributes=14, docstrings=0, commented=2
         )
 
     def test_an_attribute_that_says_nothing_is_still_counted(self) -> None:
@@ -941,6 +941,10 @@ class TestAPostInitCheckAgainstAnImportedTupleNamesIt:
                 cell.replace("\0", "|").strip()
                 for cell in line.strip().strip("|").replace("\\|", "\0").split("|")
             ]
+            # The "shape it carried" table names a field too, in three cells: it
+            # is not a field row, and has no column naming a tuple.
+            if len(cells) < 7:
+                continue
             rows[cells[0].strip(" `")] = cells[6]
         assert "`FIRMWARE_LOCATING`" in rows["cores[].locating"], rows["cores[].locating"]
         assert "`CORE_DECLARATION_STATES`" in rows["cores[].declaration"]
@@ -1623,6 +1627,9 @@ class TestTheDataRegistryReading:
             ("save-format-unrecorded", "side"): "PORTABILITY_SIDES",
             ("save-answer-unresolved", "side"): "PORTABILITY_SIDES",
             ("entry-label-unknown", "side"): "PORTABILITY_SIDES",
+            ("save-record-ambiguous", "side"): "PORTABILITY_SIDES",
+            ("save-record-partial", "side"): "PORTABILITY_SIDES",
+            ("save-record-unrecorded", "side"): "PORTABILITY_SIDES",
             ("save-format-build-unconfirmed", "reason"): "BUILD_UNCONFIRMED_REASONS",
             ("save-part-unestablished", "reason"): "PART_UNESTABLISHED_REASONS",
             ("save-part-unestablished", "cartridges"): "CARTRIDGE_STATEMENTS",

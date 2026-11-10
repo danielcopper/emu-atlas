@@ -34,7 +34,7 @@ declares lives on the installation handles, because only a handle can say.
 from __future__ import annotations
 
 import json
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Any, Literal
@@ -96,6 +96,9 @@ UNKNOWN_PAIR_CODES = frozenset(
 LIFTED_CODES = UNKNOWN_PAIR_CODES | {CAVEAT_PLATFORM_PARTS_UNESTABLISHED}
 
 PlatformRelation = Literal["exactMatch", "broadMatch", "narrowMatch", "relatedMatch"]
+# The relations a system question's resolution can name a system by (#784 D44):
+# every one but relatedMatch, which never names a system.
+SystemTier = Literal["exactMatch", "broadMatch", "narrowMatch"]
 PlatformSourceKeyStatus = Literal["keys", "none"]
 PlatformPairStatus = Literal["known", "unknown"]
 PlatformIntersectionStatus = Literal["agreed", "conflict", "unknown"]
@@ -144,6 +147,9 @@ ESDE_PLATFORM_SOURCE = "esde-platform"
 # RetroDECK's own system names: its ES-DE fork's catalogue declares systems
 # ES-DE has not (primehack, portmaster), so a RetroDECK handle reads them too.
 RETRODECK_SOURCE = "retrodeck"
+# The libretro database names the cores' .info files declare: a bare
+# RetroArch's own catalogue source, since it ships no frontend (#784 D10).
+LIBRETRO_SOURCE = "libretro"
 FOLDER_SOURCES = (ESDE_SOURCE, RETRODECK_SOURCE, "emudeck", "romm-folder", "batocera", "knulli", "rocknix")
 
 # The kinds a row may carry (#784 D16) — a closed vocabulary, one hyphenated
@@ -942,7 +948,7 @@ def known_platform_vocabularies() -> tuple[str, ...]:
 # --- the pure lookup --------------------------------------------------------
 
 
-def _pair(raw: Any) -> tuple[str, str, str | None]:
+def _pair(raw: Any) -> AskedPair:
     if not isinstance(raw, (tuple, list)) or len(raw) not in (2, 3):
         raise ValueError(f"a platform pair is (source, key) or (source, key, version), got {raw!r}")
     source, key, *rest = raw
@@ -953,8 +959,12 @@ def _pair(raw: Any) -> tuple[str, str, str | None]:
                 f"platform pair {name}: expected a string, got {value!r} "
                 f"(a numeric id is asked for as its decimal string)"
             )
+        if not value.strip():
+            raise ValueError(f"platform pair {name}: expected a non-empty string, got {value!r}")
     if version is not None and not isinstance(version, str):
         raise ValueError(f"platform pair version: expected a string or None, got {version!r}")
+    if version is not None and not version.strip():
+        raise ValueError(f"platform pair version: expected a non-empty string or None, got {version!r}")
     return source, key.strip(), version
 
 
@@ -1288,14 +1298,315 @@ def _intersection_keys(
     )
 
 
-def systems_named(translation: PlatformTranslation, columns: Sequence[str] = (ESDE_SOURCE,)) -> tuple[str, ...]:
-    """The system names the translation's intersection holds in *columns*, sorted — the machine half's join key.
+# --- naming a system: the argument every system question takes ---------------
 
-    *columns* are the catalogue columns an installation deploys: ES-DE's names
-    for every arrangement, RetroDECK's own for a RetroDECK, whose catalogue
-    adds systems ES-DE has not (``primehack``, ``portmaster``).
+# A system as an answer names it and a question takes it (#784 D10, D47): the
+# source whose key spells it, and that key, exactly as the source spells it.
+SystemPair = tuple[str, str]
+AskedPair = tuple[str, str, str | None]
+"""One parsed asked pair: source, key and the version stated with it, if any (:func:`system_pairs`)."""
+# One pair a system question is asked with, a version riding along where the
+# client has one (#784 D49) — and the argument itself: a bare name, one pair,
+# or several pairs asked together.
+SystemPairArgument = tuple[str, str] | tuple[str, str, str | None]
+SystemArgument = str | SystemPairArgument | Sequence[SystemPairArgument]
+
+# The tiers a translation names a catalogue's systems in, in the order they are
+# tried (#784 D44): the systems the asked pairs are exactly, failing those the
+# systems they are a part of, failing those the systems they are wider than. A
+# relatedMatch never names a system.
+SYSTEM_TIERS: tuple[SystemTier, ...] = ("exactMatch", "broadMatch", "narrowMatch")
+# The tier a name read live stands in — the first, and the one every own-source
+# resolution names (#784 D43).
+EXACT_TIER: SystemTier = "exactMatch"
+
+SystemResolutionStatus = Literal["resolved", "unknown", "ambiguous", "conflict"]
+
+RESOLUTION_RESOLVED: SystemResolutionStatus = "resolved"
+"""The asked pairs named one system this installation holds, read live or reached through the table, and the question
+answered for it — on the platform question, which asks about a name's standing itself, one its own source names, whose
+status there says whether it is declared, disabled or absent (#784 D53)."""
+RESOLUTION_UNKNOWN: SystemResolutionStatus = "unknown"
+"""The asked pairs named no system this installation holds — as a name read live, or as a system the table reached,
+that its catalogue does not declare or, for a system atlas names by a cited pair, that no installed core it is cited
+for files under (#784 D53); ``system-unknown`` names each such pair or system."""
+RESOLUTION_AMBIGUOUS: SystemResolutionStatus = "ambiguous"
+"""The asked pairs named several systems alike, listed as candidates; ``system-ambiguous`` names them, and
+atlas picks none.
+"""
+RESOLUTION_CONFLICT: SystemResolutionStatus = "conflict"
+"""The asked pairs named different systems, or one the other pairs do not reach; ``system-pairs-conflict``
+names the pairs, and atlas picks none.
+"""
+
+# How the system a question named was resolved (#784 D52), the statuses in the
+# order a client meets them; every one but resolved stands beside the caveat
+# stating its reason.
+SYSTEM_RESOLUTION_STATUSES = (RESOLUTION_RESOLVED, RESOLUTION_UNKNOWN, RESOLUTION_AMBIGUOUS, RESOLUTION_CONFLICT)
+
+PlatformSystemStatus = Literal["declared", "disabled", "absent"]
+
+# The three statuses a platform question states about a system (issue #68).
+# They never collapse, because the consumer's next step differs for each:
+# place content, ask the user to enable, or don't place it here at all.
+PLATFORM_STATUS_DECLARED: PlatformSystemStatus = "declared"
+"""This installation's own systems answer lists the system."""
+PLATFORM_STATUS_DISABLED: PlatformSystemStatus = "disabled"
+"""The catalogue's text carries the system only inside an XML comment: present and deliberately off, which is a
+different fact than never shipped.
+"""
+PLATFORM_STATUS_ABSENT: PlatformSystemStatus = "absent"
+"""The vocabulary knows the system and this installation does not have it."""
+
+PLATFORM_SYSTEM_STATUSES = (PLATFORM_STATUS_DECLARED, PLATFORM_STATUS_DISABLED, PLATFORM_STATUS_ABSENT)
+
+
+def system_pairs(system: SystemArgument, own_source: str) -> tuple[AskedPair, ...]:
+    """The pairs a system argument asks: a bare name, one pair, or a sequence of pairs (#784 D10, D49).
+
+    A bare name is the short form of the pair in *own_source*, the installation's
+    own catalogue source. A pair is ``(source, key)`` or ``(source, key,
+    version)``; a list of them is several pairs asked together. Anything else,
+    and an empty sequence or a blank name or part, raises ``ValueError``: no
+    question is asked about no system. A sequence whose first item is a string
+    is one pair; any other is a list of pairs, so an error names the part that
+    is wrong.
     """
-    return _intersection_keys(translation, columns)
+    if isinstance(system, str):
+        if not system.strip():
+            raise ValueError(f"a system name is a non-empty string, got {system!r}")
+        return ((own_source, system.strip(), None),)
+    if not isinstance(system, (tuple, list)) or not system:
+        raise ValueError(
+            f"a system is a name, a (source, key[, version]) pair or a list of pairs, got {system!r}"
+        )
+    if isinstance(system[0], str):
+        return (_pair(system),)
+    return tuple(_pair(raw) for raw in system)
+
+
+def systems_by_tier(
+    translation: PlatformTranslation, columns: tuple[str, ...], cited: frozenset[SystemPair] = frozenset()
+) -> tuple[tuple[SystemTier, tuple[SystemPair, ...]], ...]:
+    """The systems the translation's intersection names, per tier, in :data:`SYSTEM_TIERS` order (#784 D44).
+
+    A system is a key of one of *columns* — the installation's own catalogue
+    sources — or one of *cited*, the pairs atlas states for that installation
+    outside them (#784 D50), each matched in its own source's column. A tier
+    that names none is left out, and so is every tier where the intersection
+    is not agreed. One key in several of *columns* is one catalogue system,
+    named in the first of them that holds it: RetroDECK's catalogue spells
+    ``snes`` in ES-DE's column and its own.
+    """
+    if translation.intersection_status != INTERSECTION_AGREED:
+        return ()
+    tiers: Iterator[tuple[SystemTier, tuple[SystemPair, ...]]] = (
+        (relation, named_systems(translation, columns, cited, (relation,))) for relation in SYSTEM_TIERS
+    )
+    return tuple((relation, named) for relation, named in tiers if named)
+
+
+def catalogue_pair(columns: tuple[str, ...], name: str) -> SystemPair:
+    """The pair a name of an installation's catalogue is named by, *columns* its own sources (#784 D47).
+
+    The first own source whose table column spells the name — ES-DE's before
+    RetroDECK's, so only a RetroDECK-only system (``primehack``) is named in
+    RetroDECK's source — and the first own source for a name no column spells,
+    a system the user added by hand. Every route that names a system of an
+    installation names it here: a live pair, a key the table translated into,
+    an entry's system.
+    """
+    keys = platform_table().keys
+    return next(
+        ((column, name) for column in columns if name in keys.get(column, frozenset())),
+        (columns[0], name),
+    )
+
+
+def named_systems(
+    translation: PlatformTranslation,
+    columns: tuple[str, ...],
+    cited: frozenset[SystemPair] = frozenset(),
+    relations: tuple[PlatformRelation, ...] = PLATFORM_RELATIONS,
+) -> tuple[SystemPair, ...]:
+    """The systems of an installation the translation's intersection names under *relations*, sorted.
+
+    A key of one of *columns* — the installation's own catalogue sources — is
+    named as :func:`catalogue_pair` names it, so one key in several of them is
+    one system; a pair of *cited* — the pairs atlas states for the
+    installation outside them (#784 D50) — is named in its own source.
+    """
+    own = {catalogue_pair(columns, key) for key in _intersection_keys(translation, columns, relations)}
+    cited_named = {
+        (keys.source, key.key)
+        for keys in translation.intersection
+        for key in keys.keys
+        if key.relation in relations and (keys.source, key.key) in cited
+    }
+    return tuple(sorted(own | cited_named))
+
+
+def systems_reached(
+    translation: PlatformTranslation, columns: tuple[str, ...], cited: frozenset[SystemPair] = frozenset()
+) -> tuple[SystemTier | None, tuple[SystemPair, ...]]:
+    """The systems the translation names in the first tier that names any (#784 D44): its relation and systems.
+
+    ``(None, ())`` where no tier names one — a conflict, an unknown
+    intersection, or keys only in other sources (:func:`systems_by_tier`).
+    """
+    tiers = systems_by_tier(translation, columns, cited)
+    return tiers[0] if tiers else (None, ())
+
+
+@dataclass(frozen=True, slots=True)
+class SystemNaming:
+    """How one installation names a system: its own catalogue sources, and the pairs it cites outside them.
+
+    ``own`` are the sources whose keys the installation's catalogue spells
+    (#784 D43): ES-DE's on every ES-DE frontend, RetroDECK's own beside it, and
+    libretro's database names on a bare RetroArch. ``cited`` are the systems
+    atlas names this installation by a pair of another source, because no own
+    key names them (#784 D46, D50): a fixed set per installation kind, read
+    off packaged data, never off the machine.
+    """
+
+    own: tuple[str, ...]
+    cited: frozenset[SystemPair] = frozenset()
+
+    def named(self, pair: SystemPair) -> SystemPair | None:
+        """The one system *pair* names here: itself in an own source, otherwise through the table (#784 D44).
+
+        ``None`` where the translation names no system of this installation,
+        or several — atlas picks none.
+        """
+        if pair[0] in self.own:
+            return catalogue_pair(self.own, pair[1])
+        return _named_through_table(pair, self.own, self.cited)
+
+
+_THROUGH_TABLE: dict[tuple[SystemPair, tuple[str, ...], frozenset[SystemPair]], SystemPair | None] = {}
+
+
+def _named_through_table(
+    pair: SystemPair, own: tuple[str, ...], cited: frozenset[SystemPair]
+) -> SystemPair | None:
+    """:meth:`SystemNaming.named` for a pair outside the own sources, answered once per pair and naming."""
+    key = (pair, own, cited)
+    if key not in _THROUGH_TABLE:
+        _, named = systems_reached(translate((pair,)), own, cited)
+        _THROUGH_TABLE[key] = named[0] if len(named) == 1 else None
+    return _THROUGH_TABLE[key]
+
+
+def check_system_pair(owner: str, value: object) -> None:
+    """Refuse *value* unless it is a system as answers name one: a (source, key) pair of non-empty strings.
+
+    *owner* names the type in the message, so a refusal says which answer
+    tried to name a system it could not.
+    """
+    if not (
+        isinstance(value, tuple)
+        and len(value) == 2
+        and all(isinstance(part, str) and part.strip() for part in value)
+    ):
+        raise ValueError(f"{owner}: system must be a (source, key) pair of non-empty strings, got {value!r}")
+
+
+@dataclass(frozen=True, slots=True)
+class SystemCandidate:
+    """One of several systems the asked pairs name alike — one pair can name several — and how firmly it is here.
+
+    #784 D44.
+    """
+
+    system: SystemPair
+    """The system, as the (source, key) pair this installation names it by."""
+    status: PlatformSystemStatus
+    """How firmly the system is here — ``declared``, ``disabled`` in the catalogue's own text, or
+    ``absent``, as a platform question states it; one of :data:`PLATFORM_SYSTEM_STATUSES`.
+    """
+
+    def __post_init__(self) -> None:
+        check_system_pair("SystemCandidate", self.system)
+        if self.status not in PLATFORM_SYSTEM_STATUSES:
+            raise ValueError(f"SystemCandidate: status {self.status!r} is not one of {PLATFORM_SYSTEM_STATUSES}")
+
+
+@dataclass(frozen=True, slots=True)
+class SystemResolution:
+    """How the system a question was asked about was resolved on this installation (#784 D44, D49).
+
+    A bare name, or a pair in one of the installation's own catalogue sources,
+    is read live, exactly as spelled (#784 D43); a pair in any other source of
+    the platform table goes through the table into those sources and the
+    cited pairs atlas states for the installation (D50), exact matches first,
+    then the systems the pairs are a part of, then the systems they are wider
+    than. ``status`` says how it ended (#784 D52): ``system`` is the one system
+    that resolution named and the question answered for, ``None`` where it
+    named several (``candidates`` lists them), none, or different ones.
+    """
+
+    status: SystemResolutionStatus
+    """How the resolution ended — ``resolved`` exactly when ``system`` is named, ``ambiguous`` exactly when
+    candidates are listed, ``unknown`` or ``conflict`` with neither; one of :data:`SYSTEM_RESOLUTION_STATUSES`.
+    The answer's caveats state the reason of every status but ``resolved``.
+    """
+    system: SystemPair | None
+    """The system the question answered for, as a (source, key) pair: a name read live as spelled, or the
+    system the table routed the pairs to — one this installation holds, except on the platform question, which
+    names one it does not with ``system-unknown`` beside it (#784 D53); ``None`` where the pairs named none,
+    several, or conflict.
+    """
+    relation: SystemTier | None
+    """How the asked pairs relate to that system — ``exactMatch`` for a name read live, and the tier
+    the table named it in otherwise — one of :data:`SYSTEM_TIERS`, never ``relatedMatch``, ``None``
+    exactly when ``system`` is.
+    """
+    candidates: tuple[SystemCandidate, ...] = ()
+    """The systems the asked pairs name alike where they name several (one pair can), in the first tier that
+    names any, each with its catalogue status — atlas picks none; empty otherwise.
+    """
+    translation: PlatformTranslation | None = None
+    """The platform table's answer for the asked pairs that went through it — each pair as asked, with
+    its caveats, and their intersection — ``None`` where every pair was read live.
+    """
+
+    def __post_init__(self) -> None:
+        status = self.status
+        if status not in SYSTEM_RESOLUTION_STATUSES:
+            raise ValueError(f"SystemResolution: status {status!r} is not one of {SYSTEM_RESOLUTION_STATUSES}")
+        if (status == RESOLUTION_RESOLVED) != (self.system is not None):
+            raise ValueError("SystemResolution: a system is named exactly when the status is resolved")
+        if self.system is not None:
+            check_system_pair("SystemResolution", self.system)
+        if (status == RESOLUTION_AMBIGUOUS) != (len(self.candidates) >= 2):
+            raise ValueError("SystemResolution: two or more candidates are listed exactly when the status is ambiguous")
+        if self.candidates and status != RESOLUTION_AMBIGUOUS:
+            raise ValueError("SystemResolution: candidates are listed only where several systems answer")
+        if len({candidate.system for candidate in self.candidates}) != len(self.candidates):
+            raise ValueError("SystemResolution: each candidate is a different system")
+        if (self.system is None) != (self.relation is None):
+            raise ValueError("SystemResolution: a relation is stated exactly for a resolved system")
+        if self.relation is not None and self.relation not in SYSTEM_TIERS:
+            raise ValueError(f"SystemResolution: relation {self.relation!r} is not one of {SYSTEM_TIERS}")
+        self._check_translation()
+
+    def _check_translation(self) -> None:
+        """What the table's translation says, the resolution says too.
+
+        Only an agreed translation names candidates or a system the pairs are
+        not exactly, and a table conflict is the resolution's conflict. The
+        asked pairs name nothing here through the table, or as a name read
+        live that the installation does not hold (#784 D53), so an unknown
+        resolution may carry no translation.
+        """
+        intersection = None if self.translation is None else self.translation.intersection_status
+        if (self.candidates or self.relation not in (None, EXACT_TIER)) and intersection != INTERSECTION_AGREED:
+            raise ValueError(
+                "SystemResolution: candidates and a relation other than exactMatch come from an agreed translation"
+            )
+        if intersection == INTERSECTION_CONFLICT and self.status != RESOLUTION_CONFLICT:
+            raise ValueError("SystemResolution: a table conflict is a conflict")
 
 
 def names_one_system(source: str, key: str, table: PlatformTable | None = None) -> bool:

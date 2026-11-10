@@ -552,10 +552,33 @@ CAVEAT_FILE_SET_CLAIMS_MERGED = "file-set-claims-merged"
 CAVEAT_SAVE_FILES_SHARED_WITH_CORE = "save-files-shared-with-core"
 # The caller named no system, and the answer holds anyway because every system
 # the core's record covers writes the same files. The claim is scoped to those
-# systems — `data["systems"]` lists them — because a core run for a system its
-# record never names has established nothing here. It is the honest answer on
-# an arrangement with no frontend catalogue, where no system is ever named.
+# systems — `data` lists them as the parallel `sources` and `keys` — because a
+# core run for a system its record never names has established nothing here.
 CAVEAT_FILE_SET_ACROSS_SYSTEMS = "file-set-across-systems"
+# The system asked stands for several ES-DE systems and two of them the core's
+# record holds state different files (#784 D50). A packaged save record is
+# filed under ES-DE's names, and the platform table names several of them for
+# some systems — libretro's Super Nintendo is ES-DE's snes, sfc and snesna. The
+# record keys such a system where the entries it holds for them state the same
+# files; where two differ, no recorded file set is applied rather than one
+# picked. `data` carries `core` and the held systems, which do not all agree,
+# as the parallel `sources` and `keys`.
+CAVEAT_SAVE_RECORD_AMBIGUOUS = "save-record-ambiguous"
+# The system asked stands for several ES-DE systems, the core's record keys it
+# by the ones it holds, and it holds no entry for the rest (#784 D50) —
+# libretro's Game Boy is ES-DE's gb and sgb, and Gambatte's record covers gb
+# alone. The files answered are the held systems' files; for the others the
+# record states nothing. `data` carries `core` and the systems it holds no
+# entry for as the parallel `sources` and `keys`.
+CAVEAT_SAVE_RECORD_PARTIAL = "save-record-partial"
+# The system asked is none the core's record holds an entry for (#784 D55): a
+# single ES-DE name the record does not list, a name whose translation reaches
+# no ES-DE name, a cited pair, or RetroDECK's own name. The file set is
+# unknown, and asked without a system the record's unanimous answer stands
+# instead. `data` carries `core` and the system as asked, as `source` and
+# `key`, or as the parallel `sources` and `keys` where several pairs were
+# asked; on the portability question, `side` too.
+CAVEAT_SAVE_RECORD_UNRECORDED = "save-record-unrecorded"
 CAVEAT_UNKNOWN_OPTION_VALUE = "unknown-option-value"
 # Set to blank or the literal "default". Not the same as absent — an absent
 # key resolves to RetroArch's platform default on every route — and the
@@ -2311,8 +2334,8 @@ ENUMERATED_DATA: "Mapping[tuple[str, str], tuple[str, ...]]" = MappingProxyType(
         # The world-knowledge mark carries two keys and only one of them is
         # closed: the evidence level, as the contract spells it rather than in
         # the bracket notation the research pages use. The system it is about
-        # is a system id — open by construction, because atlas publishes its
-        # own spelling wherever no catalogue declares one.
+        # rides as `source` and `key`, a pair of whichever source names it —
+        # open by construction, as every source's keys are.
         (CAVEAT_SYSTEM_FIRMWARE_WORLD_KNOWLEDGE, "evidence"): STATED_EVIDENCE_WORDS,
         (UNRESOLVED_EMULATOR_CONFIG_UNREADABLE, "reason"): EMULATOR_CONFIG_UNREADABLE_REASONS,
         # Whether the emulator stops at a failure of the open or goes on
@@ -2329,6 +2352,12 @@ ENUMERATED_DATA: "Mapping[tuple[str, str], tuple[str, ...]]" = MappingProxyType(
                 CAVEAT_SAVE_FORMAT_UNRECORDED,
                 CAVEAT_SAVE_ANSWER_UNRESOLVED,
                 CAVEAT_ENTRY_LABEL_UNKNOWN,
+                # A system asked as several ES-DE names, where the save-format
+                # records of one side differ or leave some of them uncovered,
+                # or a system they hold no record for at all.
+                CAVEAT_SAVE_RECORD_AMBIGUOUS,
+                CAVEAT_SAVE_RECORD_PARTIAL,
+                CAVEAT_SAVE_RECORD_UNRECORDED,
             )
         },
         (CAVEAT_SAVE_FORMAT_BUILD_UNCONFIRMED, "reason"): BUILD_UNCONFIRMED_REASONS,

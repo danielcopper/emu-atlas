@@ -394,7 +394,7 @@ class TestTheHostViewOpensWhatBashOpens:
 
     def test_emudeck_s_frontend_runs_in_the_backend_directory(self):
         handle = atlas.EmuDeck(HOME, FixtureMachine({SETTINGS: ""}))
-        _, host = handle._lookup(handle._esde_snapshot("x"))  # pyright: ignore[reportPrivateUsage] - the view it builds
+        _, host = handle._lookup(handle._esde_snapshot(("esde", "x")))  # pyright: ignore[reportPrivateUsage] - the view it builds
         assert host.working_directory == f"{HOME}/.config/EmuDeck/backend"
 
 

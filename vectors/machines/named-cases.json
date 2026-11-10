@@ -2935,7 +2935,10 @@
         "catalogue": {
           "entries": [
             {
-              "system": "n64",
+              "system": {
+                "source": "esde",
+                "key": "n64"
+              },
               "label": "Mupen64Plus-Next",
               "kind": "libretro",
               "core_so": "mupen64plus_next_libretro.so",
@@ -2955,7 +2958,10 @@
               ]
             },
             {
-              "system": "n64",
+              "system": {
+                "source": "esde",
+                "key": "n64"
+              },
               "label": "ParaLLEl N64",
               "kind": "libretro",
               "core_so": "parallel_n64_libretro.so",
@@ -2975,7 +2981,17 @@
               ]
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "n64"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -3014,7 +3030,10 @@
         "catalogue": {
           "entries": [
             {
-              "system": "n64",
+              "system": {
+                "source": "esde",
+                "key": "n64"
+              },
               "label": "Mupen64Plus-Next",
               "kind": "libretro",
               "core_so": "mupen64plus_next_libretro.so",
@@ -3034,7 +3053,10 @@
               ]
             },
             {
-              "system": "n64",
+              "system": {
+                "source": "esde",
+                "key": "n64"
+              },
               "label": "ParaLLEl N64",
               "kind": "libretro",
               "core_so": "parallel_n64_libretro.so",
@@ -3054,7 +3076,17 @@
               ]
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "n64"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -3093,7 +3125,10 @@
         "catalogue": {
           "entries": [
             {
-              "system": "n64",
+              "system": {
+                "source": "esde",
+                "key": "n64"
+              },
               "label": "Mupen64Plus-Next",
               "kind": "libretro",
               "core_so": "mupen64plus_next_libretro.so",
@@ -3113,7 +3148,17 @@
               ]
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "n64"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -3152,7 +3197,10 @@
         "catalogue": {
           "entries": [
             {
-              "system": "n64",
+              "system": {
+                "source": "esde",
+                "key": "n64"
+              },
               "label": "ParaLLEl N64",
               "kind": "libretro",
               "core_so": "parallel_n64_libretro.so",
@@ -3172,7 +3220,17 @@
               ]
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "n64"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -3212,7 +3270,10 @@
         "catalogue": {
           "entries": [
             {
-              "system": "n64",
+              "system": {
+                "source": "esde",
+                "key": "n64"
+              },
               "label": "ParaLLEl N64",
               "kind": "libretro",
               "core_so": "parallel_n64_libretro.so",
@@ -3232,7 +3293,10 @@
               ]
             },
             {
-              "system": "n64",
+              "system": {
+                "source": "esde",
+                "key": "n64"
+              },
               "label": "Mupen64Plus-Next",
               "kind": "libretro",
               "core_so": "mupen64plus_next_libretro.so",
@@ -3252,7 +3316,17 @@
               ]
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "n64"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -3292,7 +3366,10 @@
         "catalogue": {
           "entries": [
             {
-              "system": "n64",
+              "system": {
+                "source": "esde",
+                "key": "n64"
+              },
               "label": "ParaLLEl N64",
               "kind": "libretro",
               "core_so": "parallel_n64_libretro.so",
@@ -3312,7 +3389,10 @@
               ]
             },
             {
-              "system": "n64",
+              "system": {
+                "source": "esde",
+                "key": "n64"
+              },
               "label": "Mupen64Plus-Next",
               "kind": "libretro",
               "core_so": "mupen64plus_next_libretro.so",
@@ -3332,7 +3412,17 @@
               ]
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "n64"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -3372,7 +3462,10 @@
         "catalogue": {
           "entries": [
             {
-              "system": "n64",
+              "system": {
+                "source": "esde",
+                "key": "n64"
+              },
               "label": "Mupen64Plus-Next",
               "kind": "libretro",
               "core_so": "mupen64plus_next_libretro.so",
@@ -3392,7 +3485,10 @@
               ]
             },
             {
-              "system": "n64",
+              "system": {
+                "source": "esde",
+                "key": "n64"
+              },
               "label": "ParaLLEl N64",
               "kind": "libretro",
               "core_so": "parallel_n64_libretro.so",
@@ -3412,7 +3508,17 @@
               ]
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "n64"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -3774,7 +3880,8 @@
             "code": "standalone-unsupported",
             "data": {
               "label": "Ruffle (Standalone)",
-              "system": "flash"
+              "source": "esde",
+              "key": "flash"
             }
           }
         }
@@ -3842,7 +3949,8 @@
             "data": {
               "core_file": "citra_libretro.dll",
               "label": "Citra",
-              "system": "n3ds"
+              "source": "esde",
+              "key": "n3ds"
             }
           }
         },
@@ -3852,7 +3960,8 @@
             "data": {
               "core_file": "citra_libretro.dll",
               "label": "Citra",
-              "system": "n3ds"
+              "source": "esde",
+              "key": "n3ds"
             }
           }
         },
@@ -3862,7 +3971,8 @@
             "data": {
               "core_file": "citra_libretro.dll",
               "label": "Citra",
-              "system": "n3ds"
+              "source": "esde",
+              "key": "n3ds"
             }
           }
         },
@@ -3872,7 +3982,8 @@
             "data": {
               "core_file": "citra_libretro.dll",
               "label": "Citra",
-              "system": "n3ds"
+              "source": "esde",
+              "key": "n3ds"
             }
           }
         },
@@ -3886,7 +3997,10 @@
             ".CCI"
           ],
           "entry": {
-            "system": "n3ds",
+            "system": {
+              "source": "esde",
+              "key": "n3ds"
+            },
             "label": "Citra",
             "kind": "retroarch-foreign-core",
             "core_so": null,
@@ -3902,7 +4016,8 @@
                 "data": {
                   "core_file": "citra_libretro.dll",
                   "label": "Citra",
-                  "system": "n3ds"
+                  "source": "esde",
+                  "key": "n3ds"
                 }
               },
               {
@@ -3921,7 +4036,8 @@
             {
               "code": "emulator-catalogue-sealed",
               "data": {
-                "system": "n3ds"
+                "source": "esde",
+                "key": "n3ds"
               }
             },
             {
@@ -3929,10 +4045,21 @@
               "data": {
                 "core_file": "citra_libretro.dll",
                 "label": "Citra",
-                "system": "n3ds"
+                "source": "esde",
+                "key": "n3ds"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "n3ds"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -3983,7 +4110,10 @@
             ".CCI"
           ],
           "entry": {
-            "system": "n3ds",
+            "system": {
+              "source": "esde",
+              "key": "n3ds"
+            },
             "label": "Azahar (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -4010,10 +4140,21 @@
             {
               "code": "emulator-catalogue-sealed",
               "data": {
-                "system": "n3ds"
+                "source": "esde",
+                "key": "n3ds"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "n3ds"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -4026,7 +4167,7 @@
           "/home/deck/.config/EmuDeck/settings.sh": "romsPath=\"$HOME/Emulation/roms\"\nsavesPath=\"$HOME/Emulation/saves\"\ndoInstallESDE=true\n",
           "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"/home/deck/Emulation/saves/retroarch/saves\"\nlibretro_directory = \"/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores\"\nlibretro_info_path = \"/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores\"\n",
           "/home/deck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n</systemList>\n",
-          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores/mgba_libretro.info": "corename = \"mGBA\"\nsystemname = \"Game Boy Advance\"\n"
+          "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores/mgba_libretro.info": "corename = \"mGBA\"\nsystemname = \"Game Boy Advance\"\ndatabase = \"Nintendo - Game Boy Advance\"\n"
         },
         "dirs": [
           "/home/deck/Emulation/saves",
@@ -4073,17 +4214,29 @@
             {
               "code": "emulator-catalogue-sealed",
               "data": {
-                "system": "gba"
+                "source": "esde",
+                "key": "gba"
               }
             },
             {
               "code": "launch-command-label-unknown",
               "data": {
-                "system": "gba",
+                "source": "esde",
+                "key": "gba",
                 "label": "VBA-M"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "gba"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -5878,7 +6031,11 @@
               "code": "file-set-across-systems",
               "data": {
                 "core": "neocd",
-                "systems": [
+                "sources": [
+                  "esde",
+                  "esde"
+                ],
+                "keys": [
                   "neogeocd",
                   "neogeocdjp"
                 ]
@@ -8472,7 +8629,10 @@
         "catalogue": {
           "entries": [
             {
-              "system": "n64",
+              "system": {
+                "source": "esde",
+                "key": "n64"
+              },
               "label": "Mupen64Plus-Next",
               "kind": "libretro",
               "core_so": "mupen64plus_next_libretro.so",
@@ -8492,7 +8652,10 @@
               ]
             },
             {
-              "system": "n64",
+              "system": {
+                "source": "esde",
+                "key": "n64"
+              },
               "label": "ParaLLEl N64",
               "kind": "libretro",
               "core_so": "parallel_n64_libretro.so",
@@ -8512,7 +8675,17 @@
               ]
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "n64"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         },
         "entry_savefile_location": {
           "dir": "/mnt/sd/retrodeck/saves",
@@ -8602,7 +8775,10 @@
         "catalogue": {
           "entries": [
             {
-              "system": "n64",
+              "system": {
+                "source": "esde",
+                "key": "n64"
+              },
               "label": "ParaLLEl N64",
               "kind": "libretro",
               "core_so": "parallel_n64_libretro.so",
@@ -8622,7 +8798,10 @@
               ]
             },
             {
-              "system": "n64",
+              "system": {
+                "source": "esde",
+                "key": "n64"
+              },
               "label": "Mupen64Plus-Next",
               "kind": "libretro",
               "core_so": "mupen64plus_next_libretro.so",
@@ -8642,7 +8821,17 @@
               ]
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "n64"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         },
         "entry_savefile_location": {
           "dir": "/mnt/sd/retrodeck/saves",
@@ -8740,7 +8929,10 @@
         "catalogue": {
           "entries": [
             {
-              "system": "n64",
+              "system": {
+                "source": "esde",
+                "key": "n64"
+              },
               "label": "ParaLLEl N64",
               "kind": "libretro",
               "core_so": "parallel_n64_libretro.so",
@@ -8760,7 +8952,10 @@
               ]
             },
             {
-              "system": "n64",
+              "system": {
+                "source": "esde",
+                "key": "n64"
+              },
               "label": "Mupen64Plus-Next",
               "kind": "libretro",
               "core_so": "mupen64plus_next_libretro.so",
@@ -8780,7 +8975,17 @@
               ]
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "n64"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         },
         "entry_savefile_location": {
           "dir": "/mnt/sd/retrodeck/saves",
@@ -8967,10 +9172,21 @@
             {
               "code": "emulator-catalogue-unreadable",
               "data": {
-                "system": "n64"
+                "source": "esde",
+                "key": "n64"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "n64"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         },
         "systems": {
           "systems": [],
@@ -8993,7 +9209,7 @@
           "/home/deck/saves/.keep": ""
         },
         "catalogue_query": {
-          "system": "n64"
+          "system": "Nintendo - Nintendo 64"
         }
       },
       "expected": {
@@ -9018,12 +9234,26 @@
               }
             },
             {
+              "code": "system-unknown",
+              "data": {
+                "source": "libretro",
+                "key": "Nintendo - Nintendo 64"
+              }
+            },
+            {
               "code": "arrangement-unverified",
               "data": {
                 "kind": "bare_retroarch_native"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "unknown",
+            "system": null,
+            "relation": null,
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -9066,7 +9296,17 @@
                 "arrangement": "emudeck"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "n64"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -9111,10 +9351,21 @@
             {
               "code": "emulator-catalogue-unreadable",
               "data": {
-                "system": "n64"
+                "source": "esde",
+                "key": "n64"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "n64"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         },
         "systems": {
           "systems": [],
@@ -9145,7 +9396,7 @@
           "/mnt/sd/retrodeck/bios"
         ],
         "catalogue_query": {
-          "system": "n64",
+          "system": "Nintendo - Nintendo 64",
           "installation": "bare_retroarch_native"
         }
       },
@@ -9180,12 +9431,26 @@
               }
             },
             {
+              "code": "system-unknown",
+              "data": {
+                "source": "libretro",
+                "key": "Nintendo - Nintendo 64"
+              }
+            },
+            {
               "code": "arrangement-unverified",
               "data": {
                 "kind": "bare_retroarch_native"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "unknown",
+            "system": null,
+            "relation": null,
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -9353,7 +9618,10 @@
         ],
         "aggregate_query": {
           "question": "emulators_for",
-          "system": "n64"
+          "system": [
+            "libretro",
+            "Nintendo - Nintendo 64"
+          ]
         }
       },
       "expected": {
@@ -9394,10 +9662,306 @@
                 {
                   "code": "emulator-catalogue-unreadable",
                   "data": {
-                    "system": "n64"
+                    "source": "esde",
+                    "key": "n64"
                   }
                 }
-              ]
+              ],
+              "resolution": {
+                "status": "resolved",
+                "system": {
+                  "source": "esde",
+                  "key": "n64"
+                },
+                "relation": "exactMatch",
+                "candidates": [],
+                "translation": {
+                  "table_version": 1,
+                  "pairs": [
+                    {
+                      "source": "libretro",
+                      "key": "Nintendo - Nintendo 64",
+                      "version": null,
+                      "status": "known",
+                      "sources": [
+                        {
+                          "source": "esde",
+                          "status": "keys",
+                          "keys": [
+                            {
+                              "key": "n64",
+                              "relation": "exactMatch"
+                            }
+                          ]
+                        },
+                        {
+                          "source": "esde-platform",
+                          "status": "keys",
+                          "keys": [
+                            {
+                              "key": "n64",
+                              "relation": "broadMatch"
+                            }
+                          ]
+                        },
+                        {
+                          "source": "retrodeck",
+                          "status": "keys",
+                          "keys": [
+                            {
+                              "key": "n64",
+                              "relation": "exactMatch"
+                            }
+                          ]
+                        },
+                        {
+                          "source": "emudeck",
+                          "status": "keys",
+                          "keys": [
+                            {
+                              "key": "n64",
+                              "relation": "exactMatch"
+                            }
+                          ]
+                        },
+                        {
+                          "source": "romm",
+                          "status": "keys",
+                          "keys": [
+                            {
+                              "key": "n64",
+                              "relation": "exactMatch"
+                            }
+                          ]
+                        },
+                        {
+                          "source": "romm-folder",
+                          "status": "keys",
+                          "keys": [
+                            {
+                              "key": "n64",
+                              "relation": "exactMatch"
+                            }
+                          ]
+                        },
+                        {
+                          "source": "libretro",
+                          "status": "keys",
+                          "keys": [
+                            {
+                              "key": "Nintendo - Nintendo 64",
+                              "relation": "exactMatch"
+                            }
+                          ]
+                        },
+                        {
+                          "source": "batocera",
+                          "status": "keys",
+                          "keys": [
+                            {
+                              "key": "n64",
+                              "relation": "broadMatch"
+                            }
+                          ]
+                        },
+                        {
+                          "source": "knulli",
+                          "status": "keys",
+                          "keys": [
+                            {
+                              "key": "n64",
+                              "relation": "broadMatch"
+                            }
+                          ]
+                        },
+                        {
+                          "source": "rocknix",
+                          "status": "keys",
+                          "keys": [
+                            {
+                              "key": "n64",
+                              "relation": "broadMatch"
+                            }
+                          ]
+                        },
+                        {
+                          "source": "igdb",
+                          "status": "keys",
+                          "keys": [
+                            {
+                              "key": "4",
+                              "relation": "exactMatch"
+                            },
+                            {
+                              "key": "n64",
+                              "relation": "exactMatch"
+                            }
+                          ]
+                        },
+                        {
+                          "source": "screenscraper",
+                          "status": "keys",
+                          "keys": [
+                            {
+                              "key": "14",
+                              "relation": "broadMatch"
+                            }
+                          ]
+                        },
+                        {
+                          "source": "thegamesdb",
+                          "status": "keys",
+                          "keys": [
+                            {
+                              "key": "3",
+                              "relation": "broadMatch"
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ],
+                  "intersection_status": "agreed",
+                  "intersection": [
+                    {
+                      "source": "esde",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "n64",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "esde-platform",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "n64",
+                          "relation": "broadMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "retrodeck",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "n64",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "emudeck",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "n64",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "romm",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "n64",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "romm-folder",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "n64",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "libretro",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "Nintendo - Nintendo 64",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "batocera",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "n64",
+                          "relation": "broadMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "knulli",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "n64",
+                          "relation": "broadMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "rocknix",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "n64",
+                          "relation": "broadMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "igdb",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "4",
+                          "relation": "exactMatch"
+                        },
+                        {
+                          "key": "n64",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "screenscraper",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "14",
+                          "relation": "broadMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "thegamesdb",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "3",
+                          "relation": "broadMatch"
+                        }
+                      ]
+                    }
+                  ],
+                  "conflict": [],
+                  "caveats": []
+                }
+              }
             }
           },
           {
@@ -9420,12 +9984,26 @@
                   }
                 },
                 {
+                  "code": "system-unknown",
+                  "data": {
+                    "source": "libretro",
+                    "key": "Nintendo - Nintendo 64"
+                  }
+                },
+                {
                   "code": "arrangement-unverified",
                   "data": {
                     "kind": "bare_retroarch_native"
                   }
                 }
-              ]
+              ],
+              "resolution": {
+                "status": "unknown",
+                "system": null,
+                "relation": null,
+                "candidates": [],
+                "translation": null
+              }
             }
           }
         ]
@@ -9738,7 +10316,10 @@
         "catalogue": {
           "entries": [
             {
-              "system": "n64",
+              "system": {
+                "source": "esde",
+                "key": "n64"
+              },
               "label": "Mupen64Plus-Next",
               "kind": "libretro",
               "core_so": "mupen64plus_next_libretro.so",
@@ -9767,11 +10348,24 @@
                 "observed": "0.11.0b"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "n64"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         },
         "systems": {
           "systems": [
-            "n64"
+            {
+              "source": "esde",
+              "key": "n64"
+            }
           ],
           "caveats": [
             {
@@ -9833,7 +10427,11 @@
                   "code": "file-set-across-systems",
                   "data": {
                     "core": "mupen64plus_next",
-                    "systems": [
+                    "sources": [
+                      "esde",
+                      "esde"
+                    ],
+                    "keys": [
                       "n64",
                       "n64dd"
                     ]
@@ -9888,7 +10486,11 @@
               "code": "file-set-across-systems",
               "data": {
                 "core": "mupen64plus_next",
-                "systems": [
+                "sources": [
+                  "esde",
+                  "esde"
+                ],
+                "keys": [
                   "n64",
                   "n64dd"
                 ]
@@ -9932,7 +10534,8 @@
                 "observed": "0.11.0b"
               }
             }
-          ]
+          ],
+          "resolution": null
         },
         "identification": {
           "identity": null,
@@ -10047,7 +10650,10 @@
         ],
         "systems": {
           "systems": [
-            "n64"
+            {
+              "source": "esde",
+              "key": "n64"
+            }
           ],
           "caveats": []
         },
@@ -10081,7 +10687,11 @@
               "code": "file-set-across-systems",
               "data": {
                 "core": "mupen64plus_next",
-                "systems": [
+                "sources": [
+                  "esde",
+                  "esde"
+                ],
+                "keys": [
                   "n64",
                   "n64dd"
                 ]
@@ -10116,7 +10726,8 @@
             }
           ],
           "unclaimed": [],
-          "caveats": []
+          "caveats": [],
+          "resolution": null
         }
       }
     },
@@ -10162,7 +10773,10 @@
         ],
         "systems": {
           "systems": [
-            "n64"
+            {
+              "source": "esde",
+              "key": "n64"
+            }
           ],
           "caveats": []
         },
@@ -10196,7 +10810,11 @@
               "code": "file-set-across-systems",
               "data": {
                 "core": "mupen64plus_next",
-                "systems": [
+                "sources": [
+                  "esde",
+                  "esde"
+                ],
+                "keys": [
                   "n64",
                   "n64dd"
                 ]
@@ -10255,7 +10873,10 @@
         ],
         "systems": {
           "systems": [
-            "n64"
+            {
+              "source": "esde",
+              "key": "n64"
+            }
           ],
           "caveats": []
         },
@@ -10289,7 +10910,11 @@
               "code": "file-set-across-systems",
               "data": {
                 "core": "mupen64plus_next",
-                "systems": [
+                "sources": [
+                  "esde",
+                  "esde"
+                ],
+                "keys": [
                   "n64",
                   "n64dd"
                 ]
@@ -10389,7 +11014,11 @@
               "code": "file-set-across-systems",
               "data": {
                 "core": "mupen64plus_next",
-                "systems": [
+                "sources": [
+                  "esde",
+                  "esde"
+                ],
+                "keys": [
                   "n64",
                   "n64dd"
                 ]
@@ -10672,7 +11301,10 @@
         "catalogue": {
           "entries": [
             {
-              "system": "n64",
+              "system": {
+                "source": "esde",
+                "key": "n64"
+              },
               "label": "Mupen64Plus-Next",
               "kind": "libretro",
               "core_so": "mupen64plus_next_libretro.so",
@@ -10718,11 +11350,24 @@
                 "path": "/home/deck/retrodeck/bios"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "n64"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         },
         "systems": {
           "systems": [
-            "n64"
+            {
+              "source": "esde",
+              "key": "n64"
+            }
           ],
           "caveats": [
             {
@@ -10815,7 +11460,8 @@
                 "core_so": "mupen64plus_next_libretro.so"
               }
             }
-          ]
+          ],
+          "resolution": null
         }
       }
     },
@@ -10891,17 +11537,29 @@
             {
               "code": "firmware-declaration-unknown",
               "data": {
-                "system": "flash"
+                "source": "esde",
+                "key": "flash"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "flash"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         },
         "entry_savefile_location": {
           "unresolved": {
             "code": "standalone-unsupported",
             "data": {
               "label": "Ruffle (Standalone)",
-              "system": "flash"
+              "source": "esde",
+              "key": "flash"
             }
           }
         }
@@ -10956,7 +11614,10 @@
               "requirements": [
                 {
                   "core_so": "pcsx_rearmed_libretro.so",
-                  "system": "psx",
+                  "system": {
+                    "source": "libretro",
+                    "key": "Sony - PlayStation"
+                  },
                   "system_source": "systemname",
                   "need": "required",
                   "file_name": "scph5501.bin",
@@ -10981,7 +11642,8 @@
                 {
                   "code": "system-firmware-world-knowledge",
                   "data": {
-                    "system": "psx",
+                    "source": "libretro",
+                    "key": "Sony - PlayStation",
                     "evidence": "verified"
                   }
                 }
@@ -10996,7 +11658,8 @@
                 "kind": "bare_retroarch_native"
               }
             }
-          ]
+          ],
+          "resolution": null
         }
       }
     },
@@ -11050,7 +11713,8 @@
                 "kind": "bare_retroarch_native"
               }
             }
-          ]
+          ],
+          "resolution": null
         }
       }
     },
@@ -11104,7 +11768,10 @@
               "requirements": [
                 {
                   "core_so": "pcsx_rearmed_libretro.so",
-                  "system": "psx",
+                  "system": {
+                    "source": "libretro",
+                    "key": "Sony - PlayStation"
+                  },
                   "system_source": "systemname",
                   "need": "required",
                   "file_name": "scph5501.bin",
@@ -11129,7 +11796,8 @@
                 {
                   "code": "system-firmware-world-knowledge",
                   "data": {
-                    "system": "psx",
+                    "source": "libretro",
+                    "key": "Sony - PlayStation",
                     "evidence": "verified"
                   }
                 }
@@ -11151,7 +11819,8 @@
                 "kind": "bare_retroarch_native"
               }
             }
-          ]
+          ],
+          "resolution": null
         }
       }
     },
@@ -11192,7 +11861,10 @@
         "catalogue": {
           "entries": [
             {
-              "system": "n64",
+              "system": {
+                "source": "esde",
+                "key": "n64"
+              },
               "label": "Mupen64Plus-Next",
               "kind": "libretro",
               "core_so": "mupen64plus_next_libretro.so",
@@ -11221,7 +11893,10 @@
               ]
             },
             {
-              "system": "n64",
+              "system": {
+                "source": "esde",
+                "key": "n64"
+              },
               "label": "ParaLLEl N64",
               "kind": "libretro",
               "core_so": "parallel_n64_libretro.so",
@@ -11250,7 +11925,17 @@
               ]
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "n64"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -11727,7 +12412,10 @@
         "catalogue": {
           "entries": [
             {
-              "system": "psp",
+              "system": {
+                "source": "esde",
+                "key": "psp"
+              },
               "label": "PPSSPP (Standalone)",
               "kind": "standalone",
               "core_so": null,
@@ -11747,7 +12435,10 @@
               ]
             },
             {
-              "system": "psp",
+              "system": {
+                "source": "esde",
+                "key": "psp"
+              },
               "label": "PPSSPP",
               "kind": "libretro",
               "core_so": "ppsspp_libretro.so",
@@ -11767,7 +12458,17 @@
               ]
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psp"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         },
         "entry_savefile_location": {
           "dir": "/home/deck/.var/app/net.retrodeck.retrodeck/config/ppsspp/PSP/SAVEDATA",
@@ -11865,7 +12566,10 @@
         "catalogue": {
           "entries": [
             {
-              "system": "n3ds",
+              "system": {
+                "source": "esde",
+                "key": "n3ds"
+              },
               "label": "Citra",
               "kind": "retroarch-foreign-core",
               "core_so": null,
@@ -11881,7 +12585,8 @@
                   "data": {
                     "core_file": "citra_libretro.dll",
                     "label": "Citra",
-                    "system": "n3ds"
+                    "source": "esde",
+                    "key": "n3ds"
                   }
                 },
                 {
@@ -11891,7 +12596,10 @@
               ]
             },
             {
-              "system": "n3ds",
+              "system": {
+                "source": "esde",
+                "key": "n3ds"
+              },
               "label": "Azahar (Standalone)",
               "kind": "standalone",
               "core_so": null,
@@ -11915,10 +12623,21 @@
             {
               "code": "emulator-catalogue-sealed",
               "data": {
-                "system": "n3ds"
+                "source": "esde",
+                "key": "n3ds"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "n3ds"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         },
         "firmware": {
           "root": "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/system",
@@ -11942,7 +12661,8 @@
                   "data": {
                     "core_file": "citra_libretro.dll",
                     "label": "Citra",
-                    "system": "n3ds"
+                    "source": "esde",
+                    "key": "n3ds"
                   }
                 }
               ]
@@ -11984,16 +12704,28 @@
             {
               "code": "emulator-catalogue-sealed",
               "data": {
-                "system": "n3ds"
+                "source": "esde",
+                "key": "n3ds"
               }
             },
             {
               "code": "firmware-declaration-unknown",
               "data": {
-                "system": "n3ds"
+                "source": "esde",
+                "key": "n3ds"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "n3ds"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -12117,7 +12849,17 @@
             ".zip",
             ".ZIP"
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "n64"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -12165,10 +12907,21 @@
             {
               "code": "rom-path-undeclared",
               "data": {
-                "system": "pathless"
+                "source": "esde",
+                "key": "pathless"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "pathless"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -12181,7 +12934,7 @@
           "/home/deck/.config/retroarch/retroarch.cfg": "libretro_directory = \"~/.config/retroarch/cores\"\n"
         },
         "rom_location_query": {
-          "system": "n64"
+          "system": "Nintendo - Nintendo 64"
         }
       },
       "expected": {
@@ -12208,12 +12961,26 @@
               }
             },
             {
+              "code": "system-unknown",
+              "data": {
+                "source": "libretro",
+                "key": "Nintendo - Nintendo 64"
+              }
+            },
+            {
               "code": "arrangement-unverified",
               "data": {
                 "kind": "bare_retroarch_native"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "unknown",
+            "system": null,
+            "relation": null,
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -12267,7 +13034,17 @@
             ".zip",
             ".ZIP"
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "n64"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -12321,7 +13098,17 @@
             ".zip",
             ".ZIP"
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "n64"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -12376,7 +13163,17 @@
             ".zip",
             ".ZIP"
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "n64"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -12431,7 +13228,17 @@
             ".zip",
             ".ZIP"
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "n64"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -12496,12 +13303,23 @@
             {
               "code": "frontend-settings-unreadable",
               "data": {
-                "system": "n64",
+                "source": "esde",
+                "key": "n64",
                 "path": "/home/deck/.var/app/net.retrodeck.retrodeck/config/ES-DE/settings/es_settings.xml",
                 "status": "unreadable"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "n64"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -12552,7 +13370,17 @@
             ".zip",
             ".ZIP"
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "n64"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -12603,7 +13431,17 @@
             ".zip",
             ".ZIP"
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "n64"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -12657,7 +13495,17 @@
             ".zip",
             ".ZIP"
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "n64"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -12719,12 +13567,23 @@
             {
               "code": "rom-path-unresolved",
               "data": {
-                "system": "n64",
+                "source": "esde",
+                "key": "n64",
                 "declared": "%ROMPATH%/n64",
                 "configured": "Emulation/roms"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "n64"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -12779,7 +13638,17 @@
             ".zip",
             ".ZIP"
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "n64"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -12840,14 +13709,20 @@
         ],
         "systems": {
           "systems": [
-            "n64"
+            {
+              "source": "esde",
+              "key": "n64"
+            }
           ],
           "caveats": []
         },
         "catalogue": {
           "entries": [
             {
-              "system": "n64",
+              "system": {
+                "source": "esde",
+                "key": "n64"
+              },
               "label": "Mupen64Plus-Next",
               "kind": "libretro",
               "core_so": "mupen64plus_next_libretro.so",
@@ -12867,7 +13742,17 @@
               ]
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "n64"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         },
         "rom_location": {
           "dir": "/mnt/sd/retrodeck/roms/n64",
@@ -12880,7 +13765,17 @@
             ".zip",
             ".ZIP"
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "n64"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         },
         "savefile_location": {
           "dir": "/mnt/sd/retrodeck/saves",
@@ -12912,7 +13807,11 @@
               "code": "file-set-across-systems",
               "data": {
                 "core": "mupen64plus_next",
-                "systems": [
+                "sources": [
+                  "esde",
+                  "esde"
+                ],
+                "keys": [
                   "n64",
                   "n64dd"
                 ]
@@ -12961,7 +13860,17 @@
             }
           ],
           "unclaimed": [],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "n64"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -13014,7 +13923,10 @@
         ],
         "systems": {
           "systems": [
-            "n64"
+            {
+              "source": "esde",
+              "key": "n64"
+            }
           ],
           "caveats": []
         },
@@ -13029,7 +13941,17 @@
             ".zip",
             ".ZIP"
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "n64"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         },
         "savefile_location": {
           "dir": "/mnt/sd/retrodeck/saves",
@@ -13061,7 +13983,11 @@
               "code": "file-set-across-systems",
               "data": {
                 "core": "mupen64plus_next",
-                "systems": [
+                "sources": [
+                  "esde",
+                  "esde"
+                ],
+                "keys": [
                   "n64",
                   "n64dd"
                 ]
@@ -13152,7 +14078,11 @@
               "code": "file-set-across-systems",
               "data": {
                 "core": "mupen64plus_next",
-                "systems": [
+                "sources": [
+                  "esde",
+                  "esde"
+                ],
+                "keys": [
                   "n64",
                   "n64dd"
                 ]
@@ -13242,7 +14172,11 @@
               "code": "file-set-across-systems",
               "data": {
                 "core": "mupen64plus_next",
-                "systems": [
+                "sources": [
+                  "esde",
+                  "esde"
+                ],
+                "keys": [
                   "n64",
                   "n64dd"
                 ]
@@ -13338,7 +14272,11 @@
               "code": "file-set-across-systems",
               "data": {
                 "core": "mupen64plus_next",
-                "systems": [
+                "sources": [
+                  "esde",
+                  "esde"
+                ],
+                "keys": [
                   "n64",
                   "n64dd"
                 ]
@@ -13410,10 +14348,21 @@
             {
               "code": "emulator-catalogue-sealed",
               "data": {
-                "system": "atarijaguar"
+                "source": "esde",
+                "key": "atarijaguar"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "atarijaguar"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -13454,7 +14403,10 @@
         "rom_locations": {
           "placements": [
             {
-              "system": "n64",
+              "system": {
+                "source": "esde",
+                "key": "n64"
+              },
               "placement": {
                 "dir": "/mnt/sd/retrodeck/roms/n64",
                 "physical_dir": null,
@@ -13466,11 +14418,24 @@
                   ".zip",
                   ".ZIP"
                 ],
-                "caveats": []
+                "caveats": [],
+                "resolution": {
+                  "status": "resolved",
+                  "system": {
+                    "source": "esde",
+                    "key": "n64"
+                  },
+                  "relation": "exactMatch",
+                  "candidates": [],
+                  "translation": null
+                }
               }
             },
             {
-              "system": "pathless",
+              "system": {
+                "source": "esde",
+                "key": "pathless"
+              },
               "placement": {
                 "dir": null,
                 "physical_dir": null,
@@ -13479,10 +14444,21 @@
                   {
                     "code": "rom-path-undeclared",
                     "data": {
-                      "system": "pathless"
+                      "source": "esde",
+                      "key": "pathless"
                     }
                   }
-                ]
+                ],
+                "resolution": {
+                  "status": "resolved",
+                  "system": {
+                    "source": "esde",
+                    "key": "pathless"
+                  },
+                  "relation": "exactMatch",
+                  "candidates": [],
+                  "translation": null
+                }
               }
             }
           ],
@@ -13533,7 +14509,10 @@
         "rom_locations": {
           "placements": [
             {
-              "system": "atarijaguar",
+              "system": {
+                "source": "esde",
+                "key": "atarijaguar"
+              },
               "placement": {
                 "dir": "/home/deck/Emulation/roms/atarijaguar",
                 "physical_dir": null,
@@ -13549,10 +14528,21 @@
                   {
                     "code": "emulator-catalogue-sealed",
                     "data": {
-                      "system": "atarijaguar"
+                      "source": "esde",
+                      "key": "atarijaguar"
                     }
                   }
-                ]
+                ],
+                "resolution": {
+                  "status": "resolved",
+                  "system": {
+                    "source": "esde",
+                    "key": "atarijaguar"
+                  },
+                  "relation": "exactMatch",
+                  "candidates": [],
+                  "translation": null
+                }
               }
             }
           ],
@@ -13651,7 +14641,10 @@
         "rom_locations": {
           "placements": [
             {
-              "system": "n64",
+              "system": {
+                "source": "esde",
+                "key": "n64"
+              },
               "placement": {
                 "dir": null,
                 "physical_dir": null,
@@ -13667,12 +14660,23 @@
                   {
                     "code": "rom-path-unresolved",
                     "data": {
-                      "system": "n64",
+                      "source": "esde",
+                      "key": "n64",
                       "declared": "%ROMPATH%/n64",
                       "configured": "Emulation/roms"
                     }
                   }
-                ]
+                ],
+                "resolution": {
+                  "status": "resolved",
+                  "system": {
+                    "source": "esde",
+                    "key": "n64"
+                  },
+                  "relation": "exactMatch",
+                  "candidates": [],
+                  "translation": null
+                }
               }
             }
           ],
@@ -13687,8 +14691,8 @@
         "home": "/home/user",
         "files": {
           "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"~/saves\"\nlibretro_directory = \"/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores\"\nlibretro_info_path = \"/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores\"\n",
-          "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores/mgba_libretro.info": "display_name = \"Nintendo - Game Boy Advance (mGBA)\"\ncorename = \"mGBA\"\nsystemname = \"Game Boy Advance\"\nsystemid = \"game_boy_advance\"\nfirmware_count = \"0\"\n",
-          "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores/gambatte_libretro.info": "display_name = \"Nintendo - Game Boy Color (Gambatte)\"\ncorename = \"Gambatte\"\nsystemname = \"Nintendo - Game Boy Color\"\nfirmware_count = \"0\"\n"
+          "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores/mgba_libretro.info": "display_name = \"Nintendo - Game Boy Advance (mGBA)\"\ncorename = \"mGBA\"\nsystemname = \"Game Boy Advance\"\ndatabase = \"Nintendo - Game Boy Advance\"\nsystemid = \"game_boy_advance\"\nfirmware_count = \"0\"\n",
+          "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores/gambatte_libretro.info": "display_name = \"Nintendo - Game Boy Color (Gambatte)\"\ncorename = \"Gambatte\"\nsystemname = \"Nintendo - Game Boy Color\"\ndatabase = \"Nintendo - Game Boy Color\"\nfirmware_count = \"0\"\n"
         },
         "cores": {
           "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores/mgba_libretro.so": {
@@ -13715,7 +14719,10 @@
         "rom_locations": {
           "placements": [
             {
-              "system": "gba",
+              "system": {
+                "source": "libretro",
+                "key": "Nintendo - Game Boy Advance"
+              },
               "placement": {
                 "dir": null,
                 "physical_dir": null,
@@ -13733,11 +14740,24 @@
                       "kind": "bare_retroarch_flatpak"
                     }
                   }
-                ]
+                ],
+                "resolution": {
+                  "status": "resolved",
+                  "system": {
+                    "source": "libretro",
+                    "key": "Nintendo - Game Boy Advance"
+                  },
+                  "relation": "exactMatch",
+                  "candidates": [],
+                  "translation": null
+                }
               }
             },
             {
-              "system": "gbc",
+              "system": {
+                "source": "libretro",
+                "key": "Nintendo - Game Boy Color"
+              },
               "placement": {
                 "dir": null,
                 "physical_dir": null,
@@ -13755,7 +14775,17 @@
                       "kind": "bare_retroarch_flatpak"
                     }
                   }
-                ]
+                ],
+                "resolution": {
+                  "status": "resolved",
+                  "system": {
+                    "source": "libretro",
+                    "key": "Nintendo - Game Boy Color"
+                  },
+                  "relation": "exactMatch",
+                  "candidates": [],
+                  "translation": null
+                }
               }
             }
           ],
@@ -13824,7 +14854,10 @@
         ],
         "systems": {
           "systems": [
-            "atarijaguar"
+            {
+              "source": "esde",
+              "key": "atarijaguar"
+            }
           ],
           "caveats": [
             {
@@ -13836,7 +14869,10 @@
         "catalogue": {
           "entries": [
             {
-              "system": "atarijaguar",
+              "system": {
+                "source": "esde",
+                "key": "atarijaguar"
+              },
               "label": "Virtual Jaguar",
               "kind": "libretro",
               "core_so": "virtualjaguar_libretro.so",
@@ -13856,7 +14892,10 @@
               ]
             },
             {
-              "system": "atarijaguar",
+              "system": {
+                "source": "esde",
+                "key": "atarijaguar"
+              },
               "label": "BigPEmu (Proton)",
               "kind": "standalone",
               "core_so": null,
@@ -13880,10 +14919,21 @@
             {
               "code": "emulator-catalogue-sealed",
               "data": {
-                "system": "atarijaguar"
+                "source": "esde",
+                "key": "atarijaguar"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "atarijaguar"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         },
         "rom_location": {
           "dir": "/home/deck/Emulation/roms/atarijaguar",
@@ -13900,10 +14950,21 @@
             {
               "code": "emulator-catalogue-sealed",
               "data": {
-                "system": "atarijaguar"
+                "source": "esde",
+                "key": "atarijaguar"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "atarijaguar"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -13957,20 +15018,32 @@
             {
               "code": "emulator-catalogue-sealed",
               "data": {
-                "system": "gb"
+                "source": "esde",
+                "key": "gb"
               }
             },
             {
               "code": "emulator-list-derived",
               "data": {
-                "system": "gb"
+                "source": "esde",
+                "key": "gb"
               }
             },
             {
               "code": "info-path-unresolved",
               "data": {}
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "gb"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         },
         "rom_location": {
           "dir": null,
@@ -13980,10 +15053,21 @@
             {
               "code": "emulator-catalogue-sealed",
               "data": {
-                "system": "gb"
+                "source": "esde",
+                "key": "gb"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "gb"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -14031,7 +15115,10 @@
         "catalogue": {
           "entries": [
             {
-              "system": "atarijaguar",
+              "system": {
+                "source": "esde",
+                "key": "atarijaguar"
+              },
               "label": "Virtual Jaguar",
               "kind": "libretro",
               "core_so": "virtualjaguar_libretro.so",
@@ -14051,7 +15138,10 @@
               ]
             },
             {
-              "system": "atarijaguar",
+              "system": {
+                "source": "esde",
+                "key": "atarijaguar"
+              },
               "label": "BigPEmu (Proton)",
               "kind": "standalone",
               "core_so": null,
@@ -14075,7 +15165,8 @@
             {
               "code": "emulator-catalogue-sealed",
               "data": {
-                "system": "atarijaguar"
+                "source": "esde",
+                "key": "atarijaguar"
               }
             },
             {
@@ -14086,7 +15177,17 @@
                 "observed": "present"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "atarijaguar"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -14139,7 +15240,17 @@
                 "observed": "absent"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "atarijaguar"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -14194,7 +15305,10 @@
         ],
         "systems": {
           "systems": [
-            "atarijaguar"
+            {
+              "source": "esde",
+              "key": "atarijaguar"
+            }
           ],
           "caveats": [
             {
@@ -14218,10 +15332,21 @@
             {
               "code": "emulator-catalogue-sealed",
               "data": {
-                "system": "atarijaguar"
+                "source": "esde",
+                "key": "atarijaguar"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "atarijaguar"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -14318,7 +15443,8 @@
             {
               "code": "emulator-catalogue-sealed",
               "data": {
-                "system": "atarijaguar"
+                "source": "esde",
+                "key": "atarijaguar"
               }
             }
           ],
@@ -14353,7 +15479,8 @@
             {
               "code": "emulator-catalogue-sealed",
               "data": {
-                "system": "atarijaguar"
+                "source": "esde",
+                "key": "atarijaguar"
               }
             }
           ]
@@ -14393,7 +15520,7 @@
     },
     {
       "name": "emudeck-esde-resource-shadow-is-the-bundled-layer",
-      "rationale": "ES-DE's per-file resource override (INSTALL.md v3.4.1:1125): a file at ~/ES-DE/resources/systems/linux/es_systems.xml shadows the embedded es_systems.xml for ES-DE itself, so where one exists and parses it IS the bundled layer, on disk. Nothing is sealed away: no sealed caveat, the shadow and the overlay merge the way RetroDECK's two layers do, and a system neither layer declares is now the read-and-declares-none fact rom-path-undeclared states.",
+      "rationale": "ES-DE's per-file resource override (INSTALL.md v3.4.1:1125): a file at ~/ES-DE/resources/systems/linux/es_systems.xml shadows the embedded es_systems.xml for ES-DE itself, so where one exists and parses it IS the bundled layer, on disk. Nothing is sealed away: no sealed caveat, the shadow and the overlay merge the way RetroDECK's two layers do, and a system neither layer declares is no system of this installation: the resolution is unknown, with system-unknown stating why (#784 D53).",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -14441,15 +15568,24 @@
         ],
         "systems": {
           "systems": [
-            "atarijaguar",
-            "gb"
+            {
+              "source": "esde",
+              "key": "atarijaguar"
+            },
+            {
+              "source": "esde",
+              "key": "gb"
+            }
           ],
           "caveats": []
         },
         "catalogue": {
           "entries": [
             {
-              "system": "gb",
+              "system": {
+                "source": "esde",
+                "key": "gb"
+              },
               "label": "Gambatte",
               "kind": "libretro",
               "core_so": "gambatte_libretro.so",
@@ -14469,7 +15605,17 @@
               ]
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "gb"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         },
         "rom_location": {
           "dir": null,
@@ -14477,12 +15623,20 @@
           "extensions": [],
           "caveats": [
             {
-              "code": "rom-path-undeclared",
+              "code": "system-unknown",
               "data": {
-                "system": "gba"
+                "source": "esde",
+                "key": "gba"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "unknown",
+            "system": null,
+            "relation": null,
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -14628,7 +15782,8 @@
             {
               "code": "emulator-catalogue-sealed",
               "data": {
-                "system": "atarijaguar"
+                "source": "esde",
+                "key": "atarijaguar"
               }
             },
             {
@@ -14690,7 +15845,10 @@
         ],
         "systems": {
           "systems": [
-            "gbc"
+            {
+              "source": "esde",
+              "key": "gbc"
+            }
           ],
           "caveats": [
             {
@@ -14702,7 +15860,10 @@
         "catalogue": {
           "entries": [
             {
-              "system": "gbc",
+              "system": {
+                "source": "esde",
+                "key": "gbc"
+              },
               "label": "Gambatte",
               "kind": "libretro",
               "core_so": "gambatte_libretro.so",
@@ -14726,10 +15887,21 @@
             {
               "code": "emulator-catalogue-exclusive",
               "data": {
-                "system": "gbc"
+                "source": "esde",
+                "key": "gbc"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "gbc"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         },
         "rom_location": {
           "dir": "/mnt/sd/retrodeck/roms/gbc",
@@ -14744,10 +15916,21 @@
             {
               "code": "emulator-catalogue-exclusive",
               "data": {
-                "system": "gbc"
+                "source": "esde",
+                "key": "gbc"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "gbc"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         },
         "firmware": {
           "root": "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/system",
@@ -14791,22 +15974,34 @@
             {
               "code": "emulator-catalogue-exclusive",
               "data": {
-                "system": "gbc"
+                "source": "esde",
+                "key": "gbc"
               }
             },
             {
               "code": "firmware-declaration-unknown",
               "data": {
-                "system": "gbc"
+                "source": "esde",
+                "key": "gbc"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "gbc"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
     {
       "name": "catalogue-loadexclusive-a-bundled-system-is-not-loaded",
-      "rationale": "The other half of honoring the tag: a system only the bundled layer declares does not exist for this frontend — ES-DE never opens the bundled file (SystemData.cpp:858-862, v3.4.1). Its emulator enumeration is empty with the exclusive statement saying why, and its ROM placement is rom-path-undeclared: the catalogue in force was read and declares no <path>, a real absence, not a failed look.",
+      "rationale": "The other half of honoring the tag: a system only the bundled layer declares does not exist for this frontend — ES-DE never opens the bundled file (SystemData.cpp:858-862, v3.4.1). Both questions resolve it unknown, with system-unknown beside the exclusive statement (#784 D53): the catalogue in force was read and does not declare it, a real absence, not a failed look.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -14844,11 +16039,23 @@
           "caveats": [
             {
               "code": "emulator-catalogue-exclusive",
+              "data": {}
+            },
+            {
+              "code": "system-unknown",
               "data": {
-                "system": "n64"
+                "source": "esde",
+                "key": "n64"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "unknown",
+            "system": null,
+            "relation": null,
+            "candidates": [],
+            "translation": null
+          }
         },
         "rom_location": {
           "dir": null,
@@ -14857,17 +16064,23 @@
           "caveats": [
             {
               "code": "emulator-catalogue-exclusive",
-              "data": {
-                "system": "n64"
-              }
+              "data": {}
             },
             {
-              "code": "rom-path-undeclared",
+              "code": "system-unknown",
               "data": {
-                "system": "n64"
+                "source": "esde",
+                "key": "n64"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "unknown",
+            "system": null,
+            "relation": null,
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -14906,16 +16119,28 @@
         ],
         "systems": {
           "systems": [
-            "gbc",
-            "n64",
-            "ps3"
+            {
+              "source": "esde",
+              "key": "gbc"
+            },
+            {
+              "source": "esde",
+              "key": "n64"
+            },
+            {
+              "source": "esde",
+              "key": "ps3"
+            }
           ],
           "caveats": []
         },
         "catalogue": {
           "entries": [
             {
-              "system": "gbc",
+              "system": {
+                "source": "esde",
+                "key": "gbc"
+              },
               "label": "Gambatte",
               "kind": "libretro",
               "core_so": "gambatte_libretro.so",
@@ -14935,7 +16160,17 @@
               ]
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "gbc"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -14973,15 +16208,24 @@
         ],
         "systems": {
           "systems": [
-            "n64",
-            "ps3"
+            {
+              "source": "esde",
+              "key": "n64"
+            },
+            {
+              "source": "esde",
+              "key": "ps3"
+            }
           ],
           "caveats": []
         },
         "catalogue": {
           "entries": [
             {
-              "system": "n64",
+              "system": {
+                "source": "esde",
+                "key": "n64"
+              },
               "label": "Mupen64Plus-Next",
               "kind": "libretro",
               "core_so": "mupen64plus_next_libretro.so",
@@ -15001,7 +16245,10 @@
               ]
             },
             {
-              "system": "n64",
+              "system": {
+                "source": "esde",
+                "key": "n64"
+              },
               "label": "ParaLLEl N64",
               "kind": "libretro",
               "core_so": "parallel_n64_libretro.so",
@@ -15021,7 +16268,17 @@
               ]
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "n64"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -15071,7 +16328,10 @@
         ],
         "systems": {
           "systems": [
-            "atarijaguar"
+            {
+              "source": "esde",
+              "key": "atarijaguar"
+            }
           ],
           "caveats": [
             {
@@ -15083,7 +16343,10 @@
         "catalogue": {
           "entries": [
             {
-              "system": "atarijaguar",
+              "system": {
+                "source": "esde",
+                "key": "atarijaguar"
+              },
               "label": "Virtual Jaguar",
               "kind": "libretro",
               "core_so": "virtualjaguar_libretro.so",
@@ -15103,7 +16366,10 @@
               ]
             },
             {
-              "system": "atarijaguar",
+              "system": {
+                "source": "esde",
+                "key": "atarijaguar"
+              },
               "label": "BigPEmu (Proton)",
               "kind": "standalone",
               "core_so": null,
@@ -15127,16 +16393,27 @@
             {
               "code": "emulator-catalogue-exclusive",
               "data": {
-                "system": "atarijaguar"
+                "source": "esde",
+                "key": "atarijaguar"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "atarijaguar"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
     {
       "name": "emudeck-loadexclusive-an-undeclared-system-is-a-real-absence",
-      "rationale": "A complete catalogue changes what an undeclared system means: under the sealed hedge an id the readable layers do not declare answers silently, because the declaration may sit in the layer nobody could read — but under <loadExclusive/> the overlay is the whole catalogue, a system it does not declare has no <path> anywhere, and the answer states rom-path-undeclared beside the exclusive statement.",
+      "rationale": "A complete catalogue changes what an undeclared system means: under the sealed hedge an id the readable layers do not declare answers silently, because the declaration may sit in the layer nobody could read — but under <loadExclusive/> the overlay is the whole catalogue, a system it does not declare is no system here, and the answer resolves it unknown with system-unknown beside the exclusive statement (#784 D53).",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -15181,17 +16458,23 @@
           "caveats": [
             {
               "code": "emulator-catalogue-exclusive",
-              "data": {
-                "system": "gb"
-              }
+              "data": {}
             },
             {
-              "code": "rom-path-undeclared",
+              "code": "system-unknown",
               "data": {
-                "system": "gb"
+                "source": "esde",
+                "key": "gb"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "unknown",
+            "system": null,
+            "relation": null,
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -15284,7 +16567,8 @@
             {
               "code": "emulator-catalogue-exclusive",
               "data": {
-                "system": "atarijaguar"
+                "source": "esde",
+                "key": "atarijaguar"
               }
             },
             {
@@ -15338,15 +16622,24 @@
         ],
         "systems": {
           "systems": [
-            "n64",
-            "ps3"
+            {
+              "source": "esde",
+              "key": "n64"
+            },
+            {
+              "source": "esde",
+              "key": "ps3"
+            }
           ],
           "caveats": []
         },
         "catalogue": {
           "entries": [
             {
-              "system": "n64",
+              "system": {
+                "source": "esde",
+                "key": "n64"
+              },
               "label": "Mupen64Plus-Next",
               "kind": "libretro",
               "core_so": "mupen64plus_next_libretro.so",
@@ -15366,7 +16659,10 @@
               ]
             },
             {
-              "system": "n64",
+              "system": {
+                "source": "esde",
+                "key": "n64"
+              },
               "label": "ParaLLEl N64",
               "kind": "libretro",
               "core_so": "parallel_n64_libretro.so",
@@ -15386,7 +16682,17 @@
               ]
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "n64"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -15981,7 +17287,10 @@
         ],
         "systems": {
           "systems": [
-            "n64"
+            {
+              "source": "esde",
+              "key": "n64"
+            }
           ],
           "caveats": []
         },
@@ -16037,7 +17346,10 @@
         ],
         "systems": {
           "systems": [
-            "n64"
+            {
+              "source": "esde",
+              "key": "n64"
+            }
           ],
           "caveats": []
         },
@@ -16071,7 +17383,11 @@
               "code": "file-set-across-systems",
               "data": {
                 "core": "mupen64plus_next",
-                "systems": [
+                "sources": [
+                  "esde",
+                  "esde"
+                ],
+                "keys": [
                   "n64",
                   "n64dd"
                 ]
@@ -16171,7 +17487,11 @@
               "code": "file-set-across-systems",
               "data": {
                 "core": "mupen64plus_next",
-                "systems": [
+                "sources": [
+                  "esde",
+                  "esde"
+                ],
+                "keys": [
                   "n64",
                   "n64dd"
                 ]
@@ -16730,7 +18050,10 @@
         ],
         "systems": {
           "systems": [
-            "gb"
+            {
+              "source": "esde",
+              "key": "gb"
+            }
           ],
           "caveats": []
         }
@@ -16792,7 +18115,10 @@
         ],
         "systems": {
           "systems": [
-            "gb"
+            {
+              "source": "esde",
+              "key": "gb"
+            }
           ],
           "caveats": [
             {
@@ -16842,7 +18168,10 @@
         ],
         "systems": {
           "systems": [
-            "gb"
+            {
+              "source": "esde",
+              "key": "gb"
+            }
           ],
           "caveats": [
             {
@@ -17192,7 +18521,10 @@
             ".gdi"
           ],
           "entry": {
-            "system": "dreamcast",
+            "system": {
+              "source": "esde",
+              "key": "dreamcast"
+            },
             "label": "Flycast",
             "kind": "libretro",
             "core_so": "flycast_libretro.so",
@@ -17215,7 +18547,17 @@
           "installers": null,
           "boots": null,
           "opens": null,
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "dreamcast"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -17275,7 +18617,10 @@
             ".gdi"
           ],
           "entry": {
-            "system": "dreamcast",
+            "system": {
+              "source": "esde",
+              "key": "dreamcast"
+            },
             "label": "Flycast",
             "kind": "libretro",
             "core_so": "flycast_libretro.so",
@@ -17312,7 +18657,17 @@
                 "extension": ".chd"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "dreamcast"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -17359,7 +18714,10 @@
             ".gdi"
           ],
           "entry": {
-            "system": "dreamcast",
+            "system": {
+              "source": "esde",
+              "key": "dreamcast"
+            },
             "label": "Flycast",
             "kind": "libretro",
             "core_so": "flycast_libretro.so",
@@ -17393,7 +18751,8 @@
             {
               "code": "frontend-name-unscanned",
               "data": {
-                "system": "dreamcast",
+                "source": "esde",
+                "key": "dreamcast",
                 "kind": "file",
                 "extension": ".bin",
                 "names": [
@@ -17404,7 +18763,17 @@
                 "reason": "token-not-listed"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "dreamcast"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -17457,7 +18826,10 @@
             {
               "emulator": "RPCS3",
               "entry": {
-                "system": "ps3",
+                "system": {
+                  "source": "esde",
+                  "key": "ps3"
+                },
                 "label": "RPCS3",
                 "kind": "standalone",
                 "core_so": null,
@@ -17484,7 +18856,8 @@
             {
               "code": "frontend-name-unscanned",
               "data": {
-                "system": "ps3",
+                "source": "esde",
+                "key": "ps3",
                 "kind": "file",
                 "extension": ".pkg",
                 "names": [
@@ -17496,7 +18869,17 @@
                 "reason": "token-not-listed"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -17555,7 +18938,10 @@
             {
               "emulator": "RPCS3",
               "entry": {
-                "system": "ps3",
+                "system": {
+                  "source": "esde",
+                  "key": "ps3"
+                },
                 "label": "RPCS3",
                 "kind": "standalone",
                 "core_so": null,
@@ -17582,7 +18968,8 @@
             {
               "code": "frontend-name-unscanned",
               "data": {
-                "system": "ps3",
+                "source": "esde",
+                "key": "ps3",
                 "kind": "file",
                 "extension": ".pkg",
                 "names": [
@@ -17594,7 +18981,17 @@
                 "reason": "token-not-listed"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -17671,7 +19068,10 @@
             {
               "emulator": "AZAHAR",
               "entry": {
-                "system": "n3ds",
+                "system": {
+                  "source": "esde",
+                  "key": "n3ds"
+                },
                 "label": "Azahar (Standalone)",
                 "kind": "standalone",
                 "core_so": null,
@@ -17701,7 +19101,8 @@
             {
               "code": "frontend-name-unscanned",
               "data": {
-                "system": "n3ds",
+                "source": "esde",
+                "key": "n3ds",
                 "kind": "file",
                 "extension": ".cia",
                 "names": [
@@ -17734,7 +19135,17 @@
                 "reason": "token-not-listed"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "n3ds"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -17787,7 +19198,10 @@
             {
               "emulator": "VITA3K",
               "entry": {
-                "system": "psvita",
+                "system": {
+                  "source": "esde",
+                  "key": "psvita"
+                },
                 "label": "Vita3K (Standalone)",
                 "kind": "standalone",
                 "core_so": null,
@@ -17813,7 +19227,8 @@
             {
               "code": "frontend-name-unscanned",
               "data": {
-                "system": "psvita",
+                "source": "esde",
+                "key": "psvita",
                 "kind": "file",
                 "extension": ".vpk",
                 "names": [
@@ -17822,7 +19237,17 @@
                 "reason": "token-not-listed"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psvita"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -17880,7 +19305,10 @@
             {
               "emulator": "RPCS3",
               "entry": {
-                "system": "ps3",
+                "system": {
+                  "source": "esde",
+                  "key": "ps3"
+                },
                 "label": "RPCS3 Directory (Standalone)",
                 "kind": "standalone",
                 "core_so": null,
@@ -17910,7 +19338,8 @@
             {
               "code": "frontend-name-unscanned",
               "data": {
-                "system": "ps3",
+                "source": "esde",
+                "key": "ps3",
                 "kind": "file",
                 "extension": ".edat",
                 "names": [
@@ -17925,7 +19354,17 @@
                 "reason": "token-not-listed"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -17991,13 +19430,15 @@
             {
               "code": "emulator-catalogue-sealed",
               "data": {
-                "system": "ps4"
+                "source": "esde",
+                "key": "ps4"
               }
             },
             {
               "code": "frontend-name-unscanned",
               "data": {
-                "system": "ps4",
+                "source": "esde",
+                "key": "ps4",
                 "kind": "file",
                 "extension": ".pkg",
                 "names": [
@@ -18006,7 +19447,17 @@
                 "reason": "token-not-listed"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps4"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -18061,7 +19512,10 @@
             {
               "emulator": "AZAHAR",
               "entry": {
-                "system": "n3ds",
+                "system": {
+                  "source": "esde",
+                  "key": "n3ds"
+                },
                 "label": "Azahar (Standalone)",
                 "kind": "standalone",
                 "core_so": null,
@@ -18087,7 +19541,17 @@
           ],
           "boots": null,
           "opens": null,
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "n3ds"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -18141,10 +19605,21 @@
             {
               "code": "emulator-catalogue-sealed",
               "data": {
-                "system": "dreamcast"
+                "source": "esde",
+                "key": "dreamcast"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "dreamcast"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -18198,7 +19673,10 @@
             ".7z"
           ],
           "entry": {
-            "system": "n3ds",
+            "system": {
+              "source": "esde",
+              "key": "n3ds"
+            },
             "label": "Azahar",
             "kind": "standalone",
             "core_so": null,
@@ -18223,7 +19701,17 @@
           "installers": null,
           "boots": null,
           "opens": null,
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "n3ds"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -18278,7 +19766,10 @@
             ".7z"
           ],
           "entry": {
-            "system": "n3ds",
+            "system": {
+              "source": "esde",
+              "key": "n3ds"
+            },
             "label": "Citra",
             "kind": "libretro",
             "core_so": "citra_libretro.so",
@@ -18309,7 +19800,17 @@
                 "extension": ".zip"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "n3ds"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -18364,7 +19865,10 @@
             ".7z"
           ],
           "entry": {
-            "system": "n3ds",
+            "system": {
+              "source": "esde",
+              "key": "n3ds"
+            },
             "label": "Azahar",
             "kind": "standalone",
             "core_so": null,
@@ -18389,7 +19893,17 @@
           "installers": null,
           "boots": null,
           "opens": null,
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "n3ds"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -18451,11 +19965,22 @@
             {
               "code": "launch-command-label-unknown",
               "data": {
-                "system": "n3ds",
+                "source": "esde",
+                "key": "n3ds",
                 "label": "Citra (Standalone)"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "n3ds"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -18509,7 +20034,10 @@
             ".zip"
           ],
           "entry": {
-            "system": "gb",
+            "system": {
+              "source": "esde",
+              "key": "gb"
+            },
             "label": "Gambatte",
             "kind": "libretro",
             "core_so": "gambatte_libretro.so",
@@ -18540,7 +20068,17 @@
                 "extension": ".zip"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "gb"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -18594,7 +20132,10 @@
             ".zip"
           ],
           "entry": {
-            "system": "gb",
+            "system": {
+              "source": "esde",
+              "key": "gb"
+            },
             "label": "Gambatte",
             "kind": "libretro",
             "core_so": "gambatte_libretro.so",
@@ -18625,7 +20166,17 @@
                 "extension": ".sgb"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "gb"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -18679,7 +20230,10 @@
             ".zip"
           ],
           "entry": {
-            "system": "gb",
+            "system": {
+              "source": "esde",
+              "key": "gb"
+            },
             "label": "Gambatte",
             "kind": "libretro",
             "core_so": "gambatte_libretro.so",
@@ -18706,7 +20260,8 @@
             {
               "code": "frontend-name-unscanned",
               "data": {
-                "system": "gb",
+                "source": "esde",
+                "key": "gb",
                 "kind": "file",
                 "extension": ".dmg",
                 "names": [
@@ -18718,7 +20273,17 @@
                 "reason": "token-not-listed"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "gb"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -18772,7 +20337,10 @@
             ".zip"
           ],
           "entry": {
-            "system": "gb",
+            "system": {
+              "source": "esde",
+              "key": "gb"
+            },
             "label": "Gambatte",
             "kind": "libretro",
             "core_so": "gambatte_libretro.so",
@@ -18806,7 +20374,8 @@
             {
               "code": "frontend-name-unscanned",
               "data": {
-                "system": "gb",
+                "source": "esde",
+                "key": "gb",
                 "kind": "file",
                 "extension": ".txt",
                 "names": [
@@ -18818,7 +20387,17 @@
                 "reason": "token-not-listed"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "gb"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -18874,7 +20453,10 @@
             ".zip"
           ],
           "entry": {
-            "system": "gb",
+            "system": {
+              "source": "esde",
+              "key": "gb"
+            },
             "label": "Gambatte",
             "kind": "libretro",
             "core_so": "gambatte_libretro.so",
@@ -18918,7 +20500,8 @@
             {
               "code": "frontend-name-unscanned",
               "data": {
-                "system": "gb",
+                "source": "esde",
+                "key": "gb",
                 "kind": "directory",
                 "extension": ".",
                 "names": [
@@ -18930,7 +20513,17 @@
                 "reason": "directory-without-token"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "gb"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -18986,7 +20579,10 @@
             ".zip"
           ],
           "entry": {
-            "system": "gb",
+            "system": {
+              "source": "esde",
+              "key": "gb"
+            },
             "label": "Gambatte",
             "kind": "libretro",
             "core_so": "gambatte_libretro.so",
@@ -19031,7 +20627,8 @@
             {
               "code": "frontend-name-unscanned",
               "data": {
-                "system": "gb",
+                "source": "esde",
+                "key": "gb",
                 "kind": "directory",
                 "extension": ".1",
                 "names": [
@@ -19043,7 +20640,17 @@
                 "reason": "token-not-listed"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "gb"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -19098,7 +20705,10 @@
             ".zip"
           ],
           "entry": {
-            "system": "gb",
+            "system": {
+              "source": "esde",
+              "key": "gb"
+            },
             "label": "Gambatte",
             "kind": "libretro",
             "core_so": "gambatte_libretro.so",
@@ -19121,7 +20731,17 @@
           "installers": null,
           "boots": null,
           "opens": null,
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "gb"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -19174,7 +20794,10 @@
             ".zip"
           ],
           "entry": {
-            "system": "gb",
+            "system": {
+              "source": "esde",
+              "key": "gb"
+            },
             "label": "Gambatte",
             "kind": "libretro",
             "core_so": "gambatte_libretro.so",
@@ -19204,7 +20827,17 @@
                 "path": "/mnt/sd/retrodeck/roms/gb/Game.sgb"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "gb"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -19252,7 +20885,10 @@
             ".ps3dir"
           ],
           "entry": {
-            "system": "ps3",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
             "label": "RPCS3",
             "kind": "standalone",
             "core_so": null,
@@ -19283,7 +20919,17 @@
                 "extension": ".iso"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -19294,8 +20940,8 @@
         "home": "/home/user",
         "files": {
           "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"~/saves\"\nlibretro_directory = \"/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores\"\nlibretro_info_path = \"/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores\"\n",
-          "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores/mgba_libretro.info": "display_name = \"Nintendo - Game Boy Advance (mGBA)\"\ncorename = \"mGBA\"\nsystemname = \"Game Boy Advance\"\nsystemid = \"game_boy_advance\"\nfirmware_count = \"0\"\n",
-          "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores/gambatte_libretro.info": "display_name = \"Nintendo - Game Boy Color (Gambatte)\"\ncorename = \"Gambatte\"\nsystemname = \"Nintendo - Game Boy Color\"\nfirmware_count = \"0\"\n"
+          "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores/mgba_libretro.info": "display_name = \"Nintendo - Game Boy Advance (mGBA)\"\ncorename = \"mGBA\"\nsystemname = \"Game Boy Advance\"\ndatabase = \"Nintendo - Game Boy Advance\"\nsystemid = \"game_boy_advance\"\nfirmware_count = \"0\"\n",
+          "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores/gambatte_libretro.info": "display_name = \"Nintendo - Game Boy Color (Gambatte)\"\ncorename = \"Gambatte\"\nsystemname = \"Nintendo - Game Boy Color\"\ndatabase = \"Nintendo - Game Boy Color\"\nfirmware_count = \"0\"\n"
         },
         "cores": {
           "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores/mgba_libretro.so": {
@@ -19306,7 +20952,10 @@
           }
         },
         "catalogue_query": {
-          "system": "gba"
+          "system": [
+            "esde",
+            "gba"
+          ]
         }
       },
       "expected": {
@@ -19324,7 +20973,10 @@
         "catalogue": {
           "entries": [
             {
-              "system": "gba",
+              "system": {
+                "source": "libretro",
+                "key": "Nintendo - Game Boy Advance"
+              },
               "label": "mGBA",
               "kind": "libretro",
               "core_so": "mgba_libretro.so",
@@ -19348,13 +21000,15 @@
             {
               "code": "emulator-catalogue-unavailable",
               "data": {
-                "system": "gba"
+                "source": "libretro",
+                "key": "Nintendo - Game Boy Advance"
               }
             },
             {
               "code": "emulator-list-derived",
               "data": {
-                "system": "gba"
+                "source": "libretro",
+                "key": "Nintendo - Game Boy Advance"
               }
             },
             {
@@ -19363,7 +21017,318 @@
                 "kind": "bare_retroarch_flatpak"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "libretro",
+              "key": "Nintendo - Game Boy Advance"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": {
+              "table_version": 1,
+              "pairs": [
+                {
+                  "source": "esde",
+                  "key": "gba",
+                  "version": null,
+                  "status": "known",
+                  "sources": [
+                    {
+                      "source": "esde",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "gba",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "esde-platform",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "gba",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "retrodeck",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "gba",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "emudeck",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "gba",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "romm",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "gba",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "romm-folder",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "gba",
+                          "relation": "exactMatch"
+                        },
+                        {
+                          "key": "gba2players",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "libretro",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "Nintendo - Game Boy Advance",
+                          "relation": "exactMatch"
+                        },
+                        {
+                          "key": "Nintendo - Game Boy Advance (e-Cards)",
+                          "relation": "narrowMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "batocera",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "gba",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "knulli",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "gba",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "rocknix",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "gba",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "igdb",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "24",
+                          "relation": "exactMatch"
+                        },
+                        {
+                          "key": "gba",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "screenscraper",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "12",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "thegamesdb",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "5",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "intersection_status": "agreed",
+              "intersection": [
+                {
+                  "source": "esde",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "gba",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "esde-platform",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "gba",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "retrodeck",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "gba",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "emudeck",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "gba",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "romm",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "gba",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "romm-folder",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "gba",
+                      "relation": "exactMatch"
+                    },
+                    {
+                      "key": "gba2players",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "libretro",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "Nintendo - Game Boy Advance",
+                      "relation": "exactMatch"
+                    },
+                    {
+                      "key": "Nintendo - Game Boy Advance (e-Cards)",
+                      "relation": "narrowMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "batocera",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "gba",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "knulli",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "gba",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "rocknix",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "gba",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "igdb",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "24",
+                      "relation": "exactMatch"
+                    },
+                    {
+                      "key": "gba",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "screenscraper",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "12",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "thegamesdb",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "5",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                }
+              ],
+              "conflict": [],
+              "caveats": []
+            }
+          }
         }
       }
     },
@@ -19374,8 +21339,8 @@
         "home": "/home/user",
         "files": {
           "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"~/saves\"\nlibretro_directory = \"/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores\"\nlibretro_info_path = \"/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores\"\n",
-          "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores/mgba_libretro.info": "display_name = \"Nintendo - Game Boy Advance (mGBA)\"\ncorename = \"mGBA\"\nsystemname = \"Game Boy Advance\"\nsystemid = \"game_boy_advance\"\nfirmware_count = \"0\"\n",
-          "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores/gambatte_libretro.info": "display_name = \"Nintendo - Game Boy Color (Gambatte)\"\ncorename = \"Gambatte\"\nsystemname = \"Nintendo - Game Boy Color\"\nfirmware_count = \"0\"\n"
+          "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores/mgba_libretro.info": "display_name = \"Nintendo - Game Boy Advance (mGBA)\"\ncorename = \"mGBA\"\nsystemname = \"Game Boy Advance\"\ndatabase = \"Nintendo - Game Boy Advance\"\nsystemid = \"game_boy_advance\"\nfirmware_count = \"0\"\n",
+          "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores/gambatte_libretro.info": "display_name = \"Nintendo - Game Boy Color (Gambatte)\"\ncorename = \"Gambatte\"\nsystemname = \"Nintendo - Game Boy Color\"\ndatabase = \"Nintendo - Game Boy Color\"\nfirmware_count = \"0\"\n"
         },
         "cores": {
           "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores/mgba_libretro.so": {
@@ -19386,7 +21351,10 @@
           }
         },
         "launchable_query": {
-          "system": "gba",
+          "system": [
+            "esde",
+            "gba"
+          ],
           "content_path": "/home/deck/roms/gba/Game.gba",
           "label": "VBA-M"
         }
@@ -19422,7 +21390,8 @@
             {
               "code": "launch-command-label-unknown",
               "data": {
-                "system": "gba",
+                "source": "libretro",
+                "key": "Nintendo - Game Boy Advance",
                 "label": "VBA-M"
               }
             },
@@ -19432,7 +21401,318 @@
                 "kind": "bare_retroarch_flatpak"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "libretro",
+              "key": "Nintendo - Game Boy Advance"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": {
+              "table_version": 1,
+              "pairs": [
+                {
+                  "source": "esde",
+                  "key": "gba",
+                  "version": null,
+                  "status": "known",
+                  "sources": [
+                    {
+                      "source": "esde",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "gba",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "esde-platform",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "gba",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "retrodeck",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "gba",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "emudeck",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "gba",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "romm",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "gba",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "romm-folder",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "gba",
+                          "relation": "exactMatch"
+                        },
+                        {
+                          "key": "gba2players",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "libretro",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "Nintendo - Game Boy Advance",
+                          "relation": "exactMatch"
+                        },
+                        {
+                          "key": "Nintendo - Game Boy Advance (e-Cards)",
+                          "relation": "narrowMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "batocera",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "gba",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "knulli",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "gba",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "rocknix",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "gba",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "igdb",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "24",
+                          "relation": "exactMatch"
+                        },
+                        {
+                          "key": "gba",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "screenscraper",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "12",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "thegamesdb",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "5",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "intersection_status": "agreed",
+              "intersection": [
+                {
+                  "source": "esde",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "gba",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "esde-platform",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "gba",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "retrodeck",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "gba",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "emudeck",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "gba",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "romm",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "gba",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "romm-folder",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "gba",
+                      "relation": "exactMatch"
+                    },
+                    {
+                      "key": "gba2players",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "libretro",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "Nintendo - Game Boy Advance",
+                      "relation": "exactMatch"
+                    },
+                    {
+                      "key": "Nintendo - Game Boy Advance (e-Cards)",
+                      "relation": "narrowMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "batocera",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "gba",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "knulli",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "gba",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "rocknix",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "gba",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "igdb",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "24",
+                      "relation": "exactMatch"
+                    },
+                    {
+                      "key": "gba",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "screenscraper",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "12",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "thegamesdb",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "5",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                }
+              ],
+              "conflict": [],
+              "caveats": []
+            }
+          }
         }
       }
     },
@@ -19443,8 +21723,8 @@
         "home": "/home/user",
         "files": {
           "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"~/saves\"\nlibretro_directory = \"/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores\"\nlibretro_info_path = \"/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores\"\n",
-          "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores/mgba_libretro.info": "display_name = \"Nintendo - Game Boy Advance (mGBA)\"\ncorename = \"mGBA\"\nsystemname = \"Game Boy Advance\"\nsystemid = \"game_boy_advance\"\nfirmware_count = \"0\"\n",
-          "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores/gambatte_libretro.info": "display_name = \"Nintendo - Game Boy Color (Gambatte)\"\ncorename = \"Gambatte\"\nsystemname = \"Nintendo - Game Boy Color\"\nfirmware_count = \"0\"\n"
+          "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores/mgba_libretro.info": "display_name = \"Nintendo - Game Boy Advance (mGBA)\"\ncorename = \"mGBA\"\nsystemname = \"Game Boy Advance\"\ndatabase = \"Nintendo - Game Boy Advance\"\nsystemid = \"game_boy_advance\"\nfirmware_count = \"0\"\n",
+          "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores/gambatte_libretro.info": "display_name = \"Nintendo - Game Boy Color (Gambatte)\"\ncorename = \"Gambatte\"\nsystemname = \"Nintendo - Game Boy Color\"\ndatabase = \"Nintendo - Game Boy Color\"\nfirmware_count = \"0\"\n"
         },
         "cores": {
           "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores/mgba_libretro.so": {
@@ -19470,8 +21750,14 @@
         ],
         "systems": {
           "systems": [
-            "gba",
-            "gbc"
+            {
+              "source": "libretro",
+              "key": "Nintendo - Game Boy Advance"
+            },
+            {
+              "source": "libretro",
+              "key": "Nintendo - Game Boy Color"
+            }
           ],
           "caveats": [
             {
@@ -20038,7 +22324,10 @@
           },
           "matches": [
             {
-              "system": "snes",
+              "system": {
+                "source": "esde",
+                "key": "snes"
+              },
               "status": "declared",
               "platforms": [
                 "snes"
@@ -20046,7 +22335,10 @@
               "tags_source": "catalogue"
             },
             {
-              "system": "snesna",
+              "system": {
+                "source": "esde",
+                "key": "snesna"
+              },
               "status": "absent",
               "platforms": [
                 "snes"
@@ -20057,7 +22349,10 @@
           "caveats": []
         },
         "platform_ids": {
-          "system": "sfc",
+          "system": {
+            "source": "esde",
+            "key": "sfc"
+          },
           "status": "absent",
           "tags_source": "vocabulary",
           "platforms": [
@@ -20365,7 +22660,25 @@
             "conflict": [],
             "caveats": []
           },
-          "caveats": []
+          "caveats": [
+            {
+              "code": "system-unknown",
+              "data": {
+                "source": "esde",
+                "key": "sfc"
+              }
+            }
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "sfc"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -20797,7 +23110,10 @@
           },
           "matches": [
             {
-              "system": "snes",
+              "system": {
+                "source": "esde",
+                "key": "snes"
+              },
               "status": "declared",
               "platforms": [
                 "snes"
@@ -20805,7 +23121,10 @@
               "tags_source": "catalogue"
             },
             {
-              "system": "sfc",
+              "system": {
+                "source": "esde",
+                "key": "sfc"
+              },
               "status": "absent",
               "platforms": [
                 "snes"
@@ -20813,7 +23132,10 @@
               "tags_source": "vocabulary"
             },
             {
-              "system": "snesna",
+              "system": {
+                "source": "esde",
+                "key": "snesna"
+              },
               "status": "absent",
               "platforms": [
                 "snes"
@@ -20824,7 +23146,10 @@
           "caveats": []
         },
         "platform_ids": {
-          "system": "sfc",
+          "system": {
+            "source": "esde",
+            "key": "sfc"
+          },
           "status": "absent",
           "tags_source": "vocabulary",
           "platforms": [
@@ -21132,7 +23457,25 @@
             "conflict": [],
             "caveats": []
           },
-          "caveats": []
+          "caveats": [
+            {
+              "code": "system-unknown",
+              "data": {
+                "source": "esde",
+                "key": "sfc"
+              }
+            }
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "sfc"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -21450,7 +23793,10 @@
           },
           "matches": [
             {
-              "system": "xbox360",
+              "system": {
+                "source": "esde",
+                "key": "xbox360"
+              },
               "status": "disabled",
               "platforms": [
                 "xbox360"
@@ -21461,7 +23807,10 @@
           "caveats": []
         },
         "platform_ids": {
-          "system": "xbox360",
+          "system": {
+            "source": "esde",
+            "key": "xbox360"
+          },
           "status": "disabled",
           "tags_source": "catalogue",
           "platforms": [
@@ -21743,13 +24092,31 @@
             "conflict": [],
             "caveats": []
           },
-          "caveats": []
+          "caveats": [
+            {
+              "code": "system-unknown",
+              "data": {
+                "source": "esde",
+                "key": "xbox360"
+              }
+            }
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "xbox360"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
     {
       "name": "an-id-nothing-maps-answers-unmapped",
-      "rationale": "A key the platform table does not hold, and a system name neither the machine nor the vocabulary knows: both answer nothing plus the platform-unmapped caveat, because inventing a folder from the raw key is the silent failure this question exists to prevent.",
+      "rationale": "A key the platform table does not hold, and a system name neither the machine nor the vocabulary knows: both answer nothing plus the platform-unmapped caveat, and the name system-unknown (#784 D53), because inventing a folder from the raw key is the silent failure this question exists to prevent.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -21819,7 +24186,10 @@
           ]
         },
         "platform_ids": {
-          "system": "nonsense-system",
+          "system": {
+            "source": "esde",
+            "key": "nonsense-system"
+          },
           "status": "absent",
           "tags_source": "vocabulary",
           "platforms": [],
@@ -21849,13 +24219,30 @@
           },
           "caveats": [
             {
+              "code": "system-unknown",
+              "data": {
+                "source": "esde",
+                "key": "nonsense-system"
+              }
+            },
+            {
               "code": "platform-unmapped",
               "data": {
                 "source": "esde",
                 "key": "nonsense-system"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "nonsense-system"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -22264,7 +24651,10 @@
           },
           "matches": [
             {
-              "system": "ps4-homebrew",
+              "system": {
+                "source": "esde",
+                "key": "ps4-homebrew"
+              },
               "status": "declared",
               "platforms": [
                 "ps4"
@@ -22280,7 +24670,10 @@
           ]
         },
         "platform_ids": {
-          "system": "homegrown",
+          "system": {
+            "source": "esde",
+            "key": "homegrown"
+          },
           "status": "declared",
           "tags_source": "catalogue",
           "platforms": [
@@ -22318,7 +24711,8 @@
             {
               "code": "platform-unknown",
               "data": {
-                "system": "homegrown",
+                "source": "esde",
+                "key": "homegrown",
                 "token": "selfmade"
               }
             },
@@ -22329,7 +24723,17 @@
                 "key": "homegrown"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "homegrown"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -22366,7 +24770,10 @@
           }
         ],
         "platform_ids": {
-          "system": "ps4-homebrew",
+          "system": {
+            "source": "esde",
+            "key": "ps4-homebrew"
+          },
           "status": "declared",
           "tags_source": "catalogue",
           "platforms": [
@@ -22643,7 +25050,17 @@
               "code": "emulator-catalogue-exclusive",
               "data": {}
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps4-homebrew"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -22680,7 +25097,10 @@
           }
         ],
         "platform_ids": {
-          "system": "ps4-homebrew",
+          "system": {
+            "source": "esde",
+            "key": "ps4-homebrew"
+          },
           "status": "declared",
           "tags_source": "catalogue",
           "platforms": [
@@ -22722,7 +25142,17 @@
                 "key": "ps4-homebrew"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps4-homebrew"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -23032,7 +25462,10 @@
           "caveats": []
         },
         "platform_ids": {
-          "system": "ps4-homebrew",
+          "system": {
+            "source": "esde",
+            "key": "ps4-homebrew"
+          },
           "status": "disabled",
           "tags_source": "catalogue",
           "platforms": [
@@ -23064,13 +25497,30 @@
           },
           "caveats": [
             {
+              "code": "system-unknown",
+              "data": {
+                "source": "esde",
+                "key": "ps4-homebrew"
+              }
+            },
+            {
               "code": "platform-unmapped",
               "data": {
                 "source": "esde",
                 "key": "ps4-homebrew"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps4-homebrew"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -23422,7 +25872,10 @@
           },
           "matches": [
             {
-              "system": "primehack",
+              "system": {
+                "source": "retrodeck",
+                "key": "primehack"
+              },
               "status": "declared",
               "platforms": [
                 "wii"
@@ -23430,7 +25883,10 @@
               "tags_source": "catalogue"
             },
             {
-              "system": "wii",
+              "system": {
+                "source": "esde",
+                "key": "wii"
+              },
               "status": "absent",
               "platforms": [
                 "wii"
@@ -23441,7 +25897,10 @@
           "caveats": []
         },
         "platform_ids": {
-          "system": "primehack",
+          "system": {
+            "source": "retrodeck",
+            "key": "primehack"
+          },
           "status": "declared",
           "tags_source": "catalogue",
           "platforms": [
@@ -23757,7 +26216,17 @@
             "conflict": [],
             "caveats": []
           },
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "retrodeck",
+              "key": "primehack"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -23807,7 +26276,10 @@
           }
         ],
         "platform_ids": {
-          "system": "cavestory",
+          "system": {
+            "source": "esde",
+            "key": "cavestory"
+          },
           "status": "absent",
           "tags_source": "vocabulary",
           "platforms": [],
@@ -23837,13 +26309,30 @@
           },
           "caveats": [
             {
+              "code": "system-unknown",
+              "data": {
+                "source": "esde",
+                "key": "cavestory"
+              }
+            },
+            {
               "code": "platform-unmapped",
               "data": {
                 "source": "esde",
                 "key": "cavestory"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "cavestory"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -24634,7 +27123,10 @@
           },
           "matches": [
             {
-              "system": "megadrivejp",
+              "system": {
+                "source": "esde",
+                "key": "megadrivejp"
+              },
               "status": "absent",
               "platforms": [
                 "megadrive"
@@ -25568,7 +28060,10 @@
           },
           "matches": [
             {
-              "system": "megadrivejp",
+              "system": {
+                "source": "esde",
+                "key": "megadrivejp"
+              },
               "status": "absent",
               "platforms": [
                 "megadrive"
@@ -26101,7 +28596,10 @@
           },
           "matches": [
             {
-              "system": "primehack",
+              "system": {
+                "source": "retrodeck",
+                "key": "primehack"
+              },
               "status": "absent",
               "platforms": [
                 "wii"
@@ -26109,7 +28607,10 @@
               "tags_source": "vocabulary"
             },
             {
-              "system": "wii",
+              "system": {
+                "source": "esde",
+                "key": "wii"
+              },
               "status": "absent",
               "platforms": [
                 "wii"
@@ -26458,7 +28959,10 @@
           },
           "matches": [
             {
-              "system": "cps1",
+              "system": {
+                "source": "esde",
+                "key": "cps1"
+              },
               "status": "declared",
               "platforms": [
                 "arcade"
@@ -28055,7 +30559,10 @@
           },
           "matches": [
             {
-              "system": "cps1",
+              "system": {
+                "source": "esde",
+                "key": "cps1"
+              },
               "status": "declared",
               "platforms": [
                 "arcade"
@@ -28063,7 +30570,10 @@
               "tags_source": "catalogue"
             },
             {
-              "system": "cps2",
+              "system": {
+                "source": "esde",
+                "key": "cps2"
+              },
               "status": "declared",
               "platforms": [
                 "arcade"
@@ -28071,7 +30581,10 @@
               "tags_source": "catalogue"
             },
             {
-              "system": "mame",
+              "system": {
+                "source": "esde",
+                "key": "mame"
+              },
               "status": "declared",
               "platforms": [
                 "arcade"
@@ -28079,7 +30592,10 @@
               "tags_source": "catalogue"
             },
             {
-              "system": "arcade",
+              "system": {
+                "source": "esde",
+                "key": "arcade"
+              },
               "status": "absent",
               "platforms": [
                 "arcade"
@@ -28087,7 +30603,10 @@
               "tags_source": "vocabulary"
             },
             {
-              "system": "atomiswave",
+              "system": {
+                "source": "esde",
+                "key": "atomiswave"
+              },
               "status": "absent",
               "platforms": [
                 "arcade"
@@ -28095,7 +30614,10 @@
               "tags_source": "vocabulary"
             },
             {
-              "system": "consolearcade",
+              "system": {
+                "source": "esde",
+                "key": "consolearcade"
+              },
               "status": "absent",
               "platforms": [
                 "arcade"
@@ -28103,7 +30625,10 @@
               "tags_source": "vocabulary"
             },
             {
-              "system": "cps",
+              "system": {
+                "source": "esde",
+                "key": "cps"
+              },
               "status": "absent",
               "platforms": [
                 "arcade"
@@ -28111,7 +30636,10 @@
               "tags_source": "vocabulary"
             },
             {
-              "system": "cps3",
+              "system": {
+                "source": "esde",
+                "key": "cps3"
+              },
               "status": "absent",
               "platforms": [
                 "arcade"
@@ -28119,7 +30647,10 @@
               "tags_source": "vocabulary"
             },
             {
-              "system": "daphne",
+              "system": {
+                "source": "esde",
+                "key": "daphne"
+              },
               "status": "absent",
               "platforms": [
                 "daphne",
@@ -28128,7 +30659,10 @@
               "tags_source": "vocabulary"
             },
             {
-              "system": "fba",
+              "system": {
+                "source": "esde",
+                "key": "fba"
+              },
               "status": "absent",
               "platforms": [
                 "arcade"
@@ -28136,7 +30670,10 @@
               "tags_source": "vocabulary"
             },
             {
-              "system": "fbneo",
+              "system": {
+                "source": "esde",
+                "key": "fbneo"
+              },
               "status": "absent",
               "platforms": [
                 "arcade"
@@ -28144,7 +30681,10 @@
               "tags_source": "vocabulary"
             },
             {
-              "system": "laserdisc",
+              "system": {
+                "source": "esde",
+                "key": "laserdisc"
+              },
               "status": "absent",
               "platforms": [
                 "daphne",
@@ -28153,7 +30693,10 @@
               "tags_source": "vocabulary"
             },
             {
-              "system": "lcdgames",
+              "system": {
+                "source": "esde",
+                "key": "lcdgames"
+              },
               "status": "absent",
               "platforms": [
                 "lcdgames",
@@ -28162,7 +30705,10 @@
               "tags_source": "vocabulary"
             },
             {
-              "system": "model2",
+              "system": {
+                "source": "esde",
+                "key": "model2"
+              },
               "status": "absent",
               "platforms": [
                 "arcade"
@@ -28170,7 +30716,10 @@
               "tags_source": "vocabulary"
             },
             {
-              "system": "naomi",
+              "system": {
+                "source": "esde",
+                "key": "naomi"
+              },
               "status": "absent",
               "platforms": [
                 "arcade"
@@ -28178,7 +30727,10 @@
               "tags_source": "vocabulary"
             },
             {
-              "system": "naomi2",
+              "system": {
+                "source": "esde",
+                "key": "naomi2"
+              },
               "status": "absent",
               "platforms": [
                 "arcade"
@@ -28186,7 +30738,10 @@
               "tags_source": "vocabulary"
             },
             {
-              "system": "naomigd",
+              "system": {
+                "source": "esde",
+                "key": "naomigd"
+              },
               "status": "absent",
               "platforms": [
                 "arcade"
@@ -28194,7 +30749,10 @@
               "tags_source": "vocabulary"
             },
             {
-              "system": "stv",
+              "system": {
+                "source": "esde",
+                "key": "stv"
+              },
               "status": "absent",
               "platforms": [
                 "arcade"
@@ -28202,7 +30760,10 @@
               "tags_source": "vocabulary"
             },
             {
-              "system": "triforce",
+              "system": {
+                "source": "esde",
+                "key": "triforce"
+              },
               "status": "absent",
               "platforms": [
                 "arcade"
@@ -28573,7 +31134,10 @@
           },
           "matches": [
             {
-              "system": "doom",
+              "system": {
+                "source": "esde",
+                "key": "doom"
+              },
               "status": "declared",
               "platforms": [
                 "pc",
@@ -28889,7 +31453,10 @@
           },
           "matches": [
             {
-              "system": "scummvm",
+              "system": {
+                "source": "esde",
+                "key": "scummvm"
+              },
               "status": "declared",
               "platforms": [
                 "scummvm"
@@ -29296,7 +31863,10 @@
           },
           "matches": [
             {
-              "system": "cps3",
+              "system": {
+                "source": "esde",
+                "key": "cps3"
+              },
               "status": "absent",
               "platforms": [
                 "arcade"
@@ -29667,7 +32237,10 @@
           },
           "matches": [
             {
-              "system": "doom",
+              "system": {
+                "source": "esde",
+                "key": "doom"
+              },
               "status": "disabled",
               "platforms": [
                 "pc",
@@ -29713,7 +32286,10 @@
           }
         ],
         "platform_ids": {
-          "system": "secret",
+          "system": {
+            "source": "esde",
+            "key": "secret"
+          },
           "status": "declared",
           "tags_source": "catalogue",
           "platforms": [
@@ -29751,7 +32327,8 @@
             {
               "code": "platform-scraping-ignored",
               "data": {
-                "system": "secret"
+                "source": "esde",
+                "key": "secret"
               }
             },
             {
@@ -29761,19 +32338,29 @@
                 "key": "secret"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "secret"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
     {
-      "name": "a-derived-systems-tags-come-from-the-vocabulary",
-      "rationale": "A catalogue-less arrangement's systems are derived from its cores (issue #133) — no catalogue text carries a <platform> tag for them, so the tags come from the stated build's snapshot column and the answer says so: tags_source vocabulary, never passed off as a read.",
+      "name": "a-bare-retroarch-system-is-named-by-its-database-name",
+      "rationale": "A bare RetroArch's own source is libretro (#784 D10, D46): asked through ES-DE's gba, the table resolves the pair to the libretro database name the installed core declares, and the reverse question answers for that system — declared, named in libretro's source, with no platform tags, since no catalogue tags it and the snapshot column holds ES-DE's names only; the translation states every source's keys for it instead.",
       "input": {
         "home": "/home/user",
         "files": {
           "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"~/saves\"\nlibretro_directory = \"/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores\"\nlibretro_info_path = \"/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores\"\n",
-          "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores/mgba_libretro.info": "display_name = \"Nintendo - Game Boy Advance (mGBA)\"\ncorename = \"mGBA\"\nsystemname = \"Game Boy Advance\"\nsystemid = \"game_boy_advance\"\nfirmware_count = \"0\"\n",
-          "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores/gambatte_libretro.info": "display_name = \"Nintendo - Game Boy Color (Gambatte)\"\ncorename = \"Gambatte\"\nsystemname = \"Nintendo - Game Boy Color\"\nfirmware_count = \"0\"\n"
+          "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores/mgba_libretro.info": "display_name = \"Nintendo - Game Boy Advance (mGBA)\"\ncorename = \"mGBA\"\nsystemname = \"Game Boy Advance\"\ndatabase = \"Nintendo - Game Boy Advance\"\nsystemid = \"game_boy_advance\"\nfirmware_count = \"0\"\n",
+          "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores/gambatte_libretro.info": "display_name = \"Nintendo - Game Boy Color (Gambatte)\"\ncorename = \"Gambatte\"\nsystemname = \"Nintendo - Game Boy Color\"\ndatabase = \"Nintendo - Game Boy Color\"\nfirmware_count = \"0\"\n"
         },
         "cores": {
           "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores/mgba_libretro.so": {
@@ -29784,7 +32371,10 @@
           }
         },
         "platform_ids_query": {
-          "system": "gba"
+          "system": [
+            "esde",
+            "gba"
+          ]
         }
       },
       "expected": {
@@ -29800,18 +32390,19 @@
           }
         ],
         "platform_ids": {
-          "system": "gba",
+          "system": {
+            "source": "libretro",
+            "key": "Nintendo - Game Boy Advance"
+          },
           "status": "declared",
           "tags_source": "vocabulary",
-          "platforms": [
-            "gba"
-          ],
+          "platforms": [],
           "translation": {
             "table_version": 1,
             "pairs": [
               {
-                "source": "esde",
-                "key": "gba",
+                "source": "libretro",
+                "key": "Nintendo - Game Boy Advance",
                 "version": null,
                 "status": "known",
                 "sources": [
@@ -30119,7 +32710,318 @@
                 "kind": "bare_retroarch_flatpak"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "libretro",
+              "key": "Nintendo - Game Boy Advance"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": {
+              "table_version": 1,
+              "pairs": [
+                {
+                  "source": "esde",
+                  "key": "gba",
+                  "version": null,
+                  "status": "known",
+                  "sources": [
+                    {
+                      "source": "esde",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "gba",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "esde-platform",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "gba",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "retrodeck",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "gba",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "emudeck",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "gba",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "romm",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "gba",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "romm-folder",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "gba",
+                          "relation": "exactMatch"
+                        },
+                        {
+                          "key": "gba2players",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "libretro",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "Nintendo - Game Boy Advance",
+                          "relation": "exactMatch"
+                        },
+                        {
+                          "key": "Nintendo - Game Boy Advance (e-Cards)",
+                          "relation": "narrowMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "batocera",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "gba",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "knulli",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "gba",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "rocknix",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "gba",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "igdb",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "24",
+                          "relation": "exactMatch"
+                        },
+                        {
+                          "key": "gba",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "screenscraper",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "12",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "thegamesdb",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "5",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "intersection_status": "agreed",
+              "intersection": [
+                {
+                  "source": "esde",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "gba",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "esde-platform",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "gba",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "retrodeck",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "gba",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "emudeck",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "gba",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "romm",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "gba",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "romm-folder",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "gba",
+                      "relation": "exactMatch"
+                    },
+                    {
+                      "key": "gba2players",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "libretro",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "Nintendo - Game Boy Advance",
+                      "relation": "exactMatch"
+                    },
+                    {
+                      "key": "Nintendo - Game Boy Advance (e-Cards)",
+                      "relation": "narrowMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "batocera",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "gba",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "knulli",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "gba",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "rocknix",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "gba",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "igdb",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "24",
+                      "relation": "exactMatch"
+                    },
+                    {
+                      "key": "gba",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "screenscraper",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "12",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "thegamesdb",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "5",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                }
+              ],
+              "conflict": [],
+              "caveats": []
+            }
+          }
         }
       }
     },
@@ -30173,14 +33075,26 @@
         ],
         "systems": {
           "systems": [
-            "atarijaguar",
-            "dreamcast",
-            "gba"
+            {
+              "source": "esde",
+              "key": "atarijaguar"
+            },
+            {
+              "source": "esde",
+              "key": "dreamcast"
+            },
+            {
+              "source": "esde",
+              "key": "gba"
+            }
           ],
           "caveats": []
         },
         "platform_ids": {
-          "system": "dreamcast",
+          "system": {
+            "source": "esde",
+            "key": "dreamcast"
+          },
           "status": "declared",
           "tags_source": "catalogue",
           "platforms": [
@@ -30480,7 +33394,17 @@
             "conflict": [],
             "caveats": []
           },
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "dreamcast"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -30528,7 +33452,10 @@
         ],
         "systems": {
           "systems": [
-            "atarijaguar"
+            {
+              "source": "esde",
+              "key": "atarijaguar"
+            }
           ],
           "caveats": [
             {
@@ -30593,7 +33520,17 @@
                 "app_id": "net.retrodeck.retrodeck"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "gba"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         },
         "rom_location": {
           "dir": null,
@@ -30607,7 +33544,17 @@
                 "app_id": "net.retrodeck.retrodeck"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "gba"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         },
         "savefile_location": {
           "unresolved": {
@@ -30631,7 +33578,17 @@
                 "app_id": "net.retrodeck.retrodeck"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "gba"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -30707,7 +33664,8 @@
                 "app_id": "net.retrodeck.retrodeck"
               }
             }
-          ]
+          ],
+          "resolution": null
         }
       }
     },

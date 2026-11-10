@@ -188,7 +188,7 @@ class TestTheAlternativesEntryIsItsOwnShape:
 
     def _option(self, file_name: str, regions: tuple[str, ...]) -> atlas.FirmwareRequirement:
         return atlas.FirmwareRequirement(
-            core_so=None, system="psx", system_source="card", need="required",
+            core_so=None, system=("esde", "psx"), system_source="card", need="required",
             file_name=file_name, path=f"/bios/{file_name}", declared=file_name,
             description="prose stays prose", identity=None, found="missing", checked=None,
             regions=regions,
@@ -223,7 +223,7 @@ class TestTheAlternativesEntryIsItsOwnShape:
 
     def test_a_plain_requirement_carries_no_regions_key(self):
         plain = atlas.FirmwareRequirement(
-            core_so=None, system="psx", system_source="card", need="required",
+            core_so=None, system=("esde", "psx"), system_source="card", need="required",
             file_name="bios.bin", path="/bios/bios.bin", declared="bios.bin",
             description="", identity=None, found="missing", checked=None,
         )

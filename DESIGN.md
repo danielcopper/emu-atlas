@@ -452,13 +452,28 @@ not a data set to re-ship — and each release publishes them as a versioned art
 
 ## Vocabulary
 
-**The ids the questions about a system take are ES-DE's system names**, packaged and cited
-(`atlas/data/system_ids.json`, read by `atlas.systems`) — one column of the platform table below, not a canonical id of
-atlas's own, and the pair `("esde", name)` once every question takes a pair (#792). ES-DE's names are the ones the
-questions take because they are the vocabulary a frontend catalogue on the machine actually declares — the questions
-answer about names that exist there, not about names atlas invented — and the id set is pinned to the `es_systems.xml`
-of a stated build, so membership is checkable rather than an opinion. A test parses that build's file and asserts
-set-identity, which is what keeps the snapshot honest as the build moves.
+**A question that names a system takes a bare name, one `(source, key[, version])` pair, or several pairs** (#784 D43,
+D44, D49). Each installation has its own catalogue sources — ES-DE's names on every ES-DE frontend, RetroDECK's own
+beside them on RetroDECK, the libretro database names its cores declare on a bare RetroArch — and a bare name is the
+short form of a pair in the first of them. A pair in an own source is read live against the machine's catalogue, exactly
+as spelled; a pair in any other source of the platform table below goes through the table into the own sources, exact
+matches first, then the systems the pairs are a part of, then the systems they are wider than, and never a related one.
+Several pairs are intersected the way the platform questions intersect them. Where that names one system the
+installation holds, the question answers for it; where it names several or none, or the pairs conflict, the question
+answers its empty or unknown form and a caveat says why, naming the candidates where there are several — atlas picks
+none. The first tier that names any system decides, held here or not; a later tier is never tried. A system the
+installation does not hold, read live or reached through the table, is no system here (#784 D53) — a system atlas names
+by a cited pair is held only where a core it is cited for is installed — and the unknown form states as much about the
+catalogue as the resolved form would; the one exception is `platform_ids`, the question about a name's standing itself,
+which keeps such a name as the system it spells with its status `absent` or `disabled`. An answer about a system states
+the resolution beside it, and the resolution states how it ended — resolved, unknown, ambiguous or conflict — so a
+client branches on that rather than on caveat codes. `savefile_location` takes a system only to key a core's recorded
+file set, so what resolving it said leads its placement's caveats instead, and RetroDECK's `gamelist_selections`, whose
+answer has no caveats, refuses a system that does not resolve to one. Every answer field that names a system is a
+`{source, key}` pair. The source decides the route, so there is no fallback between them: a client whose vocabulary
+comes from another source sends pairs, and one that read the installation's catalogue, or reuses a system an answer
+named, sends the name. `atlas/data/system_ids.json` still lists the system names one catalogue declares (RetroDECK
+0.10.9b), pinned by a test that parses that build's file; #797 replaces it with the table.
 
 _Settled (issue #784, cut #785):_ **one cited table maps the keys of every included source onto one another, and atlas
 adds no vocabulary of its own.** Its unit is a _row_: one system at the finest distinction any source makes — the common
@@ -507,16 +522,18 @@ version stays 1 until the first release that carries the table and counts every 
 half of the platform question — which of the named systems this installation declares — stays read live
 (`systems_for_platform`, `systems_for_platforms`, `platform_ids`).
 
-_Settled (item 20b):_ the firmware route speaks the same ids everywhere. The `systemname` map's values are ES-DE ids
-(map version 2, `atlas/firmware.py` — per-entry citations into the deployed `es_systems.xml` and the shipped `.info`
-files), so a catalogue-less arrangement answers `firmware_for_system("dreamcast")` exactly like a catalogued one, and
-the libretro-derived slugs (`dc`, `pce`, …) are internal history. What remains is a fact about the world, not a seam: a
-handful of systems exist on supported machines and in no ES-DE build (`SYSTEMS_WITHOUT_CATALOGUE_ID` — `bk`, `ti83`,
-`ep128`), and those answer atlas's own spelling marked with `system-not-in-catalogue`, the same form `_unknown` takes —
-a token no catalogue declares, plus a structured caveat saying why. Two guards hold the map to its word: every value
-must be an id or a declared own spelling, and the recorded evidence joins (fullname, catalogue-launches-core) are re-run
-against the deployed `es_systems.xml`. A systemname the map does not know still files mechanically (`SOURCE_SLUG`) —
-visible in `system_source`, and marked as derived where the core spans systems.
+_Settled (item 20b, revised by #784 D20, D45, D46):_ the firmware route names systems the way the installation does. The
+`systemname` map's values are pairs (map version 3, `atlas/firmware.py`, its re-pointed entries cited): an ES-DE name
+wherever an ES-DE build names the system, and another source's key where none does — RomM's `ti-83`, libretro's
+`BK-0010/BK-0011` and `Enterprise - 128`. An installation names a filed system by its own source where one key names it
+there, and otherwise by that cited pair, whose emulators no catalogue can enumerate or deny, so they come from the
+installed cores on every arrangement. On a bare RetroArch a core is named by its libretro database names, and one that
+declares none by the pair `atlas/data/core_systems.json` cites for it, translated into libretro's key where the table
+names exactly one; a tripwire holds those pairs against the deployed cores. No word is formed from a `systemname`: one
+the map does not hold leaves the naming to the core (`system_source` `core`), and where nothing names one system the
+file is filed under `_unknown`, a statement about the core. Two guards hold the map: every ES-DE value is an ES-DE name
+and every other value a key its source holds in the table, and the recorded evidence joins (fullname,
+catalogue-launches-core) are re-run against the deployed `es_systems.xml`.
 
 ## Settled decisions
 
@@ -641,15 +658,17 @@ visible in `system_source`, and marked as derived where the core spans systems.
   with every core release. Everything else files a file by what its whole _core_ is called, which holds exactly while
   the core covers one system, and the `.info` says when it does not: `database` names every system the core serves. When
   a declaration falls back on a multi-system core, the answer carries `system-assignment-derived` naming the exact
-  files; a core with no `systemname` at all is a different state with its own code. `database` is read as that signal
-  only — it is a different vocabulary (`Sinclair - ZX 81` where `systemname` says `ZX81`), so assigning from it would
-  mean maintaining a second table of the same size.
-- **An empty answer says which kind of empty it is.** `system-unknown` means nothing here covers that identifier — a
-  consumer that failed to translate its own vocabulary lands there. Where the subject _is_ covered, an empty requirement
-  list has three further reasons and each carries its own code, because each is a different instruction:
-  `no-firmware-declaration` — every declaration source was read and none names a file, so the absence is established;
-  `no-firmware-requirement` — firmware is declared here and none of it became a requirement (refused, or outside the
-  enumeration its own core performs), so the per-emulator entries say which file went where; and
+  files; a core with no `systemname` at all is a different state with its own code. `database` is that signal, and it is
+  also a name since #784 D46 and D50: a bare RetroArch names a core by it, and an ES-DE frontend translates it through
+  the platform table where the `systemname` map holds none, so the second vocabulary is mapped by the table rather than
+  by a hand-kept list of the same size.
+- **An empty answer says which kind of empty it is.** `system-unknown` means nothing here covers that system — a name
+  the installation's catalogue does not declare, or pairs that name none of its systems; pairs naming several or
+  conflicting say so with `system-ambiguous` and `system-pairs-conflict` instead. Where the subject _is_ covered, an
+  empty requirement list has three further reasons and each carries its own code, because each is a different
+  instruction: `no-firmware-declaration` — every declaration source was read and none names a file, so the absence is
+  established; `no-firmware-requirement` — firmware is declared here and none of it became a requirement (refused, or
+  outside the enumeration its own core performs), so the per-emulator entries say which file went where; and
   `firmware-declaration-unknown` — what is declared could not be established at all, because the enumeration did not
   happen or nothing in it could be read. One code for several of these would read as the mildest of them: "nothing
   needed" where the right instruction is "you asked in the wrong vocabulary", or worse, where the truth is that atlas

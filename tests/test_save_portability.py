@@ -20,6 +20,9 @@ import pytest
 import atlas
 from atlas.machine import FixtureMachine
 from atlas.placement import (
+    CAVEAT_SAVE_RECORD_AMBIGUOUS,
+    CAVEAT_SAVE_RECORD_PARTIAL,
+    CAVEAT_SAVE_RECORD_UNRECORDED,
     FILE_SET_DECLARED,
     Caveat,
     GRANULARITY_PER_GAME_FILE,
@@ -36,6 +39,7 @@ from atlas.placement import (
     SavefilePlacement,
     Unresolved,
 )
+from atlas.platforms import SystemNaming
 from atlas.portability_codes import (
     PART_NO_GAME_DATA,
     CAVEAT_ENTRY_LABEL_UNKNOWN,
@@ -157,7 +161,8 @@ def _ask(source: SavefilePlacement | Unresolved, target: SavefilePlacement | Unr
 
 def _answer(source, target, table, *, running=lambda entry: "1.0 abc1234", labels=("Source", "Target")):
     return portability_answer(
-        "psx",
+        ("esde", "psx"),
+        record_systems=("psx",),
         source=labels[0],
         target=labels[1],
         entries=(SOURCE, TARGET),
@@ -173,6 +178,87 @@ CARD_RULES = [
     _rule("memory-card", "2", "card", ["<rom_stem>.1.mcr", "<rom_stem>_2.mcd"]),
 ]
 TWO_CORES = _table({"src": _record("libretro", CARD_RULES), "dst": _record("libretro", CARD_RULES)})
+
+
+def _filed_under(record: dict[str, object], *names: str, other_rules=None) -> dict[str, object]:
+    """*record* with its psx entry filed under each of *names*, the second one under *other_rules* where given."""
+    entry = record["systems"]["psx"]  # type: ignore[index]
+    systems: dict[str, object] = {}
+    for position, name in enumerate(names):
+        systems[name] = {"parts": other_rules} if other_rules is not None and position == 1 else entry
+    return {**record, "systems": systems}
+
+
+def _named_answer(table: SaveFormats, record_systems: tuple[str, ...]):
+    same = _placement(_group("Game.srm"))
+    return portability_answer(
+        ("libretro", "Sony - PlayStation"),
+        record_systems=record_systems,
+        source="Source",
+        target="Target",
+        entries=(SOURCE, TARGET),
+        ask=lambda entry: same,
+        running=lambda entry: "1.0 abc1234",
+        token=lambda entry: entry.emulator,
+        table=table,
+    )
+
+
+class TestARecordFiledUnderSeveralNames:
+    """One system asked as several ES-DE names keys the records each side holds for them (#784 D50)."""
+
+    def test_a_name_neither_side_holds_is_named_and_the_held_record_answers(self):
+        table = _table({key: _filed_under(_record("libretro", CARD_RULES), "psx") for key in ("src", "dst")})
+        answer = _named_answer(table, ("psx", "psxjp"))
+        assert answer.verdict == _named_answer(table, ("psx",)).verdict == PORTABILITY_SAME_FILES
+        partial = [c for c in answer.caveats if c.code == CAVEAT_SAVE_RECORD_PARTIAL]
+        assert [(c.data["side"], c.data["core"], c.data["sources"], c.data["keys"]) for c in partial] == [
+            ("source", "src", ("esde",), ("psxjp",)),
+            ("target", "dst", ("esde",), ("psxjp",)),
+        ]
+
+    def test_two_held_records_that_differ_key_none_and_are_named(self):
+        other = [_rule("memory-card", "1", "other", ["<rom_stem>.srm"])]
+        differing = _filed_under(_record("libretro", CARD_RULES), "psx", "psxjp", other_rules=other)
+        table = _table({"src": differing, "dst": _filed_under(_record("libretro", CARD_RULES), "psx")})
+        answer = _named_answer(table, ("psx", "psxjp"))
+        assert answer.verdict == PORTABILITY_UNESTABLISHED
+        codes = [c.code for c in answer.caveats]
+        assert CAVEAT_SAVE_FORMAT_UNRECORDED not in codes
+        (ambiguous,) = [c for c in answer.caveats if c.code == CAVEAT_SAVE_RECORD_AMBIGUOUS]
+        assert (ambiguous.data["side"], ambiguous.data["sources"], ambiguous.data["keys"]) == (
+            "source",
+            ("esde", "esde"),
+            ("psx", "psxjp"),
+        )
+        assert "differ" in ambiguous.message
+        # "among others" only where the system stands for a name neither held.
+        assert "among others" not in ambiguous.message
+        wider = _named_answer(table, ("psx", "psxjp", "psxeu"))
+        (ambiguous,) = [c for c in wider.caveats if c.code == CAVEAT_SAVE_RECORD_AMBIGUOUS]
+        assert "psx, psxjp, among others" in ambiguous.message
+
+    def test_names_no_record_holds_leave_the_side_unrecorded(self):
+        # Records exist for both emulators, and none of them holds the system
+        # asked: each side says so by the system as asked (#784 D55), not as
+        # an emulator nobody recorded.
+        table = _table({key: _filed_under(_record("libretro", CARD_RULES), "psx") for key in ("src", "dst")})
+        answer = _named_answer(table, ("psxjp", "psxeu"))
+        assert answer.verdict == PORTABILITY_UNESTABLISHED
+        unrecorded = [c for c in answer.caveats if c.code == CAVEAT_SAVE_RECORD_UNRECORDED]
+        assert [(c.data["side"], c.data["source"], c.data["key"]) for c in unrecorded] == [
+            ("source", "libretro", "Sony - PlayStation"),
+            ("target", "libretro", "Sony - PlayStation"),
+        ]
+        codes = [c.code for c in answer.caveats]
+        assert CAVEAT_SAVE_FORMAT_UNRECORDED not in codes
+        assert CAVEAT_SAVE_RECORD_PARTIAL not in codes and CAVEAT_SAVE_RECORD_AMBIGUOUS not in codes
+
+    def test_an_emulator_with_no_record_at_all_stays_unrecorded_by_format(self):
+        answer = _named_answer(_table({}), ("psx",))
+        codes = [c.code for c in answer.caveats]
+        assert codes.count(CAVEAT_SAVE_FORMAT_UNRECORDED) == 2
+        assert CAVEAT_SAVE_RECORD_UNRECORDED not in codes
 
 
 class TestTheSummaryIsTheMostSeverePart:
@@ -416,7 +502,7 @@ class TestAMemoryKeptPerRegion:
         source = _placement(_region_folder("/a", "USA"), _region_folder("/a", "EUR"))
         target = _placement(_region_folder("/b", "USA"), _region_folder("/b", "EUR"))
         answer = portability_answer(
-            "psx", source="Source", target="Target", entries=(SOURCE, TARGET), ask=_ask(source, target),
+            ("esde", "psx"), record_systems=("psx",), source="Source", target="Target", entries=(SOURCE, TARGET), ask=_ask(source, target),
             running=lambda entry: "1.0 abc1234", token=lambda entry: entry.emulator, table=self._regionless_table(),
             content_path="/roms/gc/Homebrew.DOL",
         )
@@ -434,7 +520,7 @@ class TestAMemoryKeptPerRegion:
         table = _table({"src": _record("libretro", REGION_CARD_RULES), "dst": target_record})
         source, target = _placement(_region_folder("/a", "JAP")), _placement(_region_folder("/b", "JAP"))
         answer = portability_answer(
-            "psx", source="Source", target="Target", entries=(SOURCE, TARGET), ask=_ask(source, target),
+            ("esde", "psx"), record_systems=("psx",), source="Source", target="Target", entries=(SOURCE, TARGET), ask=_ask(source, target),
             running=lambda entry: "1.0 abc1234", token=lambda entry: entry.emulator, table=table,
             content_path="/roms/gc/Homebrew.dol",
         )
@@ -447,7 +533,7 @@ class TestAMemoryKeptPerRegion:
         table = _table({"src": record, "dst": _record("libretro", CARD_RULES)})
         source, target = _placement(_group("Game.srm")), _placement(_group("Game.srm"))
         answer = portability_answer(
-            "psx", source="Source", target="Target", entries=(SOURCE, TARGET), ask=_ask(source, target),
+            ("esde", "psx"), record_systems=("psx",), source="Source", target="Target", entries=(SOURCE, TARGET), ask=_ask(source, target),
             running=lambda entry: "1.0 abc1234", token=lambda entry: entry.emulator, table=table,
             content_path="/roms/gc/Homebrew.dol",
         )
@@ -457,7 +543,7 @@ class TestAMemoryKeptPerRegion:
         source = _placement(_region_folder("/a", "USA"))
         target = _placement(_region_folder("/b", "USA"))
         answer = portability_answer(
-            "psx", source="Source", target="Target", entries=(SOURCE, TARGET), ask=_ask(source, target),
+            ("esde", "psx"), record_systems=("psx",), source="Source", target="Target", entries=(SOURCE, TARGET), ask=_ask(source, target),
             running=lambda entry: "1.0 abc1234", token=lambda entry: entry.emulator, table=self._regionless_table(),
             content_path="/roms/gc/Game.iso",
         )
@@ -467,7 +553,7 @@ class TestAMemoryKeptPerRegion:
         source = _placement(_region_folder("/a", "USA", "B"))
         table = self._regionless_table(target_rules=REGION_CARD_RULES[:1])
         answer = portability_answer(
-            "psx", source="Source", target="Target", entries=(SOURCE, TARGET), ask=_ask(source, _placement(_region_folder("/b", "USA"))),
+            ("esde", "psx"), record_systems=("psx",), source="Source", target="Target", entries=(SOURCE, TARGET), ask=_ask(source, _placement(_region_folder("/b", "USA"))),
             running=lambda entry: "1.0 abc1234", token=lambda entry: entry.emulator, table=table,
             content_path="/roms/gc/Homebrew.elf",
         )
@@ -870,7 +956,7 @@ class TestTellingThePartsApart:
             readings=(("Slot1_Filename", "one.ps2"), ("Slot2_Filename", "/cards/one.ps2")),
         )
         answer = portability_answer(
-            "psx", source="Source", target="Target", entries=(source_entry, TARGET),
+            ("esde", "psx"), record_systems=("psx",), source="Source", target="Target", entries=(source_entry, TARGET),
             ask=lambda entry: source if entry.label == "Source" else _placement(_group("Game.srm")),
             running=lambda entry: "1.0 abc1234", token=lambda entry: entry.emulator, table=table,
         )
@@ -997,7 +1083,7 @@ class TestACaveatNamesTheEmulatorInItsOwnVocabulary:
         target = _Entry("Target", None, "DST")
         same = _placement(_group("Game.srm"))
         outcome = portability_answer(
-            "psx", source="Source", target="Target", entries=(SOURCE, target), ask=lambda entry: same,
+            ("esde", "psx"), record_systems=("psx",), source="Source", target="Target", entries=(SOURCE, target), ask=lambda entry: same,
             running=lambda entry: None if entry is target else "1.0 abc1234",
             token=lambda entry: entry.emulator, table=table,
         )
@@ -1010,7 +1096,7 @@ class TestACaveatNamesTheEmulatorInItsOwnVocabulary:
         target = _Entry("Target", None, "SOMEONE")
         same = _placement(_group("Game.srm"))
         outcome = portability_answer(
-            "psx", source="Source", target="Target", entries=(SOURCE, target), ask=lambda entry: same,
+            ("esde", "psx"), record_systems=("psx",), source="Source", target="Target", entries=(SOURCE, target), ask=lambda entry: same,
             running=lambda entry: "1.0 abc1234", token=lambda entry: entry.emulator, table=table,
         )
         assert [dict(c.data) for c in outcome.caveats] == [{"side": "target"}]
@@ -1021,7 +1107,7 @@ class TestALabelTwoEntriesCarry:
         twin = _Entry("Source", "other_libretro.so", "other_libretro.so")
         same = _placement(_group("Game.srm"))
         outcome = portability_answer(
-            "psx", source="Source", target="Target", entries=(SOURCE, twin, TARGET), ask=lambda entry: same,
+            ("esde", "psx"), record_systems=("psx",), source="Source", target="Target", entries=(SOURCE, twin, TARGET), ask=lambda entry: same,
             running=lambda entry: "1.0 abc1234", token=lambda entry: entry.emulator, table=TWO_CORES,
         )
         assert outcome.source is SOURCE
@@ -1084,12 +1170,24 @@ _SLOTTED_SYSTEMS = {"psx", "ps2", "gc", "dreamcast"}
 # Flycast keeps no save-format record yet, so the table below cannot name its
 # system; every other core's systems are the ones its record states.
 _SYSTEMS_WITHOUT_A_RECORD = {"flycast": ("dreamcast",)}
+_ESDE = SystemNaming(("esde",))
 
 
 def _systems_asked(query: dict[str, Any]) -> set[str]:
-    """The systems a vector's save question is about: its own, or the systems of the core it names."""
+    """The systems a vector's save question is about, by their ES-DE names: its own, or the systems of the core it names.
+
+    A question may name its system by a bare name, one pair or several pairs
+    (#784 D10); a pair in another source counts by the ES-DE name the platform
+    table gives it, so a bare RetroArch's question by a libretro database name
+    is swept as well.
+    """
     if "system" in query:
-        return {query["system"]}
+        system = query["system"]
+        if isinstance(system, str):
+            return {system}
+        pairs = [system] if isinstance(system[0], str) else system
+        named = (_ESDE.named((pair[0], pair[1])) for pair in pairs)
+        return {key for _, key in filter(None, named)}
     core = str(query.get("core_so", "")).removesuffix("_libretro.so")
     record = load_save_formats().emulators.get(core)
     return set(record.systems if record is not None else _SYSTEMS_WITHOUT_A_RECORD.get(core, ()))

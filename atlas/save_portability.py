@@ -32,8 +32,12 @@ import dataclasses
 from dataclasses import dataclass
 from typing import Callable, Literal, Mapping, Protocol
 
+from ._agreement import Agreement, agreement
 from .placement import (
     CAVEAT_SAVE_FILES_COMPRESSED,
+    CAVEAT_SAVE_RECORD_AMBIGUOUS,
+    CAVEAT_SAVE_RECORD_PARTIAL,
+    CAVEAT_SAVE_RECORD_UNRECORDED,
     GRANULARITY_SHARED_CARD,
     GRANULARITY_SHARED_FILE,
     ROLE_UNKNOWN,
@@ -43,6 +47,8 @@ from .placement import (
     SavefilePlacement,
     Unresolved,
 )
+from .firmware import spelled
+from .platforms import ESDE_SOURCE, SystemPair
 from .portability_codes import (
     CAVEAT_ENTRY_LABEL_UNKNOWN,
     CAVEAT_SAVE_ANSWER_UNRESOLVED,
@@ -202,6 +208,10 @@ class _Side:
     caveats: tuple[Caveat, ...]
     sources: tuple[str, ...]
     identity: _Identity
+    # What the side's record was keyed over, where that is narrower than the
+    # names asked (#784 D50): a statement of scope, which leaves the verdict
+    # settled, unlike :attr:`caveats`.
+    scope: tuple[Caveat, ...] = ()
 
     @property
     def mode(self) -> str | None:
@@ -369,6 +379,92 @@ def _unrecorded(side: str, identity: _Identity, mode: str | None) -> Caveat:
     )
 
 
+def _unkeyed(
+    side: str,
+    identity: _Identity,
+    placement: SavefilePlacement,
+    formats: EmulatorFormats | None,
+    agreed: Agreement[SystemFormats],
+    asked: tuple[SystemPair, ...],
+) -> Caveat:
+    """Why *side* weighs its answer against no save-format record (#784 D50, D55).
+
+    No record for the emulator at all is a record never written; records that
+    differ for the system asked are an ambiguity; records that hold none of it
+    say the system is unrecorded for this emulator.
+    """
+    if formats is None:
+        return _unrecorded(side, identity, _mode(placement))
+    if agreed.differs:
+        return _records_differ(side, identity, agreed)
+    return _system_unrecorded(side, identity, asked)
+
+
+def _system_unrecorded(side: str, identity: _Identity, asked: tuple[SystemPair, ...]) -> Caveat:
+    """That the system asked is none the *side* entry's save-format records hold (#784 D55)."""
+    # Each key is stored by name, as in :func:`_unrecorded`.
+    data: dict[str, DataValue] = {"side": side}
+    core, token = identity.core, identity.token
+    if core is not None:
+        data["core"] = core
+    if token is not None:
+        data["token"] = token
+    if len(asked) == 1:
+        data["source"] = asked[0][0]
+        data["key"] = asked[0][1]
+    else:
+        data["sources"] = tuple(source for source, _ in asked)
+        data["keys"] = tuple(key for _, key in asked)
+    return Caveat(
+        CAVEAT_SAVE_RECORD_UNRECORDED,
+        f"the system asked ({', '.join(spelled(pair) for pair in asked)}) is none the {side} entry's "
+        f"save-format records ({identity.named}) hold — what its files hold is not established here",
+        data,
+    )
+
+
+def _records_differ(side: str, identity: _Identity, agreed: Agreement[SystemFormats]) -> Caveat:
+    """Why the system both entries belong to keyed no save-format record on *side* (#784 D50)."""
+    held = agreed.held
+    # Each key is stored by name, as in :func:`_unrecorded`.
+    data: dict[str, DataValue] = {"side": side}
+    core, token = identity.core, identity.token
+    if core is not None:
+        data["core"] = core
+    if token is not None:
+        data["token"] = token
+    data["sources"] = tuple(ESDE_SOURCE for _ in held)
+    data["keys"] = held
+    return Caveat(
+        CAVEAT_SAVE_RECORD_AMBIGUOUS,
+        f"the system asked stands for ES-DE's {', '.join(held)}{', among others' if agreed.uncovered else ''}, "
+        f"and the {side} entry's save-format records ({identity.named}) differ between them — no record is "
+        "consulted rather than one picked",
+        data,
+    )
+
+
+def _records_partial(side: str, identity: _Identity, agreed: Agreement[SystemFormats]) -> Caveat:
+    """The ES-DE names the system was asked as that *side*'s save-format records do not cover (#784 D50)."""
+    uncovered = agreed.uncovered
+    # Each key is stored by name, as in :func:`_unrecorded`.
+    data: dict[str, DataValue] = {"side": side}
+    core, token = identity.core, identity.token
+    if core is not None:
+        data["core"] = core
+    if token is not None:
+        data["token"] = token
+    data["sources"] = tuple(ESDE_SOURCE for _ in uncovered)
+    data["keys"] = uncovered
+    return Caveat(
+        CAVEAT_SAVE_RECORD_PARTIAL,
+        f"the system asked stands for ES-DE's {', '.join((*agreed.held, *uncovered))}, and the "
+        f"{side} entry's save-format records ({identity.named}) cover {', '.join(agreed.held)} but not "
+        f"{', '.join(uncovered)} — the record consulted is theirs, and for the others it states nothing",
+        data,
+    )
+
+
 def _build_statement(
     formats: EmulatorFormats, running: str | None, side: str, identity: _Identity
 ) -> tuple[bool, Caveat | None, str]:
@@ -406,7 +502,8 @@ def _side(
     entry: PortabilityEntry,
     placement: SavefilePlacement,
     *,
-    system: str,
+    systems: tuple[str, ...],
+    asked: tuple[SystemPair, ...],
     table: SaveFormats,
     running: Callable[[], str | None],
     token: Callable[[], str | None],
@@ -419,11 +516,14 @@ def _side(
     """
     key = _core_key(entry.core_so) if entry.core_so is not None else token()
     formats = table.emulators.get(key or "")
-    record = formats.systems.get(system) if formats is not None else None
+    # Several ES-DE names for one system key a record where the ones it holds
+    # state it alike; the ones it does not hold are named (#784 D50).
+    agreed = agreement(formats.systems if formats is not None else {}, systems, lambda record: record)
+    record = agreed.entry
     identity = _identity(entry, formats)
     if formats is None or record is None:
-        unrecorded = _unrecorded(name, identity, _mode(placement))
-        return _Side(name, placement, None, (), False, (unrecorded,), (), identity)
+        refused = _unkeyed(name, identity, placement, formats, agreed, asked)
+        return _Side(name, placement, None, (), False, (refused,), (), identity)
     labelling = _labelled(placement, record)
     confirmed, unconfirmed, sentence = _build_statement(formats, running(), name, identity)
     caveats = tuple(
@@ -437,7 +537,8 @@ def _side(
     # What the record sets aside is said where the answer says what it rests
     # on: a part left out is never a silent drop.
     sources = (*((sentence,) if sentence else ()), *labelling.set_aside)
-    return _Side(name, placement, record, labelling.parts, confirmed, caveats, sources, identity)
+    scope = (_records_partial(name, identity, agreed),) if agreed.uncovered else ()
+    return _Side(name, placement, record, labelling.parts, confirmed, caveats, sources, identity, scope)
 
 
 def _shared(group: FileGroup) -> bool:
@@ -794,11 +895,12 @@ def _summary(parts: tuple[SavePart, ...], *, settled: bool) -> str:
     return max((floor, *(p.verdict for p in parts)), key=PORTABILITY_VERDICTS.index)
 
 
-def _label_unknown(system: str, side: str, label: str) -> Caveat:
+def _label_unknown(system: SystemPair, side: str, label: str) -> Caveat:
     return Caveat(
         CAVEAT_ENTRY_LABEL_UNKNOWN,
-        f"no catalogue entry of system {system!r} is labelled {label!r} — the {side} side names no entry",
-        {"system": system, "side": side, "label": label},
+        f"no catalogue entry of system {system[1]!r} ({system[0]}) is labelled {label!r} — the {side} side "
+        "names no entry",
+        {"source": system[0], "key": system[1], "side": side, "label": label},
     )
 
 
@@ -811,8 +913,10 @@ def _unresolved(side: str, outcome: Unresolved) -> Caveat:
 
 
 def portability_answer[EntryT: PortabilityEntry](
-    system: str,
+    system: SystemPair,
     *,
+    record_systems: tuple[str, ...],
+    asked: tuple[SystemPair, ...] = (),
     source: str,
     target: str,
     entries: tuple[EntryT, ...],
@@ -826,7 +930,13 @@ def portability_answer[EntryT: PortabilityEntry](
     """Whether the entry labelled *target* reads what the one labelled *source* wrote.
 
     *ask* is the entry's own save question with the caller's arguments, and
-    *running* the build the machine names for an entry — a core's
+    *system* is the system both entries belong to, as the installation names it,
+    and *record_systems* the ES-DE names the save-format records are filed under
+    for it: one, or several, of which a record is consulted where the ones it
+    holds state it alike — the others named in ``save-record-partial``, a
+    disagreement in ``save-record-ambiguous`` (#784 D50) — and none where no
+    ES-DE name stands for that system, when no record is consulted. *running*
+    the build the machine names for an entry — a core's
     ``library_version``, a standalone emulator's deploy record — or ``None``
     where nothing names it. *token* is the card token a standalone entry's
     command identifies on this arrangement. *caveats* are the installation's own, which every
@@ -855,9 +965,11 @@ def portability_answer[EntryT: PortabilityEntry](
         )
         return PortabilityOutcome(PORTABILITY_UNESTABLISHED, source_entry, target_entry, caveats=(*caveats, *refused))
     sides = (
-        _side(SIDE_SOURCE, source_entry, source_placement, system=system, table=table,
+        _side(SIDE_SOURCE, source_entry, source_placement, systems=record_systems, asked=asked or (system,),
+              table=table,
               running=lambda: running(source_entry), token=lambda: token(source_entry)),
-        _side(SIDE_TARGET, target_entry, target_placement, system=system, table=table,
+        _side(SIDE_TARGET, target_entry, target_placement, systems=record_systems, asked=asked or (system,),
+              table=table,
               running=lambda: running(target_entry), token=lambda: token(target_entry)),
     )
     judged = tuple(_part(part, sides[0], sides[1], table, content_path) for part in sides[0].parts)
@@ -876,5 +988,5 @@ def portability_answer[EntryT: PortabilityEntry](
         target=target_entry,
         parts=parts,
         sources=cited,
-        caveats=(*caveats, *side_caveats),
+        caveats=(*caveats, *sides[0].scope, *sides[1].scope, *side_caveats),
     )

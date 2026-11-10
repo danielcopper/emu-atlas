@@ -33,6 +33,24 @@ def translation_projection(contract: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def with_projected_resolutions(node: Any) -> Any:
+    """*node* (a serialized answer) with every system resolution's translation projected (#784 D49).
+
+    A question that takes a system states how it was resolved, and the table's
+    translation of the asked pairs rides there; it is asserted in the same
+    projection as a platform answer's own.
+    """
+    if isinstance(node, list):
+        return [with_projected_resolutions(item) for item in node]
+    if not isinstance(node, dict):
+        return node
+    projected = {key: with_projected_resolutions(value) for key, value in node.items()}
+    resolution = node.get("resolution")
+    if isinstance(resolution, dict) and resolution.get("translation") is not None:
+        projected["resolution"] = {**resolution, "translation": translation_projection(resolution["translation"])}
+    return projected
+
+
 def with_projected_translation(answer: dict[str, Any]) -> dict[str, Any]:
     """A serialized machine answer whose ``translation`` field is projected."""
     return {**answer, "translation": translation_projection(answer["translation"])}

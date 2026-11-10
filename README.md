@@ -220,12 +220,11 @@ nullability, what it means, and which caveat code rides which question with whic
    tree the emulated PS3's own VFS names) and Vita3K (the `ux0` tree below its preference path) today — one emulator per
    sub-issue until every emulator RetroDECK ships resolves, on EmuDeck too, whichever way its catalogue launches them:
    AppImage, flatpak, or a binary unpacked out of one.
-5. **The system vocabulary and the platform table** — the ids every question about a system takes are ES-DE's system
-   names, shipped as packaged data cited to a stated build and guarded by a test that parses that build's own
-   `es_systems.xml`; `known_systems()` and `from_esde_system()` let a client check its own map before using it. Beside
-   them, one cited **platform table** maps the keys of every included source onto one another — generated from pinned
-   upstreams with their licences recorded, hand judgements kept apart, each with a reason and cited — while which
-   systems an installation declares is always the machine's own statement.
+5. **The platform table and how a system is named** — one cited **platform table** maps the keys of every included
+   source onto one another, generated from pinned upstreams with their licences recorded, hand judgements kept apart,
+   each with a reason and cited. Every question about a system takes a bare name in the installation's own catalogue
+   source or `(source, key)` pairs of any source the table holds, and says how it resolved them or refuses a system it
+   cannot resolve; which systems an installation declares is always the machine's own statement.
 
 The boundary rule that decides every "table or live?" question, and the reasoning behind all of it, is
 [`DESIGN.md`](DESIGN.md):

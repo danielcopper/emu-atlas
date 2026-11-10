@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import json
 import sys
 import types
@@ -11,6 +12,8 @@ from pathlib import Path
 import pytest
 
 import atlas
+from atlas._agreement import Agreement
+from atlas.contract import catalogue_contract, launch_command_contract, launchable_contract
 from atlas.distribution_downloads import lookup_distribution_downloads
 from atlas.distribution_supplied import lookup_distribution_supplied
 from atlas.firmware import resolve_links
@@ -18,6 +21,9 @@ from atlas.installations import _fill_rule_templates  # pyright: ignore[reportPr
 from atlas.launch import PROBE_HIT, PROBE_MISS, PROBE_UNKNOWN
 from atlas.machine import GLOB_INCOMPLETE, SYMLINK_HOPS, FixtureMachine, GlobResult
 from atlas.oddities import SaveGroup, SaveMode
+from atlas.platforms import systems_reached, translate
+from atlas.save_formats import save_formats
+from atlas.save_memory import SaveMemoryRecord, SystemMemory, load_save_memory
 from tests.answers import placed, state_placed
 from tests.test_machine_vectors import fixture_machine
 
@@ -108,7 +114,7 @@ class TestABrokenCatalogueEmptiesTheFrontend:
         # The healthy stub shape: parses, declares nothing, ES-DE moves on.
         rd = self._rd('<?xml version="1.0"?>\n<systemList>\n<!-- stub -->\n</systemList>\n')
         answer = rd.systems()
-        assert answer.systems == ("gb",)
+        assert answer.systems == (("esde", "gb"),)
         assert not any(
             c.code == atlas.HEALTH_ISSUE_CATALOGUE_INVALID for c in answer.caveats
         )
@@ -371,7 +377,8 @@ class TestLaunchable:
         assert answer.extension == ".CHD"
         assert [dict(c.data) for c in answer.caveats if c.code == atlas.CAVEAT_FRONTEND_NAME_UNSCANNED] == [
             {
-                "system": "dreamcast",
+                "source": "esde",
+                "key": "dreamcast",
                 "kind": atlas.SCANNED_KIND_FILE,
                 "extension": ".CHD",
                 "names": (".chd", ".cue", ".gdi"),
@@ -717,7 +724,7 @@ class TestLaunchable:
         assert [(c.code, c.data) for c in answer.caveats] == [
             (
                 atlas.CAVEAT_LAUNCH_COMMAND_LABEL_UNKNOWN,
-                {"system": "n3ds", "label": "Citra (Standalone)"},
+                {"source": "esde", "key": "n3ds", "label": "Citra (Standalone)"},
             )
         ]
 
@@ -814,8 +821,11 @@ class TestADerivedEmulatorList:
         'sort_savefiles_by_content_enable = "false"\nsort_savefiles_enable = "false"\n'
     )
     MGBA_INFO = (
-        'corename = "mGBA"\nsystemname = "Game Boy Advance"\nfirmware_count = "0"\n'
+        'corename = "mGBA"\nsystemname = "Game Boy Advance"\ndatabase = "Nintendo - Game Boy Advance"\n'
+        'firmware_count = "0"\n'
     )
+    # A bare RetroArch names a system by the libretro database name its cores declare (#784 D10, D46).
+    GBA = "Nintendo - Game Boy Advance"
 
     def _bare(self):
         machine = FixtureMachine(
@@ -829,7 +839,7 @@ class TestADerivedEmulatorList:
         return atlas.BareRetroArchFlatpak(HOME, machine)
 
     def test_the_entries_are_the_cores_with_their_own_names(self):
-        answer = self._bare().emulators_for("gba")
+        answer = self._bare().emulators_for(self.GBA)
         assert [(e.label, e.core_so, e.kind) for e in answer.entries] == [
             ("mGBA", "mgba_libretro.so", atlas.KIND_LIBRETRO)
         ]
@@ -845,17 +855,17 @@ class TestADerivedEmulatorList:
     def test_a_derived_entry_answers_the_save_question(self):
         # The client gain: the entry route works, because a derived entry is a
         # core and the core question has always been answerable here.
-        entry = self._bare().emulators_for("gba").entries[0]
+        entry = self._bare().emulators_for(self.GBA).entries[0]
         placement = placed(entry.savefile_location(content_path="/roms/gba/Game.gba"))
         assert placement.dir == f"{HOME}/saves"
 
     def test_the_systems_list_is_what_the_cores_file_under(self):
         answer = self._bare().systems()
-        assert answer.systems == ("gba",)
+        assert answer.systems == (("libretro", self.GBA),)
         assert atlas.CAVEAT_EMULATOR_LIST_DERIVED in [c.code for c in answer.caveats]
 
     def test_a_system_no_core_files_under_is_empty_and_derived(self):
-        answer = self._bare().emulators_for("n64")
+        answer = self._bare().emulators_for("Nintendo - Nintendo 64")
         assert answer.entries == ()
         assert atlas.CAVEAT_EMULATOR_LIST_DERIVED in [c.code for c in answer.caveats]
 
@@ -864,22 +874,22 @@ class TestADerivedEmulatorList:
         # entries, so launchability refuses the same label the same way; the
         # verdict stays the catalogue absence's unknown either way.
         bare = self._bare()
-        plain = bare.launchable("gba", "/roms/gba/Game.gba")
-        refused = bare.launchable("gba", "/roms/gba/Game.gba", label="VBA-M")
+        plain = bare.launchable(self.GBA, "/roms/gba/Game.gba")
+        refused = bare.launchable(self.GBA, "/roms/gba/Game.gba", label="VBA-M")
         assert refused.verdict == plain.verdict == atlas.VERDICT_UNKNOWN
         unknown = atlas.Caveat(
             atlas.CAVEAT_LAUNCH_COMMAND_LABEL_UNKNOWN,
-            "no catalogue entry of system 'gba' is labelled 'VBA-M'",
-            {"system": "gba", "label": "VBA-M"},
+            f"no catalogue entry of system {self.GBA!r} (libretro) is labelled 'VBA-M'",
+            {"source": "libretro", "key": self.GBA, "label": "VBA-M"},
         )
         assert [c for c in refused.caveats if c != unknown] == list(plain.caveats)
         assert unknown in refused.caveats
-        assert unknown in bare.launch_command("gba", "/roms/gba/Game.gba", label="VBA-M").caveats
+        assert unknown in bare.launch_command(self.GBA, "/roms/gba/Game.gba", label="VBA-M").caveats
 
     def test_a_label_a_derived_entry_carries_leaves_the_answer_as_it_was(self):
         bare = self._bare()
-        assert bare.launchable("gba", "/roms/gba/Game.gba", label="mGBA") == bare.launchable(
-            "gba", "/roms/gba/Game.gba"
+        assert bare.launchable(self.GBA, "/roms/gba/Game.gba", label="mGBA") == bare.launchable(
+            self.GBA, "/roms/gba/Game.gba"
         )
 
     def test_the_catalogue_less_default_refuses_an_unknown_label_too(self):
@@ -888,10 +898,10 @@ class TestADerivedEmulatorList:
         # shares with the launch command's default is executed rather than
         # assumed.
         default = atlas.installations._CatalogueQueries._launchable_answer  # pyright: ignore[reportPrivateUsage]
-        answer, _ = default(self._bare(), "gba", "/roms/gba/Game.gba", "VBA-M")
+        answer, _ = default(self._bare(), ("libretro", self.GBA), "/roms/gba/Game.gba", "VBA-M")
         assert answer.verdict == atlas.VERDICT_UNKNOWN
         assert answer.caveats[-1].code == atlas.CAVEAT_LAUNCH_COMMAND_LABEL_UNKNOWN
-        answer, _ = default(self._bare(), "gba", "/roms/gba/Game.gba", "mGBA")
+        answer, _ = default(self._bare(), ("libretro", self.GBA), "/roms/gba/Game.gba", "mGBA")
         assert atlas.CAVEAT_LAUNCH_COMMAND_LABEL_UNKNOWN not in [c.code for c in answer.caveats]
 
     def test_emudeck_derives_where_the_readable_layers_are_silent(self):
@@ -936,8 +946,8 @@ class TestADerivedEmulatorList:
         assert refused.verdict == plain.verdict == atlas.VERDICT_UNKNOWN
         unknown = atlas.Caveat(
             atlas.CAVEAT_LAUNCH_COMMAND_LABEL_UNKNOWN,
-            "no catalogue entry of system 'gba' is labelled 'VBA-M'",
-            {"system": "gba", "label": "VBA-M"},
+            "no catalogue entry of system 'gba' (esde) is labelled 'VBA-M'",
+            {"source": "esde", "key": "gba", "label": "VBA-M"},
         )
         assert [c for c in refused.caveats if c != unknown] == list(plain.caveats)
         assert unknown in refused.caveats
@@ -967,7 +977,7 @@ class TestADerivedEmulatorList:
             cores={f"{self.CORES_DIR}/mgba_libretro.so": {"library_name": "mGBA"}},
         )
         answer = atlas.EmuDeck(HOME, machine).systems()
-        assert answer.systems == ("atarijaguar", "gba")
+        assert answer.systems == (("esde", "atarijaguar"), ("esde", "gba"))
         assert atlas.CAVEAT_EMULATOR_LIST_DERIVED in [c.code for c in answer.caveats]
 
     def test_emudeck_keeps_the_catalogue_where_the_overlay_declares(self):
@@ -991,6 +1001,31 @@ class TestADerivedEmulatorList:
         answer = atlas.EmuDeck(HOME, machine).emulators_for("gba")
         assert [e.label for e in answer.entries] == ["mGBA (Standalone)"]
         assert atlas.CAVEAT_EMULATOR_LIST_DERIVED not in [c.code for c in answer.caveats]
+
+
+class TestABlankDatabaseEntryNamesNoSystem:
+    """A ``database`` entry of whitespace alone is no database name: the core's questions answer without it."""
+
+    @pytest.mark.parametrize(
+        ("database", "named"),
+        [(" ", ()), ("Foo| ", (("libretro", "Foo"),))],
+        ids=["blank-alone", "blank-beside-a-name"],
+    )
+    def test_every_question_about_the_core_answers(self, database, named):
+        cores = TestADerivedEmulatorList.CORES_DIR
+        info = (
+            f'corename = "X"\nsystemname = "Unmapped Thing"\ndatabase = "{database}"\nfirmware_count = "1"\n'
+            'firmware0_desc = "bios.bin"\nfirmware0_path = "bios.bin"\nfirmware0_opt = "false"\n'
+        )
+        machine = FixtureMachine(
+            {TestADerivedEmulatorList.CFG_PATH: TestADerivedEmulatorList.CFG, f"{cores}/x_libretro.info": info},
+            cores={f"{cores}/x_libretro.so": {"library_name": "X"}},
+            dirs=[f"{HOME}/saves"],
+        )
+        install = atlas.BareRetroArchFlatpak(HOME, machine)
+        assert install.systems().systems == named
+        assert [core.core_so for core in install.firmware_for_core("x_libretro.so").cores] == ["x_libretro.so"]
+        assert [core.core_so for core in install.firmware_inventory().cores] == ["x_libretro.so"]
 
 
 class TestARevokedSaveRootIsStated:
@@ -1436,6 +1471,13 @@ class TestARetroDeckWithoutItsMarkerAnswersNothingElse:
         )
         selections = rd.gamelist_selections("gb")
         assert (selections.system_label, dict(selections.per_game)) == (None, {})
+
+    def test_a_gamelist_question_naming_no_single_system_refuses(self):
+        # Its answer has no caveat list, so a system the pairs do not name is
+        # refused with the reason rather than answered as "no gamelist".
+        rd = self._handle()
+        with pytest.raises(ValueError, match="names no single system.*share no system"):
+            rd.gamelist_selections([("esde", "gb"), ("romm", "psx")])
 
     def test_the_placement_questions_refuse(self):
         rd = self._handle()
@@ -8142,18 +8184,24 @@ class TestEmuDeckEsdeCatalogue:
             atlas.CAVEAT_SYSTEM_UNKNOWN
         )
 
-    def test_an_own_spelling_firmware_answer_is_not_catalogue_informed(self):
-        # A word no build declares is answered from the cores on every
-        # arrangement — the catalogue is never consulted, so neither its
-        # sealed statement nor the cross-check has anything to qualify.
+    def test_a_cited_pair_firmware_answer_is_not_catalogue_informed(self):
+        # A system no catalogue source of the installation names is answered
+        # from the cores on every arrangement (#784 D50) — the catalogue is
+        # never consulted, so neither its sealed statement nor the cross-check
+        # has anything to qualify. The TI-83 is held here because a core it is
+        # cited for, Numero, is installed (#784 D53).
+        cores = TestADerivedEmulatorList.CORES_DIR
         ed = self._emudeck(
             {
                 EMUDECK_SETTINGS: self.MARKER + "doInstallESDE=false\n",
+                STANDALONE_CFG: TestADerivedEmulatorList.CFG,
                 f"{HOME}/ES-DE/custom_systems/es_systems.xml": self.OVERLAY,
-            }
+                f"{cores}/numero_libretro.info": 'corename = "Numero"\nsystemname = "TI83"\nfirmware_count = "0"\n',
+            },
+            cores={f"{cores}/numero_libretro.so": {"library_name": "Numero"}},
         )
-        codes = self._codes(ed.firmware_for_system("ti83"))
-        assert atlas.CAVEAT_SYSTEM_NOT_IN_CATALOGUE in codes
+        codes = self._codes(ed.firmware_for_system(("romm", "ti-83")))
+        assert atlas.CAVEAT_EMULATOR_LIST_DERIVED in codes
         assert atlas.CAVEAT_EMULATOR_CATALOGUE_SEALED not in codes
         assert atlas.CAVEAT_FRONTEND_MARKER_MISMATCH not in codes
 
@@ -8985,6 +9033,14 @@ class _CountingMachine:
         self._inner = FixtureMachine(files, **kwargs)
         self.reads: Counter[str] = Counter()
 
+    @classmethod
+    def wrapping(cls, inner):
+        """A counter over an already-built machine (a vector's, say)."""
+        machine = cls.__new__(cls)
+        machine._inner = inner
+        machine.reads = Counter()
+        return machine
+
     def read_text(self, path):
         # An unresolvable chain (ELOOP) has no file to key on; the spelling is
         # then the most specific thing there is.
@@ -9323,6 +9379,90 @@ class TestOneReadPerSourcePerQuery:
             for path in self.OVERRIDE_FILES:
                 assert path in machine.reads, f"{question} did not read {path}"
 
+    @pytest.mark.parametrize("question", ["rom_location", "launchable", "savefile_location"])
+    @pytest.mark.parametrize(
+        ("system", "core_so"),
+        [(("libretro", "Nintendo - Game Boy"), "gambatte_libretro.so"), (("romm", "ti-83"), "numero_libretro.so")],
+        ids=["own-pair", "held-cited-pair"],
+    )
+    def test_a_bare_retroarch_reads_its_cfg_once(self, question, system, core_so):
+        # The cfg is a bare RetroArch's marker and its configuration at once:
+        # health reads its status and the derived context its text, and a
+        # cited pair's held check reaches that context too — one read serves
+        # them all.
+        cores = TestADerivedEmulatorList.CORES_DIR
+        machine = _CountingMachine(
+            {
+                TestADerivedEmulatorList.CFG_PATH: TestADerivedEmulatorList.CFG,
+                f"{cores}/gambatte_libretro.info": (
+                    'corename = "Gambatte"\nsystemname = "Game Boy/Game Boy Color"\n'
+                    'database = "Nintendo - Game Boy|Nintendo - Game Boy Color"\nfirmware_count = "0"\n'
+                ),
+                f"{cores}/numero_libretro.info": 'corename = "Numero"\nsystemname = "TI83"\nfirmware_count = "0"\n',
+            },
+            cores={
+                f"{cores}/gambatte_libretro.so": {"library_name": "Gambatte"},
+                f"{cores}/numero_libretro.so": {"library_name": "Numero"},
+            },
+            dirs=[f"{HOME}/saves"],
+        )
+        handle = atlas.BareRetroArchFlatpak(HOME, machine)
+        content = f"{HOME}/roms/game.zip"
+        if question == "rom_location":
+            handle.rom_location(system)
+        elif question == "launchable":
+            handle.launchable(system, content)
+        else:
+            handle.savefile_location(content_path=content, core_so=core_so, system=system)
+        assert TestADerivedEmulatorList.CFG_PATH in machine.reads
+        assert machine.repeats() == {}
+
+    @pytest.mark.parametrize("question", ["launch_command", "launchable"])
+    def test_the_start_probe_reads_the_overrides_files_once(self, question):
+        # The launch answers probe the library path the emulator starts with,
+        # which composes the app's overrides files over the runtime; the
+        # catalogue entries compose the same files, so the probe must read
+        # them through the per-question memo, not a second time.
+        name = "launch-command-an-override-outranks-the-runtimes-library-path"
+        path = Path(__file__).parent.parent / "vectors" / "machines" / "launch-command.json"
+        inp = next(v for v in json.loads(path.read_text())["vectors"] if v["name"] == name)["input"]
+        query = inp["launch_command_query"]
+        machine = _CountingMachine.wrapping(fixture_machine(inp))
+        handle = atlas.RetroDeck(inp["home"], machine)
+        machine.reads.clear()
+        getattr(handle, question)(query["system"], query["content_path"])
+        assert f"{HOME}/.local/share/flatpak/overrides/net.retrodeck.retrodeck" in machine.reads
+        assert machine.repeats() == {}
+
+    @pytest.mark.parametrize(
+        "system",
+        ["n64", "dreamcast", ("libretro", "Nintendo - Nintendo 64")],
+        ids=["declared", "undeclared", "routed"],
+    )
+    def test_a_save_question_asked_by_system_reads_each_source_once(self, system):
+        # A save question that names a system reads the catalogue behind its
+        # resolution (#784 D53) beside the cfg and the override files its
+        # placement composes; the portability question also composes those
+        # files for its entries' launch answer: every one of them once.
+        content, core = self.CONTENT, "parallel_n64_libretro.so"
+        questions = {
+            "savefile_location": lambda rd: placed(
+                rd.savefile_location(content_path=content, core_so=core, system=system)
+            ),
+            "save_portability": lambda rd: rd.save_portability(
+                system, source="Mupen64Plus-Next", target="ParaLLEl N64", content_path=content
+            ),
+        }
+        for question, ask in questions.items():
+            machine = self._query(ask)
+            assert machine.repeats() == {}, question
+            # A portability question about a system the catalogue does not
+            # declare has no entries, so it never reaches a placement.
+            if question == "save_portability" and system == "dreamcast":
+                continue
+            for path in self.OVERRIDE_FILES:
+                assert path in machine.reads, f"{question} did not read {path}"
+
     def test_the_catalogue_questions_do_not_read_the_overrides_files(self):
         # The other half of the same fact: ES-DE's --home is the pinned
         # XDG_CONFIG_HOME, no cfg is read, and an environment that cannot
@@ -9355,6 +9495,254 @@ class TestOneReadPerSourcePerQuery:
             assert machine.repeats() == {}
             for path in self.OVERRIDE_FILES:
                 assert path in machine.reads, f"the entry route did not read {path}"
+
+
+class TestACitedSystemIsHeldWhereItsCoreIsInstalled:
+    """A system atlas names by a cited pair is held only where a core it is cited for is installed (#784 D53)."""
+
+    @pytest.mark.parametrize(
+        "ask",
+        [
+            lambda handle: handle.firmware_for_system(("romm", "bk")),
+            lambda handle: handle.emulators_for(("romm", "bk")),
+            lambda handle: handle.rom_location(("romm", "bk")),
+            lambda handle: handle.launchable(("romm", "bk"), "/mnt/sd/retrodeck/roms/bk/Game.bin"),
+            lambda handle: handle.launch_command(("romm", "bk"), "/mnt/sd/retrodeck/roms/bk/Game.bin"),
+        ],
+        ids=["firmware", "emulators_for", "rom_location", "launchable", "launch_command"],
+    )
+    def test_a_cited_system_question_reads_each_source_once(self, ask):
+        # Telling whether the cited BK is held reads the installed cores, and
+        # the firmware answer reads them too: one revision, read once.
+        name = "romm-bk-reaches-libretros-cited-bk-on-retrodeck"
+        path = Path(__file__).parent.parent / "vectors" / "machines" / "system-pairs.json"
+        inp = next(v for v in json.loads(path.read_text())["vectors"] if v["name"] == name)["input"]
+        machine = _CountingMachine.wrapping(fixture_machine(inp))
+        handle = next(i for i in atlas.detect(inp["home"], machine) if i.kind == "retrodeck")
+        machine.reads.clear()
+        assert ask(handle).resolution.status == "resolved"
+        assert machine.reads
+        assert machine.repeats() == {}
+
+    def test_a_core_filed_under_a_cited_board_by_its_systemname_holds_it(self):
+        # On a bare RetroArch a core whose systemname the map files under a
+        # cited system holds that system, whatever database names it declares.
+        cores = TestADerivedEmulatorList.CORES_DIR
+        info = 'corename = "FBNeo"\nsystemname = "Arcade (various)"\ndatabase = "FBNeo - Arcade Games"\n'
+
+        def bare(installed: bool):
+            files = {TestADerivedEmulatorList.CFG_PATH: TestADerivedEmulatorList.CFG}
+            if installed:
+                files[f"{cores}/fbneo_libretro.info"] = info
+            machine = FixtureMachine(
+                files,
+                cores={f"{cores}/fbneo_libretro.so": {"library_name": "FBNeo"}} if installed else {},
+                dirs=[f"{HOME}/saves", cores],
+            )
+            return atlas.BareRetroArchFlatpak(HOME, machine)
+
+        def status(installed: bool) -> str:
+            resolution = bare(installed).emulators_for(("esde", "arcade")).resolution
+            assert resolution is not None
+            return resolution.status
+
+        assert status(True) == "resolved"
+        assert status(False) == "unknown"
+
+
+class TestRetroDeckAnswersACitedSystemFromItsCores:
+    """RetroDECK's catalogue questions for a held cited system answer from the installed cores (#784 D57)."""
+
+    SYSTEM = ("romm", "bk")
+    CONTENT = "/mnt/sd/retrodeck/roms/bk/Game.bin"
+
+    def _handle(self, *, catalogue_unreadable: bool = False):
+        name = "romm-bk-reaches-libretros-cited-bk-on-retrodeck"
+        path = Path(__file__).parent.parent / "vectors" / "machines" / "system-pairs.json"
+        inp = next(v for v in json.loads(path.read_text())["vectors"] if v["name"] == name)["input"]
+        if catalogue_unreadable:
+            inp = {
+                **inp,
+                "files": {
+                    file: {"status": "unreadable"} if file.endswith("es_systems.xml") else text
+                    for file, text in inp["files"].items()
+                },
+            }
+        return next(i for i in atlas.detect(inp["home"], fixture_machine(inp)) if i.kind == "retrodeck")
+
+    def test_a_label_a_derived_entry_carries_chooses_it(self):
+        handle = self._handle()
+        command = handle.launch_command(self.SYSTEM, self.CONTENT, label="bk")
+        launchable = handle.launchable(self.SYSTEM, self.CONTENT, label="bk")
+        assert command.entry is not None and command.entry.core_so == "bk_libretro.so"
+        assert command.command is None
+        assert launchable.verdict == "unknown"
+        # Both answers rest on the core enumeration and name what it read.
+        assert launchable.sources and launchable.sources == command.sources
+        for answer in (command, launchable):
+            assert [c.code for c in answer.caveats] == ["emulator-list-derived"]
+
+    def test_a_label_no_derived_entry_carries_is_refused(self):
+        handle = self._handle()
+        command = handle.launch_command(self.SYSTEM, self.CONTENT, label="Other")
+        launchable = handle.launchable(self.SYSTEM, self.CONTENT, label="Other")
+        assert command.entry is None
+        for answer in (command, launchable):
+            assert [c.code for c in answer.caveats] == ["emulator-list-derived", "launch-command-label-unknown"]
+
+    @pytest.mark.parametrize(
+        "ask",
+        [
+            lambda handle, system, content: catalogue_contract(handle.emulators_for(system)),
+            lambda handle, system, content: launch_command_contract(handle.launch_command(system, content)),
+            lambda handle, system, content: launchable_contract(handle.launchable(system, content)),
+        ],
+        ids=["emulators_for", "launch_command", "launchable"],
+    )
+    def test_the_catalogue_is_not_consulted(self, ask):
+        # As on the firmware route: the catalogue can neither enumerate nor
+        # deny the entries of a system it never declares, so one that could
+        # not be read changes nothing here.
+        readable = ask(self._handle(), self.SYSTEM, self.CONTENT)
+        assert readable["caveats"][0]["code"] == "emulator-list-derived"
+        assert ask(self._handle(catalogue_unreadable=True), self.SYSTEM, self.CONTENT) == readable
+
+
+class TestEmuDeckAnswersACitedSystemFromItsCores:
+    """An EmuDeck with ES-DE answers its catalogue questions for a held cited system from the cores (#784 D57)."""
+
+    SYSTEM = ("romm", "ti-83")
+    CONTENT = "/home/deck/Emulation/roms/ti83/Game.8xp"
+    HELD = "an-emudeck-catalogue-read-in-full-answers-a-cited-system-from-its-cores"
+    SEALED = "an-undeclared-name-states-no-system-unknown-on-a-sealed-emudeck-catalogue"
+    CORES = "/home/deck/.var/app/org.libretro.RetroArch/config/retroarch/cores"
+    SHADOW = "/home/deck/ES-DE/resources/systems/linux/es_systems.xml"
+    QUESTIONS = (
+        lambda handle, system, content: catalogue_contract(handle.emulators_for(system)),
+        lambda handle, system, content: launch_command_contract(handle.launch_command(system, content)),
+        lambda handle, system, content: launchable_contract(handle.launchable(system, content)),
+    )
+    IDS = ["emulators_for", "launch_command", "launchable"]
+
+    def _input(self, name: str):
+        path = Path(__file__).parent.parent / "vectors" / "machines" / "system-pairs.json"
+        return next(v for v in json.loads(path.read_text())["vectors"] if v["name"] == name)["input"]
+
+    def _sealed_with_the_core(self, *, files=None):
+        # The sealed machine with the held machine's Numero and its cfg lines.
+        held, inp = self._input(self.HELD), self._input(self.SEALED)
+        cfg = next(path for path in inp["files"] if path.endswith("retroarch.cfg"))
+        moved = {path: text for path, text in held["files"].items() if path.startswith(self.CORES)}
+        return {
+            **inp,
+            "files": {**inp["files"], cfg: held["files"][cfg], **moved, **(files or {})},
+            "cores": held["cores"],
+        }
+
+    def _handle(self, inp, machine=None):
+        found = atlas.detect(inp["home"], machine or fixture_machine(inp))
+        return next(i for i in found if i.kind == "emudeck")
+
+    @pytest.mark.parametrize("ask", QUESTIONS, ids=IDS)
+    def test_the_catalogue_status_does_not_ride(self, ask):
+        # The catalogue can neither enumerate nor deny the entries of a system
+        # it never declares, so whether it was read in full, sealed or broken
+        # changes nothing here — as on the firmware route and on RetroDECK.
+        held = ask(self._handle(self._input(self.HELD)), self.SYSTEM, self.CONTENT)
+        assert held["caveats"][0]["code"] == "emulator-list-derived"
+        sealed = ask(self._handle(self._sealed_with_the_core()), self.SYSTEM, self.CONTENT)
+        broken = self._sealed_with_the_core(files={self.SHADOW: {"status": "unreadable"}})
+        assert [sealed, ask(self._handle(broken), self.SYSTEM, self.CONTENT)] == [held, held]
+
+    @pytest.mark.parametrize("ask", QUESTIONS, ids=IDS)
+    def test_without_es_de_the_catalogue_questions_still_refuse(self, ask):
+        # D57 is about ES-DE's catalogue: with no ES-DE on the disk the
+        # catalogue is unestablished, a cited system's included.
+        inp = self._sealed_with_the_core()
+        inp = {**inp, "files": {path: text for path, text in inp["files"].items() if "ES-DE" not in path}}
+        codes = [caveat["code"] for caveat in ask(self._handle(inp), self.SYSTEM, self.CONTENT)["caveats"]]
+        assert "emulator-catalogue-unestablished" in codes
+        assert "emulator-list-derived" not in codes
+
+    @pytest.mark.parametrize("ask", QUESTIONS, ids=IDS)
+    @pytest.mark.parametrize("arrangement", ["complete", "sealed"])
+    def test_a_cited_system_question_reads_each_source_once(self, arrangement, ask):
+        inp = self._input(self.HELD) if arrangement == "complete" else self._sealed_with_the_core()
+        machine = _CountingMachine.wrapping(fixture_machine(inp))
+        handle = self._handle(inp, machine)
+        machine.reads.clear()
+        ask(handle, self.SYSTEM, self.CONTENT)
+        # An empty read log would make the assertion vacuously true.
+        assert machine.reads
+        assert machine.repeats() == {}
+
+
+class TestOneReadPerSourceOnEmuDeck:
+    """EmuDeck's system questions read each source once, the D53 catalogue reading included.
+
+    Stating ``system-unknown`` (#784 D53) takes a second look at the catalogue
+    beside the answer's own; both have to see one revision of the marker, the
+    companion cfg, the backend checkout's HEAD and the Flatpak override files.
+    """
+
+    QUESTIONS = (
+        lambda handle, system: handle.emulators_for(system),
+        lambda handle, system: handle.rom_location(system),
+        lambda handle, system: handle.firmware_for_system(system),
+        lambda handle, system: handle.launchable(system, "/home/deck/Emulation/roms/x/Game.bin"),
+        lambda handle, system: handle.launch_command(system, "/home/deck/Emulation/roms/x/Game.bin"),
+    )
+
+    @pytest.mark.parametrize(
+        "name",
+        [
+            "an-undeclared-name-states-system-unknown-on-a-complete-emudeck-catalogue",
+            "an-undeclared-name-states-no-system-unknown-on-a-sealed-emudeck-catalogue",
+        ],
+        ids=["complete", "sealed"],
+    )
+    @pytest.mark.parametrize(
+        "ask", QUESTIONS, ids=["emulators_for", "rom_location", "firmware", "launchable", "launch_command"]
+    )
+    def test_an_own_name_question_reads_each_source_once(self, name, ask):
+        path = Path(__file__).parent.parent / "vectors" / "machines" / "system-pairs.json"
+        inp = next(v for v in json.loads(path.read_text())["vectors"] if v["name"] == name)["input"]
+        machine = _CountingMachine.wrapping(fixture_machine(inp))
+        handle = next(i for i in atlas.detect(inp["home"], machine) if i.kind == "emudeck")
+        machine.reads.clear()
+        ask(handle, inp["catalogue_query"]["system"])
+        # An empty read log would make the assertion vacuously true.
+        assert machine.reads
+        assert machine.repeats() == {}
+
+
+class TestTheGamelistQuestionTakesPairs:
+    """A gamelist is filed under the system the asked pairs resolve to (#784 D44)."""
+
+    def _handle(self):
+        return _retrodeck(TestOneReadPerSourcePerQuery.FILES, cores=TestOneReadPerSourcePerQuery.CORES)
+
+    def test_a_pair_the_table_routes_reads_the_resolved_systems_gamelist(self):
+        # libretro's key differs from the gamelist folder's name, so only the
+        # resolved system finds the file.
+        rd = self._handle()
+        by_name = rd.gamelist_selections("n64")
+        assert dict(by_name.per_game), "an empty gamelist would make the comparison vacuous"
+        assert rd.gamelist_selections(("libretro", "Nintendo - Nintendo 64")) == by_name
+        assert rd.gamelist_selections(("esde", "n64")) == by_name
+
+    def test_a_name_the_catalogue_does_not_declare_refuses(self):
+        # The answer has no caveat list to carry system-unknown in (#784 D53),
+        # so an undeclared name is refused rather than answered as a system
+        # with no gamelist.
+        with pytest.raises(ValueError, match="names no single system.*declares no system 'dreamcast'"):
+            self._handle().gamelist_selections("dreamcast")
+
+    def test_a_resolved_systems_other_statements_are_not_carried(self):
+        # A version on a pair read live is not applied; the answer cannot say
+        # so and answers for the system as resolved.
+        rd = self._handle()
+        assert rd.gamelist_selections(("esde", "n64", "1.0")) == rd.gamelist_selections("n64")
 
 
 class TestCfgDirectorySpelling:
@@ -9441,10 +9829,11 @@ class TestEveryHandleAnswersTheCatalogueQuestion:
         # evidence work would change that. The evidence caveat beside it is a
         # different claim — no bare install has been observed live — and every
         # answer from an unverified arrangement carries it (atlas.evidence).
-        answer = self._only(self.RA_FILES).emulators_for("n64")
+        answer = self._only(self.RA_FILES).emulators_for("Nintendo - Nintendo 64")
         assert answer.entries == ()
         assert [c.code for c in answer.caveats] == [
             atlas.CAVEAT_EMULATOR_CATALOGUE_UNAVAILABLE,
+            atlas.CAVEAT_SYSTEM_UNKNOWN,
             atlas.CAVEAT_ARRANGEMENT_UNVERIFIED,
         ]
 
@@ -9492,12 +9881,12 @@ class TestEveryHandleAnswersTheCatalogueQuestion:
         assert rd.emulators_for("n64").entries == ()
         assert rd.systems().systems == ()
 
-    def test_a_read_catalogue_that_knows_no_emulator_is_silent_on_a_healthy_installation(self):
+    def test_a_read_catalogue_that_does_not_declare_the_system_states_it_unknown_on_a_healthy_installation(self):
         # The one empty answer a client may act on: read, and the frontend
-        # genuinely knows nothing for this system. The empty caveat list is
-        # this fixture's health talking too — on a broken installation the
-        # findings sit here, which is why the client's test is the three
-        # emulator-catalogue-* codes rather than `not answer.caveats`.
+        # declares no such system, which system-unknown states (#784 D53).
+        # That it is the only caveat is this fixture's health talking too —
+        # on a broken installation the findings sit beside it, which is why
+        # the client's test is the codes rather than the list's length.
         machine = FixtureMachine(
             {
                 RETRODECK_JSON: RD_JSON,
@@ -9510,7 +9899,28 @@ class TestEveryHandleAnswersTheCatalogueQuestion:
         )
         answer = atlas.RetroDeck(HOME, machine).emulators_for("dreamcast")
         assert answer.entries == ()
-        assert answer.caveats == ()
+        assert [(c.code, dict(c.data)) for c in answer.caveats] == [
+            (atlas.CAVEAT_SYSTEM_UNKNOWN, {"source": "esde", "key": "dreamcast"})
+        ]
+
+    def test_a_system_only_inside_an_xml_comment_is_unknown_and_says_why(self):
+        # A commented-out block is text the frontend does not load, so the
+        # system is not here; the message names the comment, so a reader who
+        # sees the block in the file learns why it does not count (#784 D53).
+        machine = FixtureMachine(
+            {
+                RETRODECK_JSON: RD_JSON,
+                self.DEPLOY_ESDE: '<?xml version="1.0"?>\n<systemList>\n  <system><name>n64</name>'
+                "<path>%ROMPATH%/n64</path>\n    <command label=\"Mupen64Plus-Next\">"
+                "%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%"
+                "</command>\n  </system>\n  <!-- <system><name>dreamcast</name>"
+                "<path>%ROMPATH%/dreamcast</path></system> -->\n</systemList>\n",
+            },
+            dirs=["/mnt/sd/retrodeck/saves", RD_BIOS],
+        )
+        (caveat,) = atlas.RetroDeck(HOME, machine).emulators_for("dreamcast").caveats
+        assert caveat.code == atlas.CAVEAT_SYSTEM_UNKNOWN
+        assert "only inside an XML comment" in caveat.message
 
 
 class TestTheRomDirectorySettingIsReadOrRefused:
@@ -9576,7 +9986,7 @@ class TestTheRomDirectorySettingIsReadOrRefused:
 
     def test_the_unreadable_caveat_names_the_file_and_the_read_status(self):
         caveat = self._placement(self.UNREADABLE).caveats[0]
-        assert caveat.data == {"system": "n64", "path": self.SETTINGS, "status": "unreadable"}
+        assert caveat.data == {"source": "esde", "key": "n64", "path": self.SETTINGS, "status": "unreadable"}
 
     def test_settings_whose_bytes_are_not_text_state_no_directory(self):
         placement = self._placement({"status": "invalid-text"})
@@ -9670,7 +10080,8 @@ class TestTheRomDirectorySettingIsReadOrRefused:
     def test_the_refusal_names_the_declaration_and_the_configured_value(self):
         caveat = self._placement(self.NOT_ABSOLUTE_SETTINGS).caveats[0]
         assert caveat.data == {
-            "system": "n64",
+            "source": "esde",
+            "key": "n64",
             "declared": "%ROMPATH%/n64",
             "configured": self.NOT_ABSOLUTE,
         }
@@ -9716,7 +10127,7 @@ class TestTheRomDirectorySettingIsReadOrRefused:
         # Fixed with the sources: this answer returns before reading them, so
         # citing ROMDirectory would claim a reading that did not happen.
         placement = self._placement(system="dreamcast")
-        assert [c.code for c in placement.caveats] == [atlas.CAVEAT_ROM_PATH_UNDECLARED]
+        assert [c.code for c in placement.caveats] == [atlas.CAVEAT_SYSTEM_UNKNOWN]
         assert not self._cites_the_settings(placement)
 
 
@@ -10394,13 +10805,13 @@ class TestTheRunningDeployIsTheOneFlatpakWouldStart:
                 f"{self.USER_DEPLOY}/{self.ESDE_SUFFIX}": self._catalogue("n64"),
             }
         )
-        assert rd.systems().systems == ("n64",)
+        assert rd.systems().systems == (("esde", "n64"),)
 
     def test_a_system_only_deploy_is_still_the_one_read(self):
         # The direction that keeps the rule falsifiable: with no user deploy
         # the search reaches the system installation, and that tree answers.
         rd = self._rd({f"{self.SYSTEM_DEPLOY}/{self.ESDE_SUFFIX}": self._catalogue("psx")})
-        assert rd.systems().systems == ("psx",)
+        assert rd.systems().systems == (("esde", "psx"),)
 
     def test_the_running_deploy_does_not_borrow_the_other_trees_core(self):
         # The cfg names "/app/cores"; the user deploy runs, so its cores
@@ -11656,7 +12067,7 @@ class TestEveryEntryCarriesTheIdentityItsCommandSpells:
             cores={f"{cores_dir}/mgba_libretro.so": {"library_name": "mGBA"}},
             dirs=[f"{HOME}/saves"],
         )
-        entry = atlas.BareRetroArchFlatpak(HOME, machine).emulators_for("gba").entries[0]
+        entry = atlas.BareRetroArchFlatpak(HOME, machine).emulators_for(TestADerivedEmulatorList.GBA).entries[0]
         assert entry.command == ""
         assert entry.emulator == entry.core_so == "mgba_libretro.so"
 
@@ -11915,7 +12326,7 @@ class TestTheFirmwareRouteReadsOneLaunchsOwnSandbox:
         installation = self._melonds_two_launches()
         by_system = installation._read_esde_catalogue()[0]  # pyright: ignore[reportPrivateUsage]
         entries = _firmware_catalogue_entries(
-            installation, by_system, "nds", _NO_GAMELIST_SELECTIONS
+            installation, by_system, ("esde", "nds"), _NO_GAMELIST_SELECTIONS
         )
         stated = {entry.label: entry.standalone_xdg_pinned for entry in entries}
         assert stated == {"melonDS (Standalone)": False, "melonDS (Launcher)": True}
@@ -12073,7 +12484,8 @@ class TestARowNamingACoreFileOfAnotherHost:
         assert entry.caveats[0].data == {
             "core_file": "citra_libretro.dll",
             "label": "Citra",
-            "system": "n3ds",
+            "source": "esde",
+            "key": "n3ds",
         }
 
     def test_the_sibling_standalone_row_is_untouched(self):
@@ -12098,7 +12510,7 @@ class TestARowNamingACoreFileOfAnotherHost:
         ]
         assert [a.code for a in answers] == [atlas.UNRESOLVED_CORE_FILE_FOREIGN] * 4
         assert [a.data for a in answers] == [
-            {"core_file": "citra_libretro.dll", "label": "Citra", "system": "n3ds"}
+            {"core_file": "citra_libretro.dll", "label": "Citra", "source": "esde", "key": "n3ds"}
         ] * 4
 
     def test_the_firmware_answer_is_absent_rather_than_an_emulator_nobody_read(self, monkeypatch):
@@ -12109,7 +12521,8 @@ class TestARowNamingACoreFileOfAnotherHost:
         assert cores[0].caveats[0].data == {
             "core_file": "citra_libretro.dll",
             "label": "Citra",
-            "system": "n3ds",
+            "source": "esde",
+            "key": "n3ds",
         }
 
     def test_the_inventory_leaves_no_trace_of_such_a_row(self, monkeypatch):
@@ -12219,7 +12632,7 @@ class TestARowNamingACoreFileOfAnotherHost:
         ]
         assert [a.code for a in answers] == [atlas.UNRESOLVED_CORE_FILE_FOREIGN] * 4
         assert [a.data for a in answers] == [
-            {"core_file": "citra_libretro.dll", "label": "Citra", "system": "n3ds"}
+            {"core_file": "citra_libretro.dll", "label": "Citra", "source": "esde", "key": "n3ds"}
         ] * 4
 
     def test_a_catalogue_that_spells_its_rows_the_way_retrodeck_does_declares_no_such_row(self):
@@ -12414,3 +12827,168 @@ class TestTheSandboxOpensWhatBashOpens:
 
     def test_its_working_directory_is_written_nowhere(self):
         assert self.sandbox().working_directory is None
+
+
+class TestASaveQuestionKeysItsRecordByTheSystemAsked:
+    """A save question's system keys a core's recorded file set by its ES-DE name (#784 D44).
+
+    A system in ES-DE's or RetroDECK's source keys a record by its own key,
+    and so does an asked pair in one of those sources; a system in any other
+    source by the ES-DE names the table reaches from it, where the entries the
+    record holds for them state them alike, the ones it does not hold named
+    beside the answer (#784 D50). On a bare RetroArch the system is read in
+    libretro's names, and libretro's Game Boy is ES-DE's gb and sgb.
+    """
+
+    GAMBATTE_INFO = (
+        'corename = "Gambatte"\nsystemname = "Game Boy/Game Boy Color"\n'
+        'database = "Nintendo - Game Boy|Nintendo - Game Boy Color"\nfirmware_count = "0"\n'
+    )
+
+    def _gambatte(self):
+        cores = TestADerivedEmulatorList.CORES_DIR
+        machine = FixtureMachine(
+            {
+                TestADerivedEmulatorList.CFG_PATH: TestADerivedEmulatorList.CFG,
+                f"{cores}/gambatte_libretro.info": self.GAMBATTE_INFO,
+            },
+            cores={f"{cores}/gambatte_libretro.so": {"library_name": "Gambatte", "library_version": "v0.5.0 6924c76"}},
+            dirs=[f"{HOME}/saves"],
+        )
+        return atlas.BareRetroArchFlatpak(HOME, machine)
+
+    def test_a_name_the_record_does_not_hold_is_named_beside_the_files_it_answers(self):
+        # Gambatte's record holds gb but not sgb: the entry route names the
+        # files it states for gb, and save-record-partial names sgb.
+        (entry,) = self._gambatte().emulators_for("Nintendo - Game Boy").entries
+        placement = placed(entry.savefile_location(content_path="/roms/gb/Game.gb"))
+        assert placement.file_set.files == ("Game.srm", "Game.rtc")
+        partial = [c for c in placement.caveats if c.code == atlas.CAVEAT_SAVE_RECORD_PARTIAL]
+        assert [dict(c.data) for c in partial] == [{"core": "gambatte", "sources": ("esde",), "keys": ("sgb",)}]
+
+    def test_two_entries_the_record_holds_that_differ_key_no_record(self, monkeypatch):
+        # No shipped record states two of one system's ES-DE names apart, so a
+        # record that does is written here: gb and sgb filled differently.
+        gambatte = SaveMemoryRecord(
+            key="gambatte",
+            library_names=("Gambatte",),
+            systems={
+                "gb": SystemMemory(memory_types=("save_ram", "rtc"), verified_core="v", citation="c"),
+                "sgb": SystemMemory(memory_types=("save_ram",), verified_core="v", citation="c"),
+            },
+            provenance="p",
+        )
+        monkeypatch.setattr("atlas.installations.lookup_save_memory", lambda **_: gambatte)
+        placement = placed(
+            self._gambatte().savefile_location(
+                content_path="/roms/gb/Game.gb", core_so="gambatte_libretro.so", system="Nintendo - Game Boy"
+            )
+        )
+        assert placement.file_set.files == ()
+        (ambiguous,) = [c for c in placement.caveats if c.code == atlas.CAVEAT_SAVE_RECORD_AMBIGUOUS]
+        assert dict(ambiguous.data) == {"core": "gambatte", "sources": ("esde", "esde"), "keys": ("gb", "sgb")}
+        assert "different files" in ambiguous.message
+        assert "among others" not in ambiguous.message
+        assert atlas.CAVEAT_SAVE_RECORD_PARTIAL not in [c.code for c in placement.caveats]
+        # Where the system stands for a name the record holds no entry for as
+        # well, the message says the held ones are not all of it.
+        wider = atlas.installations._record_ambiguous(  # pyright: ignore[reportPrivateUsage]
+            gambatte, Agreement(None, ("gb", "sgb"), ("gbh",))
+        )
+        assert "gb, sgb, among others" in wider.message
+
+    def test_record_keys_come_only_from_an_asked_system(self, monkeypatch):
+        # The keys a save question carries are an asked system's; keys with
+        # nothing asked would fall to the files every recorded system agrees on.
+        asked = []
+        monkeypatch.setattr(
+            "atlas.installations._retroarch_savefile_location", lambda _machine, query: asked.append(query)
+        )
+        self._gambatte().savefile_location(
+            content_path="/roms/gb/Game.gb", core_so="gambatte_libretro.so", system="Nintendo - Game Boy"
+        )
+        (query,) = asked
+        assert (query.record_keys, query.system_asked, query.system) == (("gb", "sgb"), True, None)
+        assert query.asked == (("libretro", "Nintendo - Game Boy"),)
+        assert dataclasses.replace(query, record_keys=("gb",)).system == "gb"
+        with pytest.raises(ValueError, match="record keys come from an asked system"):
+            dataclasses.replace(query, system_asked=False)
+        # The pairs an unkeyed answer names come from an asked system too.
+        with pytest.raises(ValueError, match="record keys come from an asked system"):
+            dataclasses.replace(query, record_keys=(), system_asked=False)
+        # And keys never come without the pairs that asked for them.
+        with pytest.raises(ValueError, match="record keys come with the pairs that asked for them"):
+            dataclasses.replace(query, asked=())
+
+    # mGBA declares the Game Boy beside the Game Boy Advance, so a bare
+    # RetroArch with it installed holds both (#784 D53).
+    MGBA_INFO = (
+        'corename = "mGBA"\nsystemname = "Game Boy Advance"\n'
+        'database = "Nintendo - Game Boy Advance|Nintendo - Game Boy"\nfirmware_count = "0"\n'
+    )
+
+    def _bare(self):
+        cores = TestADerivedEmulatorList.CORES_DIR
+        machine = FixtureMachine(
+            {
+                TestADerivedEmulatorList.CFG_PATH: TestADerivedEmulatorList.CFG,
+                f"{cores}/mgba_libretro.info": self.MGBA_INFO,
+            },
+            cores={f"{cores}/mgba_libretro.so": {"library_name": "mGBA"}},
+            dirs=[f"{HOME}/saves"],
+        )
+        return atlas.BareRetroArchFlatpak(HOME, machine)
+
+    def _files(self, system) -> tuple[str, tuple[str, ...]]:
+        placement = placed(
+            self._bare().savefile_location(content_path="/roms/gb/Game.gb", core_so="mgba_libretro.so", system=system)
+        )
+        return placement.file_set.state, placement.file_set.files
+
+    def test_esde_s_pair_keys_the_game_boy_record(self):
+        assert self._files(("esde", "gb")) == ("declared", ("Game.srm", "Game.rtc"))
+
+    def test_the_installation_s_own_name_keys_the_record_it_names_alone(self):
+        assert self._files("Nintendo - Game Boy Advance") == ("declared", ("Game.srm",))
+
+    def test_a_name_standing_for_several_es_de_systems_keys_the_record_they_agree_on(self):
+        # libretro's Game Boy is ES-DE's gb and sgb, and mGBA's record states
+        # the same memory for both (#784 D50).
+        assert self._files("Nintendo - Game Boy") == ("declared", ("Game.srm", "Game.rtc"))
+
+    def test_an_entry_asked_through_a_routed_pair_names_that_pair_where_it_holds_no_record(self):
+        # The portability question hands its entries the pairs it was asked
+        # by: Gambatte's record holds no entry for sgb, which libretro's Game
+        # Boy reaches on this catalogue, so the placement names the asked
+        # pair, not the entry's own system (#784 D55).
+        name = "an-entry-reached-through-a-routed-pair-names-the-asked-pair-it-holds-no-record-for"
+        path = Path(__file__).parent.parent / "vectors" / "machines" / "system-pairs.json"
+        inp = next(v for v in json.loads(path.read_text())["vectors"] if v["name"] == name)["input"]
+        handle = next(i for i in atlas.detect(inp["home"], fixture_machine(inp)) if i.kind == "emudeck")
+        asked = (("libretro", "Nintendo - Game Boy", None),)
+        (entry,) = [e for e in handle.emulators_for(asked).entries if e.label == "Gambatte"]
+        placement = entry._keyed_savefile_location(  # pyright: ignore[reportPrivateUsage]
+            asked, content_path=inp["save_portability_query"]["content_path"], cwd=None, appendconfig=()
+        )
+        (unrecorded,) = [c for c in placed(placement).caveats if c.code == atlas.CAVEAT_SAVE_RECORD_UNRECORDED]
+        assert dict(unrecorded.data) == {"core": "gambatte", "source": "libretro", "key": "Nintendo - Game Boy"}
+
+    def test_es_de_s_and_retrodeck_s_names_key_a_record_as_they_stand(self):
+        # RetroDECK's own primehack keys a record filed under primehack, not
+        # the wii the table reaches from it, and a name added to a catalogue by
+        # hand keys only itself.
+        keys = atlas.RetroDeck._record_keys  # pyright: ignore[reportPrivateUsage]
+        assert keys(("retrodeck", "primehack")) == ("primehack",)
+        assert keys(("esde", "gbh")) == ("gbh",)
+
+    def test_another_source_keys_the_es_de_names_the_table_reaches(self):
+        keys = atlas.RetroDeck._record_keys  # pyright: ignore[reportPrivateUsage]
+        assert keys(("libretro", "Nintendo - Game Boy Advance")) == ("gba",)
+        assert keys(("libretro", "Nintendo - Game Boy")) == ("gb", "sgb")  # each a narrowMatch
+        assert keys(("romm", "ti-83")) == ()
+
+    def test_an_asked_es_de_pair_keys_its_own_name(self):
+        # Asked on a bare RetroArch, ES-DE's gb resolves to libretro's Game Boy,
+        # whose ES-DE names are gb and sgb; the asked pair keys gb alone.
+        keys = atlas.RetroDeck._record_keys  # pyright: ignore[reportPrivateUsage]
+        assert keys(("libretro", "Nintendo - Game Boy"), (("esde", "gb", None),)) == ("gb",)

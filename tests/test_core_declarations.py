@@ -254,12 +254,12 @@ class TestOnlyAMissingInfoIsAnsweredFromThePackage:
         (core,) = read_core_declarations(machine, INFO, core_dir=CORES).cores
         assert core.packaged is True
         assert core.info_status == READ_MISSING
-        assert core.system == "ps2"
+        assert core.system == ("esde", "ps2")
         (slot,) = core.firmware
         assert (slot.path, slot.need, slot.system, slot.system_source, slot.declared_kind) == (
             "pcsx2/bios",
             NEED_REQUIRED,
-            "ps2",
+            ("esde", "ps2"),
             SOURCE_SYSTEMNAME,
             DECLARED_DIRECTORY,
         )

@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import typing
 from typing import Any
 
 import pytest
@@ -24,6 +25,9 @@ from atlas.contract import platform_systems_contract, platform_translation_contr
 from atlas.machine import FixtureMachine
 from atlas.placement import Caveat
 from atlas.platforms import (
+    SYSTEM_TIERS,
+    SystemResolutionStatus,
+    SystemTier,
     BROAD_MATCH,
     CAVEAT_PLATFORM_EXCLUDED,
     CAVEAT_PLATFORM_PARTS_UNESTABLISHED,
@@ -47,12 +51,25 @@ from atlas.platforms import (
     PlatformSourceKeys,
     PlatformTable,
     PlatformTranslation,
+    SystemCandidate,
+    SYSTEM_RESOLUTION_STATUSES,
+    PLATFORM_SYSTEM_STATUSES,
+    RESOLUTION_AMBIGUOUS,
+    RESOLUTION_CONFLICT,
+    RESOLUTION_RESOLVED,
+    RESOLUTION_UNKNOWN,
+    SystemNaming,
+    SystemResolution,
+    catalogue_pair,
     exact_platform_tags,
     known_platform_vocabularies,
     load_platform_table,
+    named_systems,
     names_one_system,
     platform_table,
-    systems_named,
+    systems_by_tier,
+    system_pairs,
+    systems_reached,
     translate,
 )
 
@@ -723,7 +740,7 @@ class TestTheLookup:
     def test_the_machine_half_reads_the_esde_names_and_the_exact_tags(self):
         table = _load()
         answer = translate([("romm", "genesis")], table)
-        assert systems_named(answer) == ("genesis", "megadrive")
+        assert named_systems(answer, ("esde",)) == (("esde", "genesis"), ("esde", "megadrive"))
         assert exact_platform_tags(answer) == ()
 
     def test_the_exact_platform_tags_are_the_ones_on_exactly_the_asked_systems(self):
@@ -733,9 +750,10 @@ class TestTheLookup:
 
     def test_the_machine_half_reads_the_catalogue_columns_it_is_given(self):
         answer = translate([("romm", "genesis")], _load())
-        assert systems_named(answer, ("batocera",)) == ("megadrive",)
-        assert systems_named(answer, ("esde", "batocera")) == ("genesis", "megadrive")
-        assert systems_named(translate([("romm", "pico")], _load()), ("esde", "batocera")) == ()
+        assert named_systems(answer, ("batocera",)) == (("batocera", "megadrive"),)
+        # One key in several columns is one system, named in the first that spells it.
+        assert named_systems(answer, ("esde", "batocera")) == (("esde", "genesis"), ("esde", "megadrive"))
+        assert named_systems(translate([("romm", "pico")], _load()), ("esde", "batocera")) == ()
 
 
 class TestTheAnswerTypesHoldTheirInvariants:
@@ -1354,3 +1372,298 @@ class TestTheMultiPairQuestion:
             run(["systems-for-platforms", "--pair", raw], home="/home/deck", machine=machine)
         assert stopped.value.code == 2
         assert "a pair is SOURCE:KEY or SOURCE:KEY@VERSION" in capsys.readouterr().err
+
+
+class TestTheSystemArgument:
+    """A question's system: a bare name, one (source, key[, version]) pair, or several (#784 D10, D49)."""
+
+    def test_a_bare_name_is_a_pair_in_the_own_source(self):
+        assert system_pairs("gba", "esde") == (("esde", "gba", None),)
+        assert system_pairs(" gba ", "libretro") == (("libretro", "gba", None),)
+
+    def test_one_pair_with_or_without_a_version(self):
+        assert system_pairs(("romm", "gba"), "esde") == (("romm", "gba", None),)
+        # A pair arriving from JSON (a vector, the CLI's parse) is a list.
+        as_json = ["libretro", "Nintendo - Game Boy Advance", "1.0"]
+        assert system_pairs(as_json, "esde") == (  # pyright: ignore[reportArgumentType]
+            ("libretro", "Nintendo - Game Boy Advance", "1.0"),
+        )
+
+    def test_several_pairs_keep_their_order(self):
+        mixed = [("romm", "gba"), ["libretro", "Nintendo - Game Boy Advance"]]
+        assert system_pairs(mixed, "esde") == (  # pyright: ignore[reportArgumentType] - a JSON pair is a list
+            ("romm", "gba", None),
+            ("libretro", "Nintendo - Game Boy Advance", None),
+        )
+
+    @pytest.mark.parametrize("bad", [[], (), 7, None, [("romm",)], [("romm", "gba", "1", "x")]])
+    def test_anything_else_is_refused(self, bad):
+        with pytest.raises(ValueError):
+            system_pairs(bad, "esde")
+
+    @pytest.mark.parametrize(
+        ("blank", "message"),
+        [
+            pytest.param("", "a system name is a non-empty string", id="empty-name"),
+            pytest.param("   ", "a system name is a non-empty string", id="blank-name"),
+            pytest.param(("esde", ""), "platform pair key: expected a non-empty string", id="empty-key"),
+            pytest.param(("  ", "snes"), "platform pair source: expected a non-empty string", id="blank-source"),
+            pytest.param(
+                ("esde", "snes", ""), "platform pair version: expected a non-empty string", id="empty-version"
+            ),
+            pytest.param([("esde", "snes"), ("romm", " ")], "platform pair key", id="blank-key-in-a-list"),
+        ],
+    )
+    def test_a_blank_name_or_part_names_no_system(self, blank, message):
+        # The vector grammar refuses these too: no question is asked about no system.
+        with pytest.raises(ValueError, match=message):
+            system_pairs(blank, "esde")
+
+    def test_a_pair_is_told_from_a_list_by_its_first_item(self):
+        # A sequence whose first item is a string is one pair, so an error
+        # names the part of that pair that is wrong, not the pair as a whole.
+        with pytest.raises(ValueError, match="platform pair key: expected a string, got 5"):
+            system_pairs(("esde", 5), "esde")  # pyright: ignore[reportArgumentType]
+        with pytest.raises(ValueError, match="platform pair is \\(source, key\\) or"):
+            system_pairs([("esde", "snes"), "gb"], "esde")  # pyright: ignore[reportArgumentType]
+
+
+class TestThePlatformAnswerHoldsItsShape:
+    """platform_ids' answer: system, status and tags_source together, and the system its resolution names."""
+
+    @staticmethod
+    def _answer(**overrides: Any) -> atlas.SystemPlatformsAnswer:
+        fields: dict[str, Any] = {
+            "system": ("esde", "snes"),
+            "status": "declared",
+            "tags_source": "catalogue",
+            "translation": translate([("esde", "snes")]),
+            "resolution": SystemResolution(RESOLUTION_RESOLVED, ("esde", "snes"), "exactMatch"),
+        }
+        return atlas.SystemPlatformsAnswer(**{**fields, **overrides})
+
+    def test_a_whole_answer_holds(self):
+        assert self._answer().system == ("esde", "snes")
+
+    @pytest.mark.parametrize("missing", ["status", "tags_source"])
+    def test_status_and_tags_source_are_none_exactly_with_the_system(self, missing):
+        with pytest.raises(ValueError, match="None exactly together"):
+            self._answer(**{missing: None})
+        others = {other: None for other in ("status", "tags_source") if other != missing}
+        with pytest.raises(ValueError, match="None exactly together"):
+            self._answer(system=None, resolution=None, **others)
+
+    @pytest.mark.parametrize("field", ["status", "tags_source"])
+    def test_status_and_tags_source_are_their_vocabularies(self, field):
+        with pytest.raises(ValueError, match=f"SystemPlatformsAnswer: {field} 'bogus' is not one of"):
+            self._answer(**{field: "bogus"})
+
+    def test_a_match_s_tags_source_is_its_vocabulary(self):
+        assert atlas.PLATFORM_TAGS_SOURCES == ("catalogue", "vocabulary")
+        with pytest.raises(ValueError, match="PlatformSystemMatch: tags_source 'bogus' is not one of"):
+            atlas.PlatformSystemMatch(("esde", "sfc"), "declared", (), "bogus")  # type: ignore[arg-type]
+
+    def test_platform_tags_are_stated_only_for_a_system(self):
+        unresolved = SystemResolution(RESOLUTION_CONFLICT, None, None)
+        assert self._answer(system=None, status=None, tags_source=None, resolution=unresolved).platforms == ()
+        with pytest.raises(ValueError, match="platform tags are stated only for a system"):
+            self._answer(system=None, status=None, tags_source=None, resolution=unresolved, platforms=("arcade",))
+
+    def test_the_system_is_the_one_its_resolution_names(self):
+        with pytest.raises(ValueError, match="while its resolution names"):
+            self._answer(resolution=SystemResolution(RESOLUTION_RESOLVED, ("esde", "sfc"), "exactMatch"))
+
+    def test_the_system_is_a_pair(self):
+        with pytest.raises(ValueError, match="SystemPlatformsAnswer: system must be a \\(source, key\\) pair"):
+            self._answer(system="snes", resolution=None)
+
+
+class TestTheTiersNameSystems:
+    """Which systems of an installation the table names for asked pairs, tier by tier (#784 D44)."""
+
+    def test_an_exact_key_names_its_system_in_the_first_tier(self):
+        relation, named = systems_reached(translate([("romm", "gba")]), ("esde",))
+        assert (relation, named) == (EXACT_MATCH, (("esde", "gba"),))
+
+    def test_a_part_names_the_system_it_is_a_part_of(self):
+        relation, named = systems_reached(translate([("emudeck", "sneshd")]), ("esde",))
+        assert (relation, named) == (BROAD_MATCH, (("esde", "snes"),))
+
+    def test_a_name_covering_several_systems_names_them_all(self):
+        # libretro's one database name covers ES-DE's regional systems, each
+        # narrower than it, so they are named together in the narrow tier.
+        relation, named = systems_reached(
+            translate([("libretro", "Nintendo - Super Nintendo Entertainment System")]), ("esde",)
+        )
+        assert relation == NARROW_MATCH
+        assert set(named) >= {("esde", "sfc"), ("esde", "snes")}
+
+    def test_a_translation_with_only_related_systems_names_no_tier(self):
+        # libretro's MAME is related to ES-DE's arcade and mame and to nothing
+        # else, so a tier that took related systems would name both.
+        answer = translate([("libretro", "MAME")])
+        assert named_systems(answer, ("esde",), relations=(RELATED_MATCH,)) == (("esde", "arcade"), ("esde", "mame"))
+        assert systems_by_tier(answer, ("esde",)) == ()
+
+    def test_a_key_two_own_columns_spell_is_one_system_named_by_the_first(self):
+        _, named = systems_reached(translate([("romm", "gba")]), ("esde", "retrodeck"))
+        assert named == (("esde", "gba"),)
+
+    def test_a_cited_pair_is_named_in_its_own_column(self):
+        cited = frozenset({("romm", "ti-83")})
+        assert systems_reached(translate([("romm", "ti-83")]), ("esde",)) == (None, ())
+        assert systems_reached(translate([("romm", "ti-83")]), ("esde",), cited) == (
+            EXACT_MATCH,
+            (("romm", "ti-83"),),
+        )
+
+    def test_a_conflict_or_an_unknown_pair_names_nothing(self):
+        assert systems_reached(translate([("romm", "gba"), ("romm", "psx")]), ("esde",)) == (None, ())
+        assert systems_reached(translate([("mobygames", "12")]), ("esde",)) == (None, ())
+
+
+class TestAnInstallationsNaming:
+    def test_an_own_pair_is_itself(self):
+        assert SystemNaming(("esde",)).named(("esde", "anything")) == ("esde", "anything")
+
+    def test_another_source_goes_through_the_table(self):
+        assert SystemNaming(("libretro",)).named(("esde", "gba")) == ("libretro", "Nintendo - Game Boy Advance")
+
+    def test_a_pair_naming_several_systems_names_none(self):
+        assert SystemNaming(("esde",)).named(("libretro", "Nintendo - Super Nintendo Entertainment System")) is None
+
+    def test_an_own_pair_is_named_as_every_route_names_it(self):
+        # One spelling rule for every route (catalogue_pair): a key two own
+        # columns spell is ES-DE's, a RetroDECK-only key is RetroDECK's —
+        # whichever own source the asker spelled it in.
+        retrodeck = SystemNaming(("esde", "retrodeck"))
+        assert retrodeck.named(("esde", "primehack")) == ("retrodeck", "primehack")
+        assert retrodeck.named(("retrodeck", "snes")) == ("esde", "snes")
+        assert retrodeck.named(("esde", "primehack")) == catalogue_pair(("esde", "retrodeck"), "primehack")
+
+    def test_the_tiers_and_every_relation_name_systems_alike(self):
+        # systems_by_tier and the any-relation listing are one routine
+        # (named_systems), so a part key's parent appears in both.
+        translation = translate([("emudeck", "sneshd")])
+        tiers = dict(systems_by_tier(translation, ("esde",)))
+        assert set(named_systems(translation, ("esde",))) >= set(tiers["broadMatch"])
+
+
+class TestTheResolutionStatesItsShape:
+    # How the resolution ended is its status (#784 D52), held by the type the
+    # way a translation's intersection status is.
+    _TWO = (SystemCandidate(("esde", "sfc"), "declared"), SystemCandidate(("esde", "snes"), "absent"))
+
+    def test_a_relation_is_stated_exactly_for_a_resolved_system(self):
+        with pytest.raises(ValueError, match="relation is stated exactly"):
+            SystemResolution(RESOLUTION_RESOLVED, ("esde", "gba"), None)
+        with pytest.raises(ValueError, match="relation is stated exactly"):
+            SystemResolution(RESOLUTION_UNKNOWN, None, "exactMatch")
+
+    def test_the_relation_is_one_of_the_table_s(self):
+        with pytest.raises(ValueError, match="relation"):
+            SystemResolution(RESOLUTION_RESOLVED, ("esde", "gba"), "sameAs")  # type: ignore[arg-type]
+
+    def test_the_relation_is_typed_as_the_tiers_alone(self):
+        # The contract page publishes a field's vocabulary from its annotation,
+        # so relatedMatch must not be in it (#784 D44).
+        assert typing.get_type_hints(SystemResolution)["relation"] == SystemTier | None
+        assert typing.get_args(SystemTier) == SYSTEM_TIERS
+
+    def test_related_is_no_tier_a_system_is_resolved_in(self):
+        # A relatedMatch never names a system (#784 D44), so a resolution
+        # stating one would be a resolution the routine cannot produce.
+        with pytest.raises(ValueError, match="relation"):
+            SystemResolution(
+                RESOLUTION_RESOLVED,
+                ("esde", "gba"),
+                RELATED_MATCH,  # pyright: ignore[reportArgumentType] - the type refuses it too
+                translation=translate([("romm", "gba")]),
+            )
+
+    def test_the_status_is_one_of_four(self):
+        assert SYSTEM_RESOLUTION_STATUSES == ("resolved", "unknown", "ambiguous", "conflict")
+        with pytest.raises(ValueError, match="status 'named' is not one of"):
+            SystemResolution("named", ("esde", "gba"), EXACT_MATCH)  # type: ignore[arg-type]
+
+    def test_a_system_is_named_exactly_when_resolved(self):
+        assert SystemResolution(RESOLUTION_RESOLVED, ("esde", "gba"), "exactMatch").system == ("esde", "gba")
+        with pytest.raises(ValueError, match="a system is named exactly when the status is resolved"):
+            SystemResolution(RESOLUTION_RESOLVED, None, None)
+        with pytest.raises(ValueError, match="a system is named exactly when the status is resolved"):
+            SystemResolution(RESOLUTION_CONFLICT, ("esde", "gba"), "exactMatch")
+
+    def test_unknown_and_conflict_name_neither_system_nor_candidates(self):
+        unknown = translate([("romm", "no-such-system")])
+        cases: tuple[tuple[SystemResolutionStatus, PlatformTranslation | None], ...] = (
+            (RESOLUTION_UNKNOWN, unknown),
+            (RESOLUTION_CONFLICT, None),
+        )
+        for status, translation in cases:
+            assert SystemResolution(status, None, None, translation=translation).candidates == ()
+            with pytest.raises(ValueError, match="two or more candidates are listed exactly when"):
+                SystemResolution(status, None, None, self._TWO, translate([("romm", "snes")]))
+
+    def test_candidates_are_listed_exactly_where_ambiguous(self):
+        translation = translate([("romm", "snes")])
+        assert SystemResolution(RESOLUTION_AMBIGUOUS, None, None, self._TWO, translation).candidates == self._TWO
+        with pytest.raises(ValueError, match="two or more candidates are listed exactly when"):
+            SystemResolution(RESOLUTION_AMBIGUOUS, None, None, self._TWO[:1], translation)
+        with pytest.raises(ValueError, match="two or more candidates are listed exactly when"):
+            SystemResolution(RESOLUTION_AMBIGUOUS, None, None, (), translation)
+        with pytest.raises(ValueError, match="candidates are listed only where several systems answer"):
+            SystemResolution(RESOLUTION_UNKNOWN, None, None, self._TWO[:1], translation)
+
+    def test_each_candidate_is_a_different_system(self):
+        twice = (self._TWO[0], SystemCandidate(("esde", "sfc"), "absent"))
+        with pytest.raises(ValueError, match="each candidate is a different system"):
+            SystemResolution(RESOLUTION_AMBIGUOUS, None, None, twice, translate([("romm", "snes")]))
+
+    def test_only_an_agreed_translation_names_candidates_or_a_system_it_is_not_exactly(self):
+        # A name read live is exactMatch and alone; candidates and the other
+        # tiers come from the table agreeing, so they arrive with its translation.
+        assert SystemResolution(RESOLUTION_RESOLVED, ("esde", "gba"), "exactMatch").translation is None
+        with pytest.raises(ValueError, match="come from an agreed translation"):
+            SystemResolution(RESOLUTION_RESOLVED, ("esde", "snes"), "broadMatch")
+        with pytest.raises(ValueError, match="come from an agreed translation"):
+            SystemResolution(RESOLUTION_AMBIGUOUS, None, None, self._TWO)
+        unknown = translate([("romm", "no-such-system")])
+        with pytest.raises(ValueError, match="come from an agreed translation"):
+            SystemResolution(RESOLUTION_RESOLVED, ("esde", "snes"), "broadMatch", translation=unknown)
+        with pytest.raises(ValueError, match="come from an agreed translation"):
+            SystemResolution(RESOLUTION_AMBIGUOUS, None, None, self._TWO, unknown)
+
+    def test_an_unknown_resolution_may_carry_no_translation(self):
+        # The pairs name nothing here through the table, or as a name read live
+        # that the installation does not hold (#784 D53), which has no
+        # translation to carry.
+        unknown = translate([("romm", "no-such-system")])
+        assert SystemResolution(RESOLUTION_UNKNOWN, None, None, translation=unknown).translation == unknown
+        assert SystemResolution(RESOLUTION_UNKNOWN, None, None).translation is None
+
+    def test_a_table_conflict_is_a_conflict(self):
+        conflict = translate([("romm", "snes"), ("romm", "gba")])
+        assert conflict.intersection_status == INTERSECTION_CONFLICT
+        assert SystemResolution(RESOLUTION_CONFLICT, None, None, translation=conflict).system is None
+        with pytest.raises(ValueError, match="a table conflict is a conflict"):
+            SystemResolution(RESOLUTION_RESOLVED, ("esde", "snes"), "exactMatch", translation=conflict)
+        with pytest.raises(ValueError, match="a table conflict is a conflict"):
+            SystemResolution(RESOLUTION_UNKNOWN, None, None, translation=conflict)
+
+    @pytest.mark.parametrize("system", [("", ""), ("esde", "snes", "1.0"), ("esde",), "snes", ("esde", " ")])
+    def test_a_system_is_a_pair_of_non_empty_strings(self, system):
+        with pytest.raises(ValueError, match="SystemResolution: system must be a \\(source, key\\) pair"):
+            SystemResolution(RESOLUTION_RESOLVED, system, "exactMatch")  # type: ignore[arg-type]
+        with pytest.raises(ValueError, match="SystemCandidate: system must be a \\(source, key\\) pair"):
+            SystemCandidate(system, "declared")  # type: ignore[arg-type]
+        with pytest.raises(ValueError, match="PlatformSystemMatch: system must be a \\(source, key\\) pair"):
+            atlas.PlatformSystemMatch(system, "declared", (), "catalogue")  # type: ignore[arg-type]
+
+    def test_a_candidate_s_status_is_a_platform_status(self):
+        assert PLATFORM_SYSTEM_STATUSES == ("declared", "disabled", "absent")
+        with pytest.raises(ValueError, match="SystemCandidate: status 'here' is not one of"):
+            SystemCandidate(("esde", "sfc"), "here")  # type: ignore[arg-type]
+
+    def test_a_match_s_status_is_a_platform_status(self):
+        with pytest.raises(ValueError, match="PlatformSystemMatch: status 'here' is not one of"):
+            atlas.PlatformSystemMatch(("esde", "sfc"), "here", (), "catalogue")  # type: ignore[arg-type]

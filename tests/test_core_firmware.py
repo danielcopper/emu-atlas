@@ -68,7 +68,7 @@ CONFIG_HOME = "/home/u/.config"
 # rule: DuckStation's card states a search, Cemu's states files.
 CATALOGUE = InventoryCatalogue(
     by_system={
-        "psx": Catalogue(
+        ("esde", "psx"): Catalogue(
             (
                 CatalogueEntry(
                     label="DuckStation (Standalone)",
@@ -80,7 +80,7 @@ CATALOGUE = InventoryCatalogue(
                 ),
             )
         ),
-        "wiiu": Catalogue(
+        ("esde", "wiiu"): Catalogue(
             (
                 CatalogueEntry(
                     label="Cemu (Standalone)",
@@ -114,12 +114,21 @@ firmware0_opt = "false"
 CORES = ("demo", "swanstation", "mednafen_psx_hw")
 
 
-def _machine(**extra: object) -> FixtureMachine:
+# A PlayStation BIOS image SwanStation's own table knows by its hashes, under a
+# name the core never opens, so only the directory search can find it.
+A_PLAYSTATION_BIOS = {
+    "md5": "490f666e1afb15b7362b406ed1cea246",
+    "sha1": "0555c6fae8906f3f09baf5988f00e55f88e9f30b",
+    "size": 524288,
+}
+
+
+def _machine(files: Mapping[str, object] | None = None, **extra: object) -> FixtureMachine:
     tree: dict[str, object] = {}
     for stem in CORES:
         tree[f"{INFO_DIR}/{stem}_libretro.info"] = DEMO_INFO
         tree[f"{INFO_DIR}/{stem}_libretro.so"] = {"status": "invalid-text"}
-    return FixtureMachine(tree, **extra)  # type: ignore[arg-type]
+    return FixtureMachine({**tree, **(files or {})}, **extra)  # type: ignore[arg-type]
 
 
 def _context(machine: FixtureMachine) -> FirmwareContext:
@@ -246,6 +255,50 @@ class TestALibretroCoreAnswersItsEntryOrNothing:
         machine = _machine()
         answer = firmware_for_core(machine, _context(machine), core_so="swanstation_libretro.so")
         assert [core.locating for core in answer.cores] == [LOCATING_BY_NAME_THEN_CONTENT]
+
+    @pytest.mark.parametrize(
+        ("stem", "searched"),
+        [*((stem, False) for stem in CORES), ("swanstation", True)],
+        ids=[*CORES, "swanstation-searched-image"],
+    )
+    def test_a_core_whose_system_nothing_names_states_no_source_for_it(self, stem, searched):
+        # The fixture's systemname is one no map or database names, so every
+        # requirement these cores file sits under `_unknown`, and no route may
+        # claim the systemname decided it (#784 D54).
+        # The searched case puts an image SwanStation's own table knows in the
+        # directory, so the region's answer is the search's pick.
+        image = {f"{BIOS_DIR}/a-playstation-bios": A_PLAYSTATION_BIOS} if searched else {}
+        machine = _machine(image, dirs=[BIOS_DIR])
+        core = firmware_for_core(
+            machine, _context(machine), core_so=f"{stem}_libretro.so", verify=searched
+        ).cores[0]
+        filed = [
+            option
+            for requirement in core.requirements
+            for option in (requirement.options if isinstance(requirement, FirmwareAlternatives) else (requirement,))
+        ]
+        assert filed, "a core with no requirement would make the check vacuous"
+        assert {(r.system, r.system_source) for r in filed} == {("_unknown", "none")}
+
+    @pytest.mark.parametrize("stem", CORES)
+    def test_a_core_named_by_its_database_name_states_that_source(self, stem):
+        # The systemname is one the map does not hold, and the .info's one
+        # database name names one system: the core files under it by its own
+        # name, and every route that files under the core's system says so
+        # (source core, not systemname; #784 D54). The searched image takes
+        # the region-answer route too.
+        named = {
+            f"{INFO_DIR}/{core}_libretro.info": DEMO_INFO + 'database = "Sony - PlayStation"\n' for core in CORES
+        }
+        machine = _machine({**named, f"{BIOS_DIR}/a-playstation-bios": A_PLAYSTATION_BIOS}, dirs=[BIOS_DIR])
+        core = firmware_for_core(machine, _context(machine), core_so=f"{stem}_libretro.so", verify=True).cores[0]
+        filed = [
+            option
+            for requirement in core.requirements
+            for option in (requirement.options if isinstance(requirement, FirmwareAlternatives) else (requirement,))
+        ]
+        assert filed, "a core with no requirement would make the check vacuous"
+        assert {(r.system, r.system_source) for r in filed} == {(("esde", "psx"), "core")}
 
     def test_all_three_spellings_of_a_core_name_reach_one_entry(self):
         # The same three spellings `firmware_for_core` takes, so the word does

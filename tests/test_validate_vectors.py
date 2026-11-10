@@ -36,8 +36,8 @@ import pytest
 
 import atlas
 from atlas import installations
-from atlas.installations import _CatalogueQueries  # pyright: ignore[reportPrivateUsage] - the handles' common base
-from atlas.platforms import LIFTED_CODES, UNKNOWN_PAIR_CODES
+from atlas.contract import resolution_contract, system_contract
+from atlas.platforms import LIFTED_CODES, SYSTEM_TIERS, UNKNOWN_PAIR_CODES, SystemResolution
 from scripts import validate_vectors
 from scripts.validate_vectors import VectorError, validate_machines_vector
 from scripts.validate_vectors import (
@@ -55,6 +55,18 @@ SAVES = "/mnt/sd/retrodeck/saves"
 BIOS = "/mnt/sd/retrodeck/bios"
 CORE_SO = "mgba_libretro.so"
 SYSTEM = "gb"
+
+
+def _pair(key: str = SYSTEM, source: str = "esde") -> dict[str, str]:
+    """A system as an answer names it (#784 D47)."""
+    return {"source": source, "key": key}
+
+
+def _resolution(key: str = SYSTEM) -> dict[str, Any]:
+    """The resolution of a bare name read live: the system as asked, exact (#784 D49)."""
+    return {"status": "resolved", "system": _pair(key), "relation": "exactMatch", "candidates": [], "translation": None}
+
+
 # Where a supplied_by statement's shipped file lies on this host: inside the
 # Flatpak deploy, which is what makes it an absolute host path rather than the
 # distribution's own /app spelling.
@@ -71,11 +83,6 @@ INSTALLATION = {
     "health": [],
 }
 FINDING = {"code": "root-missing", "data": {"path": "/mnt/sd/retrodeck"}}
-
-
-def _handle_classes(base: type) -> set[type]:
-    """*base* and every class that derives from it."""
-    return {base, *(handle for sub in base.__subclasses__() for handle in _handle_classes(sub))}
 
 
 def _vector(expected=None, *, installed=False, **input_keys) -> Vector:
@@ -182,7 +189,7 @@ def _supplied(**overrides) -> Vector:
 def _requirement(**overrides) -> Vector:
     return {
         "core_so": CORE_SO,
-        "system": SYSTEM,
+        "system": _pair(),
         "system_source": "systemname",
         "need": "required",
         "file_name": "gb_bios.bin",
@@ -220,7 +227,7 @@ def _core(**overrides) -> Vector:
 def _gba_requirement(**overrides) -> Vector:
     """The second system's image, beside the Game Boy one ``_requirement`` builds."""
     return _requirement(
-        system="gba",
+        system=_pair("gba"),
         file_name="gba_bios.bin",
         path=f"{BIOS}/gba_bios.bin",
         declared="gba_bios.bin",
@@ -244,7 +251,7 @@ def _search_absence_core(**overrides) -> Vector:
         caveats=[
             {"code": "firmware-packaged-declaration", "data": {}},
             {"code": "firmware-path-names-no-file", "data": {}},
-            {"code": "system-firmware-world-knowledge", "data": {"system": "psx", "evidence": "verified"}},
+            {"code": "system-firmware-world-knowledge", "data": {"source": "esde", "key": "psx", "evidence": "verified"}},
         ],
         **overrides,
     )
@@ -276,13 +283,14 @@ def _firmware(**overrides) -> Vector:
         "cores": [_core()],
         "unclaimed": [],
         "caveats": [],
+        "resolution": None,
         **overrides,
     }
 
 
 def _emulator(**overrides) -> Vector:
     return {
-        "system": SYSTEM,
+        "system": _pair(),
         "label": "mGBA",
         "kind": "libretro",
         "core_so": CORE_SO,
@@ -337,7 +345,7 @@ def _base_identification(**overrides) -> Vector:
 
 
 def _base_catalogue(**overrides) -> Vector:
-    block = {"entries": [_emulator()], "caveats": [], **overrides}
+    block = {"entries": [_emulator()], "caveats": [], "resolution": _resolution(), **overrides}
     return _vector({"catalogue": block}, installed=True, catalogue_query={"system": SYSTEM})
 
 
@@ -359,6 +367,7 @@ def _base_launchable(**overrides) -> Vector:
         "boots": None,
         "opens": None,
         "caveats": [],
+        "resolution": _resolution(),
         **overrides,
     }
     return _vector({"launchable": block}, installed=True, launchable_query={"system": SYSTEM, "content_path": ROM})
@@ -376,16 +385,23 @@ OPENED = {"path": "/roms/ps3/Game (Track 1).bin", "how": "named", "by": "/roms/p
 
 
 def _base_systems(**overrides) -> Vector:
-    block = {"systems": [SYSTEM], "caveats": [], **overrides}
+    block = {"systems": [_pair()], "caveats": [], **overrides}
     return _vector({"systems": block}, installed=True, systems_query={})
 
 
 def _rom_placement(**overrides) -> Vector:
-    return {"dir": f"{HOME}/roms/{SYSTEM}", "physical_dir": None, "extensions": [".gb"], "caveats": [], **overrides}
+    return {
+        "dir": f"{HOME}/roms/{SYSTEM}",
+        "physical_dir": None,
+        "extensions": [".gb"],
+        "caveats": [],
+        "resolution": _resolution(),
+        **overrides,
+    }
 
 
 def _base_rom_locations(**overrides) -> Vector:
-    block = {"placements": [{"system": SYSTEM, "placement": _rom_placement()}], "caveats": [], **overrides}
+    block = {"placements": [{"system": _pair(), "placement": _rom_placement()}], "caveats": [], **overrides}
     return _vector({"rom_locations": block}, installed=True, rom_locations_query={})
 
 
@@ -418,7 +434,7 @@ def _with_exact_tag(tag: str) -> dict[str, Any]:
     return projection
 
 
-MATCHES_CPS1 = [{"system": "cps1", "status": "declared", "platforms": ["arcade"], "tags_source": "catalogue"}]
+MATCHES_CPS1 = [{"system": _pair("cps1"), "status": "declared", "platforms": ["arcade"], "tags_source": "catalogue"}]
 
 
 def _base_platform_systems(**overrides) -> Vector:
@@ -437,12 +453,13 @@ def _base_platform_systems(**overrides) -> Vector:
 
 def _base_platform_ids(**overrides) -> Vector:
     block = {
-        "system": "cps1",
+        "system": _pair("cps1"),
         "status": "declared",
         "tags_source": "catalogue",
         "platforms": ["arcade"],
         "translation": _projection(),
         "caveats": [],
+        "resolution": _resolution("cps1"),
         **overrides,
     }
     return _vector({"platform_ids": block}, installed=True, platform_ids_query={"system": "cps1"})
@@ -589,7 +606,7 @@ def _base_platform_systems_by_tag() -> Vector:
     """A declared system the translation does not name, matched through an exact platform tag."""
     return _base_platform_systems(
         translation=_with_exact_tag("cps1"),
-        matches=[{"system": "cps1-hack", "status": "declared", "platforms": ["cps1"], "tags_source": "catalogue"}],
+        matches=[{"system": _pair("cps1-hack"), "status": "declared", "platforms": ["cps1"], "tags_source": "catalogue"}],
     )
 
 
@@ -913,7 +930,8 @@ QUERY_CASES = [
                  catalogue_query={"system": SYSTEM, "nope": "x"}),
          "must carry 'system'", id="catalogue-query-stray"),
     case(_vector({"catalogue": {"entries": [], "caveats": []}}, installed=True,
-                 catalogue_query={"system": ""}), "must be a non-empty string", id="catalogue-query-empty-value"),
+                 catalogue_query={"system": ""}), "must be a non-empty name, a [source, key(, version)] pair",
+         id="catalogue-query-empty-value"),
     case(_vector({"systems": {"systems": [], "caveats": []}}, installed=True, systems_query="x"),
          "input.systems_query keys must be a subset", id="systems-query-not-object"),
     case(_vector({"systems": {"systems": [], "caveats": []}}, installed=True,
@@ -925,7 +943,7 @@ QUERY_CASES = [
     case(_vector({"entry_savefile_location": _placement()}, installed=True,
                  entry_savefile_query={"system": SYSTEM, "nope": "x"}), "must carry 'system'", id="entry-query-stray"),
     case(_vector({"entry_savefile_location": _placement()}, installed=True, entry_savefile_query={"system": 7}),
-         "must be a non-empty string", id="entry-query-value-type"),
+         "must be a non-empty name, a [source, key(, version)] pair", id="entry-query-value-type"),
     case(_vector({"savefile_location": _placement()}, installed=True,
                  savefile_query={"content_path": ROM, "cwd": "launch"}),
          "input.savefile_query.cwd must be an absolute path", id="query-cwd-relative"),
@@ -1368,7 +1386,7 @@ CATALOGUE_CASES = [
     case(_base_catalogue(entries=[_emulator(selection=7)]),
          "emulator selection must be null or a string", id="emulator-selection-type"),
     case(_base_catalogue(entries=[_emulator(system="")]),
-         "emulator system must be a non-empty string", id="emulator-empty-system"),
+         "emulator system must be a {source, key} object", id="emulator-empty-system"),
     case(_base_catalogue(caveats=[{"code": "emulator-catalogue-unreadable", "data": {}}]),
          "states entries and", id="catalogue-entries-and-unread"),
     case(_base_catalogue(entries=[_emulator(declared_index="0")]),
@@ -1390,6 +1408,128 @@ CATALOGUE_CASES = [
 
 # The emulators a needs-installation verdict names (#717): a list there, null
 # on every other verdict, each emulator once and beside an entry that runs it.
+def _unresolved(*candidates: str, code: str = "system-ambiguous", status: str = "ambiguous") -> Vector:
+    """A catalogue answer for pairs that named no single system, and the caveat saying why (#784 D44, D52)."""
+    resolution = {
+        "status": status,
+        "system": None,
+        "relation": None,
+        "candidates": [{"system": _pair(key), "status": "declared"} for key in candidates],
+        "translation": _projection(),
+    }
+    return _base_catalogue(entries=[], caveats=[{"code": code, "data": {}}], resolution=resolution)
+
+
+def _conflict_projection() -> dict[str, Any]:
+    """A translation of two known pairs that share no system."""
+    projection = _projection()
+    first = projection["pairs"][0]
+    projection["pairs"] = [first, {**first, "source": "esde", "key": "cps1"}]
+    conflicting = [{k: pair[k] for k in ("source", "key", "version")} for pair in projection["pairs"]]
+    projection.update(intersection_status="conflict", intersection=[], conflict=conflicting)
+    return projection
+
+
+# The cause a translation states for its one unknown pair (ScreenScraper 6).
+_UNMAPPED_SS6 = {"code": "platform-unmapped", "data": {"source": "screenscraper", "key": "6"}}
+AMBIGUOUS = [{"system": _pair("sfc"), "status": "declared"}, {"system": _pair("snes"), "status": "absent"}]
+# How the system a question was asked about was resolved (#784 D44, D49), and the system argument's three forms.
+RESOLUTION_CASES = [
+    case(_base_catalogue(resolution={"system": _pair()}), "resolution must be exactly the fields",
+         id="resolution-shape"),
+    case(_base_catalogue(resolution={**_resolution(), "relation": None}),
+         "states a relation exactly for a resolved system", id="resolution-system-without-relation"),
+    case(_base_catalogue(resolution={**_resolution(), "status": "unknown", "system": None},
+                         caveats=[{"code": "system-unknown", "data": {}}]),
+         "states a relation exactly for a resolved system", id="resolution-relation-without-system"),
+    case(_base_catalogue(resolution={**_resolution(), "relation": "relatedMatch"}),
+         "resolution.relation must be one of", id="resolution-related-is-no-tier"),
+    case(_base_catalogue(resolution={**_resolution(), "system": "gb"}),
+         "resolution.system must be a {source, key} object", id="resolution-system-not-a-pair"),
+    case(_base_catalogue(resolution={**_resolution(), "candidates": AMBIGUOUS}),
+         "candidates lists two or more systems, exactly where the status is ambiguous",
+         id="resolution-candidates-beside-a-system"),
+    case(_unresolved("sfc"),
+         "candidates lists two or more systems, exactly where the status is ambiguous", id="resolution-one-candidate"),
+    case(_unresolved("sfc", "snes", status="unknown", code="system-unknown"),
+         "candidates lists two or more systems, exactly where the status is ambiguous",
+         id="resolution-candidates-beside-unknown"),
+    case(_unresolved(status="ambiguous"),
+         "candidates lists two or more systems, exactly where the status is ambiguous",
+         id="resolution-ambiguous-without-candidates"),
+    case(_unresolved("sfc", "snes", code="system-unknown"),
+         "resolution is ambiguous and the answer does not state system-ambiguous",
+         id="resolution-candidates-without-their-caveat"),
+    case(_base_catalogue(entries=[], resolution={**_resolution(), "status": "unknown", "system": None, "relation": None,
+                                                 "translation": _projection("unknown", caveats=[_UNMAPPED_SS6])}),
+         "resolution is unknown and the answer does not state system-unknown", id="resolution-none-without-why"),
+    case(_base_catalogue(entries=[], caveats=[{"code": "system-unknown", "data": {}}],
+                         resolution={**_resolution(), "status": "conflict", "system": None, "relation": None}),
+         "resolution is conflict and the answer does not state system-pairs-conflict",
+         id="resolution-conflict-without-its-caveat"),
+    case(_base_catalogue(resolution={**_resolution(), "status": "named"}),
+         "resolution.status must be one of", id="resolution-status-vocabulary"),
+    case(_base_catalogue(entries=[], caveats=[{"code": "system-unknown", "data": {}}],
+                         resolution={**_resolution(), "status": "unknown"}),
+         "names a system exactly when its status is resolved", id="resolution-system-beside-unknown"),
+    case(_base_catalogue(resolution={**_resolution(), "system": None, "relation": None}),
+         "names a system exactly when its status is resolved", id="resolution-resolved-without-system"),
+    case(_base_catalogue(resolution=None), "resolution is null exactly where the question named no system",
+         id="resolution-null-on-a-question-naming-a-system"),
+    case(_with(_base_firmware(), firmware_query={"kind": "system", "system": SYSTEM}),
+         "resolution is null exactly where the question named no system", id="resolution-null-on-a-firmware-system"),
+    case(_base_firmware(resolution=_resolution()),
+         "resolution is null exactly where the question named no system", id="resolution-on-a-firmware-core"),
+    case(_base_catalogue(entries=[], caveats=[{"code": "system-ambiguous", "data": {}}],
+                         resolution={"status": "ambiguous", "system": None, "relation": None,
+                                     "translation": _projection(),
+                                     "candidates": [{**AMBIGUOUS[0], "status": "here"}, AMBIGUOUS[1]]}),
+         "candidates[].status must be one of", id="resolution-candidate-status"),
+    case(_base_catalogue(entries=[], caveats=[{"code": "system-ambiguous", "data": {}}],
+                         resolution={"status": "ambiguous", "system": None, "relation": None,
+                                     "translation": _projection(), "candidates": [AMBIGUOUS[0], AMBIGUOUS[0]]}),
+         "candidates names each system once", id="resolution-candidate-twice"),
+    case(_base_catalogue(resolution={**_resolution(), "relation": "broadMatch"}),
+         "names candidates or a relation other than exactMatch without an agreed translation",
+         id="resolution-tier-without-the-table"),
+    case(_base_catalogue(resolution={**_resolution(), "relation": "broadMatch",
+                                     "translation": _projection("unknown", caveats=[_UNMAPPED_SS6])}),
+         "names candidates or a relation other than exactMatch without an agreed translation",
+         id="resolution-tier-beside-an-unknown-translation"),
+    case(_base_catalogue(entries=[], caveats=[{"code": "system-ambiguous", "data": {}}],
+                         resolution={"status": "ambiguous", "system": None, "relation": None, "translation": None,
+                                     "candidates": AMBIGUOUS}),
+         "names candidates or a relation other than exactMatch without an agreed translation",
+         id="resolution-candidates-without-the-table"),
+    case(_base_catalogue(resolution={**_resolution(), "translation": _conflict_projection()}),
+         "resolution is resolved beside a table conflict", id="resolution-system-beside-a-table-conflict"),
+    case(_base_catalogue(entries=[], caveats=[{"code": "system-unknown", "data": {}}],
+                         resolution={**_resolution(), "status": "unknown", "system": None, "relation": None,
+                                     "translation": _conflict_projection()}),
+         "resolution is unknown beside a table conflict", id="resolution-unknown-beside-a-table-conflict"),
+    case(_base_launchable(resolution={"system": None}), "resolution must be exactly the fields",
+         id="resolution-shape-on-launchable"),
+    case(_base_platform_ids(resolution=_resolution("cps2")), "answers for another system than its resolution names",
+         id="platform-ids-resolution-names-another-system"),
+    case(_base_platform_ids(system=None, resolution={**_resolution(), "status": "conflict", "system": None,
+                                                      "relation": None},
+                            caveats=[{"code": "system-pairs-conflict", "data": {}}]),
+         "names no system and still states its status or tags", id="platform-ids-unresolved-with-a-status"),
+    case(_base_rom_locations(placements=[{"system": _pair(), "placement": _rom_placement(resolution=_resolution("gba"))}]),
+         "is resolved to another system", id="rom-locations-placement-resolved-elsewhere"),
+    case(_base_systems(systems=[_pair(), _pair()]), "expected.systems names a system more than once",
+         id="systems-repeated"),
+    case(_base_firmware(cores=[_core(requirements=[_requirement(system="_unknown")])]),
+         "a requirement's system is '_unknown' exactly where nothing names it", id="requirement-unknown-named-by-a-source"),
+    case(_with(_base_launchable(), launchable_query={"system": ["esde"], "content_path": ROM}),
+         "must be a non-empty name, a [source, key(, version)] pair", id="query-system-half-a-pair"),
+    case(_with(_base_launchable(), launchable_query={"system": [["esde", "gb"], ["esde"]], "content_path": ROM}),
+         "must be a non-empty name, a [source, key(, version)] pair", id="query-system-list-with-half-a-pair"),
+    case(_with(_base_launchable(), launchable_query={"system": [], "content_path": ROM}),
+         "must be a non-empty name, a [source, key(, version)] pair", id="query-system-empty-list"),
+]
+
+
 LAUNCHABLE_CASES = [
     case(_base_launchable(verdict="unknown"),
          "installers travels with 'needs-installation' alone", id="launchable-installers-off-their-verdict"),
@@ -1445,7 +1585,8 @@ SYSTEMS_CASES = [
     case(_vector({"systems": []}, installed=True, systems_query={}),
          "expected.systems must be", id="systems-not-object"),
     case(_base_systems(systems="gb"), "expected.systems.systems must be a list", id="systems-not-list"),
-    case(_base_systems(systems=[""]), "expected.systems.systems must be a list", id="systems-empty-name"),
+    case(_base_systems(systems=[""]), "each expected.systems system must be a {source, key} object",
+         id="systems-empty-name"),
     case(_base_systems(caveats=[{"code": "emulator-catalogue-unavailable", "data": {}}]),
          "states systems and", id="systems-and-unread"),
 ]
@@ -1459,13 +1600,14 @@ ROM_LOCATIONS_CASES = [
     case(_base_rom_locations(placements=[{"system": SYSTEM}]),
          "each expected.rom_locations entry must be exactly the fields", id="rom-locations-entry-without-placement"),
     case(_base_rom_locations(placements=[{"system": "", "placement": _rom_placement()}]),
-         "entries name their system as a non-empty string", id="rom-locations-empty-system"),
-    case(_base_rom_locations(placements=[{"system": SYSTEM, "placement": _rom_placement(dir=None)}]),
-         "expected.rom_locations[gb] resolved no dir and states no caveat", id="rom-locations-silent-placement"),
-    case(_base_rom_locations(placements=[{"system": SYSTEM, "placement": _rom_placement(physical_dir=f"{HOME}/x",
-                                                                                        dir=None)}]),
-         "expected.rom_locations[gb].physical_dir without a dir", id="rom-locations-physical-without-dir"),
-    case(_base_rom_locations(placements=[{"system": SYSTEM, "placement": _rom_placement()}] * 2),
+         "rom_locations entry's system must be a {source, key} object", id="rom-locations-empty-system"),
+    case(_base_rom_locations(placements=[{"system": _pair(), "placement": _rom_placement(dir=None)}]),
+         "expected.rom_locations[('esde', 'gb')] resolved no dir and states no caveat",
+         id="rom-locations-silent-placement"),
+    case(_base_rom_locations(placements=[{"system": _pair(), "placement": _rom_placement(physical_dir=f"{HOME}/x",
+                                                                                         dir=None)}]),
+         "expected.rom_locations[('esde', 'gb')].physical_dir without a dir", id="rom-locations-physical-without-dir"),
+    case(_base_rom_locations(placements=[{"system": _pair(), "placement": _rom_placement()}] * 2),
          "names a system more than once", id="rom-locations-repeated-system"),
     case(_base_rom_locations(caveats=[{"code": "nope", "data": {}}]),
          "caveat code must be one of", id="rom-locations-unknown-code"),
@@ -1502,10 +1644,12 @@ PLATFORM_SYSTEMS_CASES = [
          "is not a source of the platform table", id="platform-systems-foreign-source"),
     case(_base_platform_systems(translation=_projection(intersection=[{"source": "esde", "status": "none", "keys": []}])),
          "must list every source of the table", id="platform-systems-missing-source"),
-    case(_base_platform_systems(matches=[{"system": "nes", "status": "declared", "platforms": ["nes"], "tags_source": "catalogue"}]),
-         "matches 'nes', which the translation does not name", id="platform-systems-match-the-translation-names-not"),
-    case(_base_platform_systems(translation=_with_exact_tag("cps1"), matches=[{"system": "cps1-hack", "status": "disabled", "platforms": ["cps1"], "tags_source": "catalogue"}]),
-         "matches 'cps1-hack', which the translation does not name", id="platform-systems-disabled-match-by-tag"),
+    case(_base_platform_systems(matches=[{"system": _pair("nes"), "status": "declared", "platforms": ["nes"], "tags_source": "catalogue"}]),
+         "matches {'source': 'esde', 'key': 'nes'}, which the translation does not name",
+         id="platform-systems-match-the-translation-names-not"),
+    case(_base_platform_systems(translation=_with_exact_tag("cps1"), matches=[{"system": _pair("cps1-hack"), "status": "disabled", "platforms": ["cps1"], "tags_source": "catalogue"}]),
+         "matches {'source': 'esde', 'key': 'cps1-hack'}, which the translation does not name",
+         id="platform-systems-disabled-match-by-tag"),
     case(_base_platform_ids(caveats=[{"code": "platform-unmapped", "data": {"source": "esde", "key": "cps1"}}]),
          "states the translation's own caveat for every unknown pair", id="platform-ids-known-and-unmapped"),
     case(_base_platform_ids(translation=_projection("unknown")),
@@ -1766,13 +1910,14 @@ REQUIREMENT_CASES = [
     case(_base_firmware(cores=[_core(requirements=[{**_requirement(), "stray": 1}])]),
          "each firmware requirement must be exactly the fields", id="requirement-stray-field"),
     case(_base_firmware(cores=[_core(requirements=[_requirement(system="")])]),
-         "firmware requirement system must be a non-empty string", id="requirement-empty-system"),
+         "firmware requirement system must be a {source, key} object", id="requirement-empty-system"),
     case(_base_firmware(cores=[_core(requirements=[_requirement(need="nope")], requirements_met=None)]),
          "firmware requirement need must be one of", id="requirement-need-unknown"),
     case(_base_firmware(cores=[_core(requirements=[_requirement(system_source="nope")])]),
          "firmware requirement system_source must be one of", id="requirement-system-source-unknown"),
     case(_base_firmware(cores=[_core(requirements=[_requirement(system_source="none")])]),
-         "with no source for the system the slug must be", id="requirement-none-source-named-system"),
+         "a requirement's system is '_unknown' exactly where nothing names it",
+         id="requirement-none-source-named-system"),
     case(_base_firmware(cores=[_core(requirements=[_requirement(path="/elsewhere/gb_bios.bin")])]),
          "must be the absolute destination under the root", id="requirement-path-outside-root"),
     # A link leading out of the root admits the one target its statement
@@ -2089,12 +2234,12 @@ UNCLAIMED_CASES = [
          "identified content carries the table's own name", id="unclaimed-identified-undescribed"),
     case(_base_firmware(hash_checked=True, unclaimed=[_named(description=7)]),
          "as a non-empty string", id="unclaimed-description-not-a-string"),
-    case(_base_firmware(unclaimed=[_unclaimed(console="psx")]),
+    case(_base_firmware(unclaimed=[_unclaimed(console=_pair("psx"))]),
          "an unidentified file says nothing about itself", id="unclaimed-unidentified-with-a-console"),
     case(_base_firmware(unclaimed=[_unclaimed(concerns=[{"emulator": "x", "relation": "declares"}])]),
          "an unidentified file says nothing about itself", id="unclaimed-unidentified-with-a-concern"),
     case(_base_firmware(unclaimed=[_unclaimed(console="")]),
-         "console must be a non-empty system id or null", id="unclaimed-empty-console"),
+         "an unclaimed file's console must be a {source, key} object", id="unclaimed-empty-console"),
     case(_base_firmware(hash_checked=True,
                         unclaimed=[_named(concerns=[{"emulator": "x"}])]),
          "each unclaimed concern must be exactly the fields", id="unclaimed-concern-missing-field"),
@@ -2171,6 +2316,7 @@ ALL_CASES = [
     *ENTRY_CASES,
     *CATALOGUE_CASES,
     *LAUNCHABLE_CASES,
+    *RESOLUTION_CASES,
     *SYSTEMS_CASES,
     *ROM_LOCATIONS_CASES,
     *PLATFORM_SYSTEMS_CASES,
@@ -2312,6 +2458,19 @@ class TestTheFileLevelRules:
 # vector would pass the whole table above, and each of these is a state the
 # corpus is allowed to reach — several of them only reachable on real machines.
 ACCEPTED_CASES = [
+    pytest.param(_with(_base_launchable(), launchable_query={"system": ["esde", "gb"], "content_path": ROM}),
+                 id="a-question-asked-by-one-pair"),
+    pytest.param(_with(_base_launchable(), launchable_query={"system": [["libretro", "Nintendo - Game Boy", "1.0"],
+                                                                        ["romm", "gb"]], "content_path": ROM}),
+                 id="a-question-asked-by-several-pairs"),
+    pytest.param(_unresolved("sfc", "snes"), id="pairs-naming-several-systems-list-them-as-candidates"),
+    pytest.param(_base_platform_ids(system=None, status=None, tags_source=None, platforms=[],
+                                    resolution={**_resolution(), "status": "conflict", "system": None,
+                                                "relation": None},
+                                    caveats=[{"code": "system-pairs-conflict", "data": {}}]),
+                 id="platform-ids-for-pairs-naming-no-single-system"),
+    pytest.param(_base_firmware(cores=[_core(requirements=[_requirement(system="_unknown", system_source="none")])]),
+                 id="a-requirement-nothing-names-the-system-of"),
     pytest.param(_with(_base_placement(), savefile_query={"content_path": ROM, "cwd": "/home/deck/launch"}),
                  id="a-save-question-asked-with-a-working-folder"),
     pytest.param(_with(_base_entry(), entry_savefile_query={"system": SYSTEM, "cwd": "/home/deck/launch"}),
@@ -2341,7 +2500,7 @@ ACCEPTED_CASES = [
     pytest.param(_with(_vector(), inaccessible=["/mnt/card"], unlistable=["/saves"]),
                  id="the-two-unreadable-lists-apart"),
     pytest.param(_base_entry({"unresolved": {"code": "standalone-unsupported",
-                                             "data": {"label": "PPSSPP", "system": "psp"}}}),
+                                             "data": {"label": "PPSSPP", "source": "esde", "key": "psp"}}}),
                  id="a-standalone-entry-answering-unresolved"),
     pytest.param(_base_placement(needs=["content_dir", "library_name", "save_id"],
                                  file_set=_file_set(state="declared", files=["<save_id>.bin"]),
@@ -2418,7 +2577,7 @@ ACCEPTED_CASES = [
     # entry it identifies carries a description and no name at all.
     pytest.param(_base_firmware(
         hash_checked=True,
-        unclaimed=[_named(identity=_identity(sha1=None), known_as=[], console="psx",
+        unclaimed=[_named(identity=_identity(sha1=None), known_as=[], console=_pair("psx"),
                           description="SCPH-1001, DTL-H1001 (v2.0 05-07-95 A)",
                           concerns=[{"emulator": "DUCKSTATION", "relation": "recognises"}])],
     ), id="an-unclaimed-file-a-content-keyed-table-identified"),
@@ -2694,9 +2853,22 @@ class TestTheVocabularyIsOneVocabulary:
         assert validate_vectors.PLATFORM_UNKNOWN_PAIR_CODES == UNKNOWN_PAIR_CODES
         assert validate_vectors.PLATFORM_PARTS_UNESTABLISHED == atlas.CAVEAT_PLATFORM_PARTS_UNESTABLISHED
         assert validate_vectors.PLATFORM_LIFTED_CODES == LIFTED_CODES
-        assert validate_vectors.PLATFORM_CATALOGUE_COLUMNS == {
-            column for handle in _handle_classes(_CatalogueQueries) for column in handle.catalogue_columns
+
+    def test_the_system_mirrors_are_atlas_own(self):
+        # A system as an answer names it, the resolution block, the tiers it may name a system in, the codes
+        # one of which says why it named none, and the sentinel a requirement's system may hold (#784 D47, D49).
+        resolution = SystemResolution("resolved", ("esde", "gb"), "exactMatch")
+        assert validate_vectors.SYSTEM_PAIR_FIELDS == set(system_contract(("esde", "gb")))
+        assert validate_vectors.RESOLUTION_FIELDS == set(resolution_contract(resolution) or {})
+        assert validate_vectors.RESOLUTION_RELATIONS == set(SYSTEM_TIERS)
+        assert set(validate_vectors.RESOLUTION_STATUS_REASONS) == set(atlas.SYSTEM_RESOLUTION_STATUSES)
+        assert validate_vectors.KNOWN_PLATFORM_STATUSES == set(atlas.PLATFORM_SYSTEM_STATUSES)
+        assert validate_vectors.UNRESOLVED_SYSTEM_CODES == {
+            atlas.CAVEAT_SYSTEM_UNKNOWN,
+            atlas.CAVEAT_SYSTEM_AMBIGUOUS,
+            atlas.CAVEAT_SYSTEM_PAIRS_CONFLICT,
         }
+        assert (validate_vectors.UNKNOWN_SYSTEM,) == atlas.SYSTEM_SENTINELS
 
     def test_the_validator_knows_no_code_atlas_cannot_emit(self):
         assert sorted(validate_vectors.KNOWN_CAVEAT_CODES - self._caveat_codes()) == []
@@ -3035,7 +3207,7 @@ class TestTheLaunchAnswerIsValidated:
 
     def entry(self, **overrides: Any) -> dict[str, Any]:
         return {
-            "system": "gc",
+            "system": _pair("gc"),
             "label": "Dolphin (Standalone)",
             "kind": "standalone",
             "core_so": None,

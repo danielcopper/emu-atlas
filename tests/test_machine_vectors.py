@@ -27,7 +27,7 @@ from atlas import placement, retroarch_cfg
 from atlas.firmware import CORE_DECLARATION_STATES
 from atlas.machine import FixtureMachine
 from tests.corpus import caveat_blocks, expected_blocks
-from tests.platform_projection import with_projected_translation
+from tests.platform_projection import with_projected_resolutions, with_projected_translation
 from scripts import validate_vectors
 from atlas.contract import (
     catalogue_contract,
@@ -223,6 +223,7 @@ def _savefile_location(installs, query, name):
         install.savefile_location(
             content_path=query.get("content_path"),
             core_so=query.get("core_so"),
+            system=query.get("system"),
             cwd=query.get("cwd"),
             appendconfig=_appendconfig(query),
         )
@@ -392,7 +393,7 @@ def test_machine_vector(vector):
         assert key in QUESTIONS, f"{name}: the runner cannot ask for expected.{key}"
         query_key, ask = QUESTIONS[key]
         assert query_key in inp, f"{name}: expected.{key} needs input.{query_key} to ask it"
-        assert ask(installs, inp[query_key], name) == expectation, rationale
+        assert with_projected_resolutions(ask(installs, inp[query_key], name)) == expectation, rationale
 
 
 class TestEveryCodeTheCorpusCanShowIsInTheCorpus:
@@ -406,7 +407,7 @@ class TestEveryCodeTheCorpusCanShowIsInTheCorpus:
     covered or named below, never silently neither.
     """
 
-    # Two exceptions, each with the test that reaches the state behind it.
+    # Three exceptions, each with the test that reaches the state behind it.
     # Detection triggers on the marker, so a machine without one has no
     # installation for a vector to ask at all — a RetroDECK found by its deploy
     # states its missing marker as 'not-set-up' instead; it is covered by a
@@ -424,12 +425,16 @@ class TestEveryCodeTheCorpusCanShowIsInTheCorpus:
     # tests/test_oddities.py::TestAModeWhosePrimaryGroupDeclaresNoFiles. The
     # sibling test below asserts the moment a vector covers either one, and a
     # human then removes its entry.
-    # 'platform-source-version-differs' rides a pair that states its source's
-    # version, and no handle question takes one in this cut (#785; the pair
-    # argument on every question is #786): the platform-table vectors and
-    # tests/test_platforms.py::TestTheLookup::test_a_stated_version_the_table_does_not_hold_is_a_caveat
-    # hold it.
-    UNREACHABLE_BY_FIXTURE = {"marker-missing", "filenames-unverified", "platform-source-version-differs"}
+    # 'save-record-ambiguous' is said where two entries a record holds for one
+    # system's ES-DE names state different files (#784 D50). Measured over the
+    # table keys that reach two or more ES-DE names against every packaged
+    # save-memory and save-format record, no held entries disagree (a name left
+    # uncovered is 'save-record-partial', not this), so no fixture machine can
+    # reach it. Crafted records hold it:
+    # tests/test_installations.py::TestASaveQuestionKeysItsRecordByTheSystemAsked
+    # ::test_two_entries_the_record_holds_that_differ_key_no_record and
+    # tests/test_save_portability.py::TestARecordFiledUnderSeveralNames.
+    UNREACHABLE_BY_FIXTURE = {"marker-missing", "filenames-unverified", "save-record-ambiguous"}
 
     def _exported_codes(self) -> set[str]:
         families = ("CAVEAT_", "HEALTH_ISSUE_", "UNRESOLVED_")
@@ -1098,7 +1103,7 @@ class TestTheGrammarRefusesContradictions:
             systems_query={},
             expected={
                 "installations": [self._INSTALLATION],
-                "systems": {"systems": ["n64"], "caveats": self._UNREAD},
+                "systems": {"systems": [{"source": "esde", "key": "n64"}], "caveats": self._UNREAD},
             },
         )
         with pytest.raises(validate_vectors.VectorError, match="states systems"):
@@ -1187,7 +1192,7 @@ class TestTheGrammarRefusesContradictions:
                 "catalogue": {
                     "entries": [
                         {
-                            "system": "n64",
+                            "system": {"source": "esde", "key": "n64"},
                             "label": "ParaLLEl N64",
                             "kind": "libretro",
                             "core_so": "parallel_n64_libretro.so",
@@ -1201,6 +1206,13 @@ class TestTheGrammarRefusesContradictions:
                         }
                     ],
                     "caveats": self._UNREAD,
+                    "resolution": {
+                        "status": "resolved",
+                        "system": {"source": "esde", "key": "n64"},
+                        "relation": "exactMatch",
+                        "candidates": [],
+                        "translation": None,
+                    },
                 },
             },
         )

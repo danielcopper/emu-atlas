@@ -621,15 +621,119 @@ stops — a missing or unreadable file, a ref packed away — states no version 
 The deployed ES-DE's version is part of the verification record's provenance, not of the runtime comparison: on disk it
 only exists in `~/ES-DE/logs/es_log.txt` after a first launch, and a fresh installation has none.
 
+## Naming a system: a name or a pair
+
+Every question that names a system — `emulators_for`, `rom_location`, `launchable`, `launch_command`,
+`save_portability`, `firmware_for_system`, `platform_ids`, `savefile_location`'s `system=`, and RetroDECK's
+`gamelist_selections` — takes it in one of three forms:
+
+```python
+inst.emulators_for("gba")                                         # a bare name: this installation's own word
+inst.emulators_for(("romm", "gba"))                               # one (source, key) pair
+inst.emulators_for(("libretro", "Nintendo - Game Boy Advance", "1.0"))  # a pair with a version, applied as below
+inst.emulators_for([("romm", "gba"), ("igdb", "24")])             # several pairs, asked together
+```
+
+**The source decides the route.** Each installation reads its catalogue in its own sources: ES-DE's names on every ES-DE
+frontend (`esde`), RetroDECK's own beside them on RetroDECK (`esde`, `retrodeck` — its `primehack`, say), and the
+libretro database names its cores' `.info` files declare on a bare RetroArch (`libretro` — `"Atari - 2600"`, not
+`atari2600`). A bare name is the short form of a pair in the first of them. A pair in one of them is read live against
+the machine's catalogue, exactly as spelled, so `("esde", "primehack")` on RetroDECK reaches the catalogue's own
+primehack; it never meets the table, so a version stated with it is not applied and the answer says so in
+`platform-version-unapplied` with the pair's `source`, `key` and `version` — the example's libretro pair on a bare
+RetroArch, whose own source is libretro. A pair in any other source of the platform table goes through the table: the
+systems of this installation it names exactly, or failing that the ones it is a part of, or failing that the ones it is
+wider than — never a related one. The first of those tiers that names any system decides, held here or not: on RetroDECK
+`("emudeck", "primehacks")` names RetroDECK's own `primehack` exactly and ES-DE's `wii` as the system it is a part of,
+so a catalogue that does not declare primehack answers it unknown rather than falling through to wii. There is no
+fallback between the routes. What that means for a client: one whose vocabulary comes from somewhere else — a scraper, a
+server, a ROM folder layout — sends pairs, always; one that read this installation's catalogue, or reuses a system an
+answer named, sends the name.
+
+A few systems no catalogue source of an ES-DE frontend names still have firmware or cores filed under them, so atlas
+names them there by a cited pair of another source: RomM's `ti-83` for the TI-83, libretro's `BK-0010/BK-0011` and
+`Enterprise - 128` for the BK and the Enterprise. On a bare RetroArch a core that declares no database name is filed
+under the pair `atlas/data/core_systems.json` cites for it, translated into libretro's key where the table names exactly
+one. Ask with that pair and the emulators come from the installed cores, on every arrangement. The installation holds
+such a system only where a core it is cited for is installed — on a bare RetroArch the core whose packaged pair or map
+target it is, on RetroDECK and EmuDeck the core whose `systemname` maps to it (numero for the TI-83, bk for the BK,
+ep128emu for the Enterprise); where none is, the pair names no system here, as any system the installation does not
+hold.
+
+**An answer about a system says how it resolved it**, in `resolution` — the answers of `emulators_for`, `rom_location`,
+`launchable`, `launch_command`, `save_portability`, `firmware_for_system` and `platform_ids`:
+
+```python
+answer = inst.emulators_for(("emudeck", "sneshd"))
+answer.resolution.status       # 'resolved' — or 'unknown', 'ambiguous', 'conflict' where no single system was named
+answer.resolution.system       # ('esde', 'snes') — the system the answer is about, as this installation names it
+answer.resolution.relation     # 'broadMatch' — sneshd is a part of the SNES; 'exactMatch' for a name read live
+answer.resolution.candidates   # () — filled only where the pairs named several systems
+answer.resolution.translation  # the table's answer for the pairs that went through it; None for a name read live
+```
+
+Where the pairs name one system the installation holds, the question answers for it and `resolution.status` is
+`resolved`. Where they name none, several, or disagree, the question answers its own empty or unknown form,
+`resolution.system` is `None`, and the status says which, each beside the caveat that states the reason: `unknown` with
+`system-unknown` once per asked pair, or per system the table reached, that names nothing here (data: `source`, `key`),
+`ambiguous` with `system-ambiguous` when several systems the installation holds answer — atlas picks none, and
+`candidates` lists each with its status here — and `conflict` with `system-pairs-conflict` when the pairs name different
+systems. Branch on the status, not on the caveat codes: `resolved` means the installation holds the system, on every
+route. One question asks about a name's standing itself: `platform_ids` keeps a name the installation does not hold, an
+own name or a system the table reached, as the system it spells, with `status` `absent` or `disabled`, a `resolved`
+resolution and `system-unknown` beside it, because telling "disabled here" from "an unknown name" is what it is for; its
+candidates carry `disabled` and `absent` as well, where every other question's are `declared`. Every other question
+answers a name the installation does not hold, read live or reached through the table, as naming no system here: the
+status is `unknown` with `system-unknown` beside it, the emulator and ROM-folder questions included, and RetroDECK's
+`gamelist_selections` refuses it (below). An own pair it does not hold, asked beside others, is an unknown pair and
+decides nothing. The installation does not hold a system on RetroDECK and EmuDeck where the catalogue, read in full,
+does not declare it (while EmuDeck's bundled layer is sealed the undeclared system may sit there, and the sealed
+statement is the whole claim; where a layer does not parse, the catalogue in force is empty but nothing that layer meant
+to declare was read, so `catalogue-invalid` is the whole claim, and an empty firmware answer states
+`firmware-declaration-unknown`, a look that failed), and on a bare RetroArch where no installed core names it — by a
+libretro database name its `.info` declares, or by the pair atlas packages for a core that declares none. A system named
+by a cited pair is held where a core it is cited for is installed, on every arrangement. An unknown name is never
+answered as a system the catalogue lists nothing for. A pair the table cannot place rides along with its own caveat
+(`platform-unmapped`, `platform-excluded`, `platform-source-unknown`) and does not decide anything; a stated version the
+table does not hold is `platform-source-version-differs` in the translation.
+
+Two questions take a system without answering about it. `savefile_location` uses it to key the core's recorded file set:
+its placement carries no `resolution`, so the same caveats lead the placement's own, and so does
+`platform-source-version-differs`, which every other answer states only in its translation (#784 D56). Records are filed
+under ES-DE's system names. A system in ES-DE's or RetroDECK's source keys one by its own key as it stands, and so does
+an asked pair in one of those sources — `("esde", "gb")` asked on a bare RetroArch keys gb. Any other system keys the
+ES-DE names the table reaches from it, and where those are several — libretro's Game Boy is gb and sgb — the record keys
+it where the entries it holds for them state the same files. A name it holds no entry for is no disagreement: the files
+are the held names' files, and `save-record-partial` names the others as `sources` and `keys` (Gambatte holds gb, not
+sgb). Where two held entries state different files, the file set is unknown and `save-record-ambiguous` names them.
+`save_portability` consults its save-format records by the same rule, and says the same things with the entry's `side`.
+A system that was asked and keys no record answers the file set unknown, and `save-record-unrecorded` names the core and
+the system as asked, as `source` and `key` or, where several pairs were asked, the parallel `sources` and `keys` — a key
+the record does not list (gbh, a system added by hand), a name that reaches no ES-DE name (a bare RetroArch's DICE), a
+cited pair or RetroDECK's own name. Pairs that name no single system state why in the resolution's own caveat, not here.
+The files every system of a record agrees on answer only a question that names no system. RetroDECK's
+`gamelist_selections` answers about a whole gamelist and has no caveats to state them in, so an argument that names no
+single system, or a name the catalogue does not declare, raises `ValueError`, as a malformed one does; what else a
+resolved system carries — a version not applied, a pair the table does not hold — its answer does not carry.
+
+Every answer field that names a system is a `{source, key}` pair — `entries[].system`, `systems()`, a firmware
+requirement's `system` (or `_unknown`, where nothing names the system of the core that declared it) — and caveat data
+names one flat, as `source` and `key`, or several as the parallel lists `sources` and `keys`. On the command line a
+subcommand takes the bare name as `SYSTEM` (or `--system`) and pairs as `--pair SOURCE:KEY[@VERSION]`, repeated for
+several; giving both is a usage error. `save-portability`'s `--source` and `--target` are the two catalogue labels, not
+a pair's source.
+
+`atlas.known_systems()` and `atlas.from_esde_system()` list the system names one catalogue declares (RetroDECK
+0.10.9b's: ES-DE's plus its own primehack and portmaster), not every system a question can take; #797 replaces them with
+the platform table.
+
 ## Arriving from a public platform id
 
-Every question about a system — `emulators_for`, `firmware_for_system` — takes an id in **ES-DE's vocabulary**: `gb`,
-`n64`, `dreamcast`. That is what a frontend catalogue on the machine declares, so it is what an answer can be about.
-
-If your catalogue speaks another vocabulary — RomM's slugs or folder names, a distribution's folders (Batocera, KNULLI,
-ROCKNIX, EmuDeck, RetroDECK), ES-DE's platform ids, libretro's database names, IGDB ids and slugs, ScreenScraper or
-TheGamesDB ids — atlas translates it from one packaged table that maps the keys of every source onto one another. The
-pure lookup takes `(source, key)` pairs and needs no machine:
+A question takes a pair of any source the platform table holds, as above. If your catalogue speaks another vocabulary —
+RomM's slugs or folder names, a distribution's folders (Batocera, KNULLI, ROCKNIX, EmuDeck, RetroDECK), ES-DE's platform
+ids, libretro's database names, IGDB ids and slugs, ScreenScraper or TheGamesDB ids — atlas translates it from one
+packaged table that maps the keys of every source onto one another. The pure lookup takes `(source, key)` pairs and
+needs no machine:
 
 ```python
 answer = atlas.translate([("romm", "genesis")])
@@ -685,26 +789,29 @@ The handle question qualifies a pair by this installation:
 ```python
 answer = inst.systems_for_platform("romm", "dc")
 # answer.translation   ← the table's answer for ("romm", "dc"), as atlas.translate gives it
-# answer.matches   == (PlatformSystemMatch(system='dreamcast', status='declared',
+# answer.matches   == (PlatformSystemMatch(system=('esde', 'dreamcast'), status='declared',
 #                                          platforms=('dreamcast',), tags_source='catalogue'),)
 ```
 
 A system matches when the translation names it in a catalogue column this installation deploys — ES-DE's system names,
 and RetroDECK's own on a RetroDECK (EmuDeck's catalogue declares ES-DE's names only; its ROM folders are a folder
-vocabulary) — and a declared system also matches through its live `<platform>` tag when that tag is an exact ES-DE
-platform key of the translation — the table does not know the name of a system the user added by hand, but it knows the
-tag that system carries. Each match's `status` says what your next step is, and the three never collapse:
+vocabulary), and on a bare RetroArch libretro's column together with the cited pairs atlas packages for its cores — and
+a declared system also matches through its live `<platform>` tag when that tag is an exact ES-DE platform key of the
+translation — the table does not know the name of a system the user added by hand, but it knows the tag that system
+carries. Each match's `status` says what your next step is, and the three never collapse:
 
 - **`declared`** — this installation's catalogue lists it: place content now.
 - **`disabled`** — the catalogue's text carries it only inside an XML comment (RetroDECK 0.10.9b shipped 31 systems that
   way): present and deliberately off — the user would have to enable it.
-- **`absent`** — the vocabulary knows the system and this installation does not have it: don't place content here.
+- **`absent`** — the vocabulary knows the system and this installation does not have it: don't place content here. On a
+  bare RetroArch the vocabulary is libretro's column of the table, and an absent system is a key no installed core
+  declares.
 
 `tags_source` says where the tags came from: `catalogue` is a live read; `vocabulary` is the stated build's snapshot
-column (what backs an `absent` system, and a sealed catalogue's derived systems). A pair the table does not hold answers
-no matches and the translation's own caveat, `platform-unmapped`, `platform-excluded` or `platform-source-unknown` —
-placing content under the raw key would name a folder no catalogue declares, which is exactly the quiet failure this
-question exists to prevent.
+column (what backs an `absent` system, a sealed catalogue's derived systems, and every system of a bare RetroArch, whose
+libretro names carry no tags of their own). A pair the table does not hold answers no matches and the translation's own
+caveat, `platform-unmapped`, `platform-excluded` or `platform-source-unknown` — placing content under the raw key would
+name a folder no catalogue declares, which is exactly the quiet failure this question exists to prevent.
 
 Several pairs go to `inst.systems_for_platforms([("romm", "genesis"), ("folder", "megadrivejp")])`: the same answer, its
 matches the systems the intersection names, and nothing at all for a conflict. Both forms give one answer shape: the
@@ -726,16 +833,8 @@ Two caveats state the tags that name no ES-DE platform id: `platform-unknown` (a
 the same token ES-DE itself warns about and drops) and `platform-scraping-ignored` (the catalogue's deliberate `ignore`
 opt-out).
 
-**If you keep a private map anyway**, validate it — the target set is still the contract:
-
-```python
-atlas.from_esde_system("dreamcast")       # 'dreamcast' — a name that IS an id, echoed back
-atlas.from_esde_system("sega-dreamcast")  # None — not an id, whatever it looks like
-atlas.known_systems()                     # every id, sorted — the whole vocabulary
-```
-
-The id set and the platform table are packaged data, cited to pinned builds and guarded by tests. They move with atlas
-releases, not with your code — so pin your atlas version and re-run your checks when you bump it.
+The platform table is packaged data, cited to pinned builds and guarded by tests. It moves with atlas releases, not with
+your code — so pin your atlas version and re-run your checks when you bump it.
 
 ## Where does this save live?
 
@@ -914,26 +1013,28 @@ frontend catalogue at all, so `emulators_for` there answers `emulator-catalogue-
 system. Say it yourself and the answer follows:
 
 ```python
-install.savefile_location(content_path=rom, core_so="mgba_libretro.so", system="gb")
+install.savefile_location(content_path=rom, core_so="mgba_libretro.so", system=("esde", "gb"))
 #   file_set: declared ('Game.srm', 'Game.rtc')
-install.savefile_location(content_path=rom, core_so="mgba_libretro.so", system="gba")
+install.savefile_location(content_path=rom, core_so="mgba_libretro.so", system="Nintendo - Game Boy Advance")
 #   file_set: declared ('Game.srm',)          — same core, same ROM path, different system
-install.savefile_location(content_path=rom, core_so="mgba_libretro.so", system="n64")
+install.savefile_location(content_path=rom, core_so="mgba_libretro.so", system=("esde", "n64"))
 #   file_set: unknown ()                       — the record covers no such system; nothing is invented
 ```
 
-`system` speaks the same vocabulary every other question here does — ES-DE's ids, `atlas.known_systems()` — and it is
-never derived from the core. A core's own metadata says which systems it _can_ run (mGBA declares Game Boy, Game Boy
-Color and Game Boy Advance); it cannot say which one the content in your hand is, and guessing would answer a Game Boy
-question with Game Boy Advance behaviour. Name it, or accept the answer below.
+`system` takes what every other question here takes — a bare RetroArch's own word is the libretro database name, and any
+table source's pair reaches it ("Naming a system: a name or a pair") — and it is never derived from the core. A core's
+own metadata says which systems it _can_ run (mGBA declares Game Boy, Game Boy Color and Game Boy Advance); it cannot
+say which one the content in your hand is, and guessing would answer a Game Boy question with Game Boy Advance
+behaviour. Name it, or accept the answer below.
 
 **Without a system, a record still answers where its systems agree.** Most cores are one behaviour: of the 66 recorded
 cores, 65 write the same files for every system they cover, so the answer holds whichever of them the content is. It
-comes with `file-set-across-systems`, whose `data["systems"]` lists exactly the systems the claim is scoped to:
+comes with `file-set-across-systems`, whose `data["sources"]` and `data["keys"]` name exactly the systems the claim is
+scoped to, one pair per index:
 
 ```python
 c = next(c for c in placement.caveats if c.code == "file-set-across-systems")
-c.data["systems"]      # ['gb', 'gbc'] — the answer holds for these, and states nothing about any other
+list(zip(c.data["sources"], c.data["keys"]))   # [('esde', 'gb'), ('esde', 'gbc')] — it holds for these, no other
 ```
 
 The one core where the systems disagree is mGBA, which is also the reason the records are keyed by system at all — it
@@ -1298,84 +1399,87 @@ answer names the folder with `file-names-unestablished` and no file names.
 
 ### Placement caveats worth branching on
 
-| Code                                       | Meaning                                                                                                                                                          |
-| ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `sorted-dir-missing`                       | `dir` does not exist yet; RetroArch creates it on first save or reverts to `fallback_dir`                                                                        |
-| `sorted-dir-uncreatable`                   | a file blocks the sorted dir — `dir` already is the unsorted root, `fallback_dir` is `None`                                                                      |
-| `dead-symlink`                             | the directory is reached through a dead link; nothing can land there                                                                                             |
-| `symlink-loop`                             | the link chain never settles (`ELOOP`); nothing can land there either — check both codes                                                                         |
-| `save-dir-unlistable`                      | the directory could not be listed (`data["path"]`): `file_set` is _unknown_, not "no saves"                                                                      |
-| `per-game-override`                        | this game's gamelist entry selects a different emulator (`data["label"]`) — ask with `content_path`                                                              |
-| `per-game-alternative-emulator`            | some games of this system select a different emulator — `data["count"]`, per label in `data["emulators"]`                                                        |
-| `per-game-overrides-present`               | games carry emulator settings files layering over this answer (`data["token"]`, `dir`, `key`, `count`)                                                           |
-| `per-game-layer-unread`                    | whether any per-game config exists was not checked (`data["dir"]`, `data["key"]`) — not "none does"                                                              |
-| `per-game-build-layer-unread`              | a per-game layer the emulator's BUILD ships, at a path the build decides — never listed, never counted                                                           |
-| `cfg-value-rejected`                       | the file sets a value the emulator cannot read, so the value it had keeps governing                                                                              |
-| `appended-config-overridden`               | an override wins a layout key a file you appended sets (`data["key"]`, `layer`, `file`) — the answer is the override's                                           |
-| `appended-config-visibility-unestablished` | whether the program's sandbox shows the appended files was not established — read as the host's paths                                                            |
-| `save-directory-visibility-unestablished`  | save folder's or working directory's sandbox visibility unknown — host-read; a cfg or override folder under `/run/user` also carries `sandbox-path-untranslated` |
-| `cwd-hidden-in-sandbox`                    | RetroDECK's sandbox shows no directory at `data["cwd"]`: RetroArch runs in `data["working_directory"]` instead                                                   |
-| `appended-config-not-read`                 | a standalone emulator reads no RetroArch config — the appended files change nothing in this answer                                                               |
-| `core-unaudited` / `core-suspect`          | no rule card for this core yet / options scan shows save-related keys nobody has verified                                                                        |
-| `core-multi-option`                        | granularity deliberately unstated — depends on options atlas does not interpret (named in it)                                                                    |
-| `filenames-content-conditional`            | the file set depends on the content: `data` carries the id-less spelling and the scope token, below                                                              |
-| `file-set-spans-roots`                     | part of the save stays under `data["dir"]` (`data["files"]`) — also in `groups` when declared                                                                    |
-| `file-names-unestablished`                 | save data lives in `data["dir"]` and its names follow from nothing atlas reads — back it up whole                                                                |
-| `file-membership-by-header`                | a file of `data["dir"]` is the game's when its bytes at `offset`, `length` long, equal the `save_id` fill — Dolphin's GCI folder, below                          |
-| `redirect-outranked`                       | this machine's configuration outranks a stated redirect route, or makes it not apply (`data["argument"]`, `data["key"]`) — below                                 |
-| `save-id-candidates`                       | the title directories the NAND or MLC holds, each spelled as the `save_id` it fills (`data["titles"]`) — below                                                   |
-| `file-set-claims-merged`                   | two parts of the answer named one file and disagreed; it is one group, `data` lists what each said                                                               |
-| `file-set-directories-unread`              | this card also writes into `data["dir"]`, which the observation did not read — not "it is empty"                                                                 |
-| `file-set-across-systems`                  | no system was named; the set holds for every system in `data["systems"]` and for no other                                                                        |
-| `core-unqueryable`                         | the core could not be queried, `library_name` unknown — `data["reason"]` says which way                                                                          |
-| `core-generation-mismatch`                 | the recorded deviation names an option this core does not register — not applied, standard frame                                                                 |
-| `core-generation-unestablished`            | the core could not be read, so its generation is unknown — the recorded deviation is not applied                                                                 |
-| `core-option-value-unestablished`          | the core fits the card, but nothing states the value governing it — not applied, standard frame                                                                  |
-| `core-options-unaudited`                   | card applied, answer unchanged: the core registers options its audit never examined (`data["added"]`)                                                            |
-| `core-mode-unestablished`                  | the card's selection rule could not decide (`data["reason"]` is a slug, below) — not applied                                                                     |
-| `option-entry-retired`                     | the options file carries a key this core generation retired — the value there stopped applying                                                                   |
-| `save-inside-content`                      | no separate save file exists: the loaded content file itself takes the writes — your call                                                                        |
-| `save-inside-image`                        | the saves live inside `data["image"]` (a disk image), laid out per `data["layout"]` — whole-file                                                                 |
-| `save-writes-discarded`                    | nothing keeps a save at all: the writes are discarded — the granularity block names the way out                                                                  |
-| `save-files-compressed`                    | RetroArch compresses the files it writes (`data["key"]`, `layer`, `file`) — those groups' `size_fixed` is false                                                  |
-| `save-files-shared-with-core`              | another core (`data["core"]`) writes its save files in the same folder, `data["dir"]` — sync or back it up once, not per core                                    |
-| `size-fixed-except-trailing-fill`          | `data["file"]` keeps its size but may grow or shrink by a trailing run of `data["fill"]` alone — below                                                           |
-| `save-root-redirected`                     | the emulator's own config routes saves to `data["path"]`, outside every root kind — do not skip                                                                  |
-| `save-root-revoked`                        | a flatpak override revokes the tree the save root lives under — writes never land here on the host                                                               |
-| `save-root-unresolvable`                   | the save trees anchor at the frontend _process's_ state (its cwd, its environment) — `data` names them                                                           |
-| `content-dir-observation`                  | the files were observed in the ROM's own directory — content files share the name, see below                                                                     |
-| `content-path-unnamed`                     | the content path names no file; no file names stated, nothing observed                                                                                           |
-| `marker-missing`                           | health: the config marker this installation is detected by is gone                                                                                               |
-| `not-set-up`                               | health: RetroDECK is installed and its marker is not there — every other answer refuses with this                                                                |
-| `marker-unreadable`                        | health: the marker exists and its bytes could not be read                                                                                                        |
-| `marker-invalid`                           | health: the marker parsed to something unusable                                                                                                                  |
-| `root-missing`                             | health: the installation's own root is not an existing directory                                                                                                 |
-| `saves-root-missing`                       | health: its saves root is not an existing directory                                                                                                              |
-| `bios-root-missing`                        | health: its BIOS folder is not an existing directory                                                                                                             |
-| `roms-root-missing`                        | health: the ROM root its frontend launches from is not an existing directory                                                                                     |
-| `roms-root-not-absolute`                   | health: ES-DE's `ROMDirectory` is not an absolute path — no ROM root to check                                                                                    |
-| `config-unreadable`                        | health: a bare RetroArch's or RetroDECK's `retroarch.cfg`, or the ES-DE settings that set the ROM root, could not be read                                        |
-| `emulator-config-missing`                  | the settings file that would name the place is not there — the place is the defaults', not a reading (see below)                                                 |
-| `companion-config-missing`                 | health: EmuDeck's claimed `org.libretro.RetroArch` config is gone or broken                                                                                      |
-| `catalogue-invalid`                        | health: an `es_systems.xml` ES-DE refuses its whole catalogue load on — no systems run                                                                           |
-| `content-tree-unwired`                     | health: a texture/mods hub tree exists that no emulator-side link reaches — filed content is lost                                                                |
-| `unverified-version`                       | the rule card was never verified against this emulator version                                                                                                   |
-| `arrangement-unverified`                   | this arrangement has never been observed live — the answer is derived (see above)                                                                                |
-| `arrangement-version-drifted`              | it was observed, on another version than this machine runs — re-verification pending                                                                             |
-| `sandbox-path-untranslated`                | a configured path exists only inside the emulator's Flatpak sandbox; nothing there was read                                                                      |
-| `entry-format-unclaimed`                   | launchable: the running core does not claim this format — attempted, never refused, and unestablished                                                            |
-| `archive-contents-unread`                  | launchable: RetroArch opens the container and picks by the core's claims — the inside is unread                                                                  |
-| `entry-format-unestablished`               | launchable: what the running entry reads was never established — not the same as "refuses"                                                                       |
-| `entry-format-content-unread`              | launchable: the running entry's loader takes the extension and then reads the content, which atlas does not                                                      |
-| `entry-format-build-dependent`             | launchable: the builds the running entry's loader card serves disagree on this extension — neither a take nor a refusal holds                                    |
-| `emulator-list-derived`                    | the entries/systems come from the installed cores' own `.info`, not a catalogue — no launch command                                                              |
-| `platform-unmapped`                        | the asked id or system corresponds to no platform knowledge — don't invent a folder from the raw id                                                              |
-| `platform-source-unknown`                  | the asked pair names a source the platform table does not include — check the source name against the listed ones                                                |
-| `platform-excluded`                        | the source has the asked key and the table places it on no system on purpose — `reason` says why                                                                 |
-| `platform-parts-unestablished`             | the pairs share the system only through different parts or overlaps of it, which the table cannot compare — `sources` and `keys` name those pairs                |
-| `platform-version-unapplied`               | a version on a bare folder pair names no single source and was not applied — ask the folder vocabulary by name                                                   |
-| `platform-unknown`                         | a catalogue's `<platform>` token is outside the platform vocabulary — ES-DE warns and drops it too                                                               |
-| `platform-scraping-ignored`                | the catalogue tags this system `ignore` — a deliberate opt-out, not a missing tag                                                                                |
+| Code                                       | Meaning                                                                                                                                                                                                  |
+| ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `sorted-dir-missing`                       | `dir` does not exist yet; RetroArch creates it on first save or reverts to `fallback_dir`                                                                                                                |
+| `sorted-dir-uncreatable`                   | a file blocks the sorted dir — `dir` already is the unsorted root, `fallback_dir` is `None`                                                                                                              |
+| `dead-symlink`                             | the directory is reached through a dead link; nothing can land there                                                                                                                                     |
+| `symlink-loop`                             | the link chain never settles (`ELOOP`); nothing can land there either — check both codes                                                                                                                 |
+| `save-dir-unlistable`                      | the directory could not be listed (`data["path"]`): `file_set` is _unknown_, not "no saves"                                                                                                              |
+| `per-game-override`                        | this game's gamelist entry selects a different emulator (`data["label"]`) — ask with `content_path`                                                                                                      |
+| `per-game-alternative-emulator`            | some games of this system select a different emulator — `data["count"]`, per label in `data["emulators"]`                                                                                                |
+| `per-game-overrides-present`               | games carry emulator settings files layering over this answer (`data["token"]`, `dir`, `key`, `count`)                                                                                                   |
+| `per-game-layer-unread`                    | whether any per-game config exists was not checked (`data["dir"]`, `data["key"]`) — not "none does"                                                                                                      |
+| `per-game-build-layer-unread`              | a per-game layer the emulator's BUILD ships, at a path the build decides — never listed, never counted                                                                                                   |
+| `cfg-value-rejected`                       | the file sets a value the emulator cannot read, so the value it had keeps governing                                                                                                                      |
+| `appended-config-overridden`               | an override wins a layout key a file you appended sets (`data["key"]`, `layer`, `file`) — the answer is the override's                                                                                   |
+| `appended-config-visibility-unestablished` | whether the program's sandbox shows the appended files was not established — read as the host's paths                                                                                                    |
+| `save-directory-visibility-unestablished`  | save folder's or working directory's sandbox visibility unknown — host-read; a cfg or override folder under `/run/user` also carries `sandbox-path-untranslated`                                         |
+| `cwd-hidden-in-sandbox`                    | RetroDECK's sandbox shows no directory at `data["cwd"]`: RetroArch runs in `data["working_directory"]` instead                                                                                           |
+| `appended-config-not-read`                 | a standalone emulator reads no RetroArch config — the appended files change nothing in this answer                                                                                                       |
+| `core-unaudited` / `core-suspect`          | no rule card for this core yet / options scan shows save-related keys nobody has verified                                                                                                                |
+| `core-multi-option`                        | granularity deliberately unstated — depends on options atlas does not interpret (named in it)                                                                                                            |
+| `filenames-content-conditional`            | the file set depends on the content: `data` carries the id-less spelling and the scope token, below                                                                                                      |
+| `file-set-spans-roots`                     | part of the save stays under `data["dir"]` (`data["files"]`) — also in `groups` when declared                                                                                                            |
+| `file-names-unestablished`                 | save data lives in `data["dir"]` and its names follow from nothing atlas reads — back it up whole                                                                                                        |
+| `file-membership-by-header`                | a file of `data["dir"]` is the game's when its bytes at `offset`, `length` long, equal the `save_id` fill — Dolphin's GCI folder, below                                                                  |
+| `redirect-outranked`                       | this machine's configuration outranks a stated redirect route, or makes it not apply (`data["argument"]`, `data["key"]`) — below                                                                         |
+| `save-id-candidates`                       | the title directories the NAND or MLC holds, each spelled as the `save_id` it fills (`data["titles"]`) — below                                                                                           |
+| `file-set-claims-merged`                   | two parts of the answer named one file and disagreed; it is one group, `data` lists what each said                                                                                                       |
+| `file-set-directories-unread`              | this card also writes into `data["dir"]`, which the observation did not read — not "it is empty"                                                                                                         |
+| `file-set-across-systems`                  | no system was named; the set holds for every system `data["sources"]` and `data["keys"]` name and for no other                                                                                           |
+| `save-record-ambiguous`                    | the system asked stands for several ES-DE systems, and core `data["core"]`'s record states different files for the ones it holds (`data["sources"]`, `data["keys"]`), so no file set is applied          |
+| `save-record-partial`                      | the system asked stands for several ES-DE systems, and core `data["core"]`'s record holds no entry for `data["sources"]` / `data["keys"]`: the set is the held ones' files, and states nothing for these |
+| `save-record-unrecorded`                   | core `data["core"]`'s record holds no entry for the system asked (`data["source"]` and `data["key"]`, or `data["sources"]` and `data["keys"]` for several pairs), so no file set is applied              |
+| `core-unqueryable`                         | the core could not be queried, `library_name` unknown — `data["reason"]` says which way                                                                                                                  |
+| `core-generation-mismatch`                 | the recorded deviation names an option this core does not register — not applied, standard frame                                                                                                         |
+| `core-generation-unestablished`            | the core could not be read, so its generation is unknown — the recorded deviation is not applied                                                                                                         |
+| `core-option-value-unestablished`          | the core fits the card, but nothing states the value governing it — not applied, standard frame                                                                                                          |
+| `core-options-unaudited`                   | card applied, answer unchanged: the core registers options its audit never examined (`data["added"]`)                                                                                                    |
+| `core-mode-unestablished`                  | the card's selection rule could not decide (`data["reason"]` is a slug, below) — not applied                                                                                                             |
+| `option-entry-retired`                     | the options file carries a key this core generation retired — the value there stopped applying                                                                                                           |
+| `save-inside-content`                      | no separate save file exists: the loaded content file itself takes the writes — your call                                                                                                                |
+| `save-inside-image`                        | the saves live inside `data["image"]` (a disk image), laid out per `data["layout"]` — whole-file                                                                                                         |
+| `save-writes-discarded`                    | nothing keeps a save at all: the writes are discarded — the granularity block names the way out                                                                                                          |
+| `save-files-compressed`                    | RetroArch compresses the files it writes (`data["key"]`, `layer`, `file`) — those groups' `size_fixed` is false                                                                                          |
+| `save-files-shared-with-core`              | another core (`data["core"]`) writes its save files in the same folder, `data["dir"]` — sync or back it up once, not per core                                                                            |
+| `size-fixed-except-trailing-fill`          | `data["file"]` keeps its size but may grow or shrink by a trailing run of `data["fill"]` alone — below                                                                                                   |
+| `save-root-redirected`                     | the emulator's own config routes saves to `data["path"]`, outside every root kind — do not skip                                                                                                          |
+| `save-root-revoked`                        | a flatpak override revokes the tree the save root lives under — writes never land here on the host                                                                                                       |
+| `save-root-unresolvable`                   | the save trees anchor at the frontend _process's_ state (its cwd, its environment) — `data` names them                                                                                                   |
+| `content-dir-observation`                  | the files were observed in the ROM's own directory — content files share the name, see below                                                                                                             |
+| `content-path-unnamed`                     | the content path names no file; no file names stated, nothing observed                                                                                                                                   |
+| `marker-missing`                           | health: the config marker this installation is detected by is gone                                                                                                                                       |
+| `not-set-up`                               | health: RetroDECK is installed and its marker is not there — every other answer refuses with this                                                                                                        |
+| `marker-unreadable`                        | health: the marker exists and its bytes could not be read                                                                                                                                                |
+| `marker-invalid`                           | health: the marker parsed to something unusable                                                                                                                                                          |
+| `root-missing`                             | health: the installation's own root is not an existing directory                                                                                                                                         |
+| `saves-root-missing`                       | health: its saves root is not an existing directory                                                                                                                                                      |
+| `bios-root-missing`                        | health: its BIOS folder is not an existing directory                                                                                                                                                     |
+| `roms-root-missing`                        | health: the ROM root its frontend launches from is not an existing directory                                                                                                                             |
+| `roms-root-not-absolute`                   | health: ES-DE's `ROMDirectory` is not an absolute path — no ROM root to check                                                                                                                            |
+| `config-unreadable`                        | health: a bare RetroArch's or RetroDECK's `retroarch.cfg`, or the ES-DE settings that set the ROM root, could not be read                                                                                |
+| `emulator-config-missing`                  | the settings file that would name the place is not there — the place is the defaults', not a reading (see below)                                                                                         |
+| `companion-config-missing`                 | health: EmuDeck's claimed `org.libretro.RetroArch` config is gone or broken                                                                                                                              |
+| `catalogue-invalid`                        | health: an `es_systems.xml` ES-DE refuses its whole catalogue load on — no systems run                                                                                                                   |
+| `content-tree-unwired`                     | health: a texture/mods hub tree exists that no emulator-side link reaches — filed content is lost                                                                                                        |
+| `unverified-version`                       | the rule card was never verified against this emulator version                                                                                                                                           |
+| `arrangement-unverified`                   | this arrangement has never been observed live — the answer is derived (see above)                                                                                                                        |
+| `arrangement-version-drifted`              | it was observed, on another version than this machine runs — re-verification pending                                                                                                                     |
+| `sandbox-path-untranslated`                | a configured path exists only inside the emulator's Flatpak sandbox; nothing there was read                                                                                                              |
+| `entry-format-unclaimed`                   | launchable: the running core does not claim this format — attempted, never refused, and unestablished                                                                                                    |
+| `archive-contents-unread`                  | launchable: RetroArch opens the container and picks by the core's claims — the inside is unread                                                                                                          |
+| `entry-format-unestablished`               | launchable: what the running entry reads was never established — not the same as "refuses"                                                                                                               |
+| `entry-format-content-unread`              | launchable: the running entry's loader takes the extension and then reads the content, which atlas does not                                                                                              |
+| `entry-format-build-dependent`             | launchable: the builds the running entry's loader card serves disagree on this extension — neither a take nor a refusal holds                                                                            |
+| `emulator-list-derived`                    | the entries/systems come from the installed cores' own `.info`, not a catalogue — no launch command                                                                                                      |
+| `platform-unmapped`                        | the asked id or system corresponds to no platform knowledge — don't invent a folder from the raw id                                                                                                      |
+| `platform-source-unknown`                  | the asked pair names a source the platform table does not include — check the source name against the listed ones                                                                                        |
+| `platform-excluded`                        | the source has the asked key and the table places it on no system on purpose — `reason` says why                                                                                                         |
+| `platform-parts-unestablished`             | the pairs share the system only through different parts or overlaps of it, which the table cannot compare — `sources` and `keys` name those pairs                                                        |
+| `platform-version-unapplied`               | a version was not applied: a bare folder pair names no single source, and an own-source pair is read live, never through the table                                                                       |
+| `platform-unknown`                         | a catalogue's `<platform>` token is outside the platform vocabulary — ES-DE warns and drops it too                                                                                                       |
+| `platform-scraping-ignored`                | the catalogue tags this system `ignore` — a deliberate opt-out, not a missing tag                                                                                                                        |
 
 Two of those codes state per-game facts from different places, and they are distinct codes on purpose (#311).
 `per-game-alternative-emulator` is a statement about the **frontend**: some games of this system select a different
@@ -1411,17 +1515,20 @@ A list is a JSON array, never a string you split on `", "`, and a one-element li
 `per-game-layer-unread.key` names a single ini setting and spells it `["state_directory"]`, because its siblings under
 that code name several and a client must not have to test the type first. The save side spells these pairs as lists:
 `filenames-content-conditional`'s `files` and `files_without_save_id`, `file-set-spans-roots.files`,
-`file-set-across-systems.systems`, `core-mode-unestablished`'s `users` / `skipped` / `unestablished`,
-`per-game-layer-unread`'s `key` / `files` / `unlistable`, `per-game-overrides-present.key`,
+`file-set-across-systems`'s, `save-record-ambiguous`'s and `save-record-partial`'s `sources` / `keys` (and
+`save-record-unrecorded`'s, where several pairs were asked), `core-mode-unestablished`'s `users` / `skipped` /
+`unestablished`, `per-game-layer-unread`'s `key` / `files` / `unlistable`, `per-game-overrides-present.key`,
 `per-game-build-layer-unread.key`, `core-multi-option.options`, `core-generation-mismatch.options`,
 `core-mode-unestablished.members`, `core-options-unaudited`'s `added` and `removed`, `unverified-version.missing` and
 `patch-formats-unestablished.formats`. The firmware side spells `regions` (on `firmware-path-names-no-file`,
 `firmware-search-unverified` and `core-mode-unestablished`), `core-mode-unestablished.unstated`,
 `firmware-declaration-unread.declared`, `firmware-directory-holds-no-image.paths`,
-`firmware-scan-incomplete.unreadable`, `files` (on `core-without-systemname`, `system-not-in-catalogue` and
-`system-assignment-derived`), `system-assignment-may-hide-cores.cores` and `database` on both `core-without-systemname`
-and `system-assignment-derived`. Order is contractual: it is the order the answer states, and two caveats naming the
-same names in different orders are two statements.
+`firmware-scan-incomplete.unreadable`, `files` (on `core-without-systemname` and `system-assignment-derived`),
+`system-assignment-may-hide-cores.cores`, the parallel `sources` and `keys` naming several systems or pairs (on
+`firmware-core-substitute`, `system-ambiguous` and `system-pairs-conflict`, as `file-set-across-systems` and
+`save-record-ambiguous` and `save-record-partial` name them on the save side and `platform-parts-unestablished` on the
+platform side) and `database` on both `core-without-systemname` and `system-assignment-derived`. Order is contractual:
+it is the order the answer states, and two caveats naming the same names in different orders are two statements.
 
 An empty list and an absent key are different answers, and which a pair gives is fixed. `[]` says this answer states no
 names under that key; whether none exist, none were read, or a listing failed is the code's business and the message's,
@@ -2651,7 +2758,7 @@ entry = answer.entries[0]          # the effective default (per-game altemulator
 entry.label, entry.kind            # 'Mupen64Plus-Next', 'libretro' — one of the three words below
 entry.core_so                      # 'mupen64plus_next_libretro.so' — None on the other two kinds, which load no core
 entry.emulator                     # 'mupen64plus_next_libretro.so' — the identity, on every entry that has one
-entry.system                       # 'n64' — an entry says what it launches, wherever it travels
+entry.system                       # ('esde', 'n64') — an entry says what it launches, wherever it travels
 entry.declared_index               # 0 — where the layer that declared the system put it, promotion aside
 entry.selection                    # why it is first, when a user promoted it — None for declared order
 entry.availability                 # 'startable' — whether the frontend finds what it launches
@@ -2686,7 +2793,10 @@ Such an entry carries this caveat, with the file's own name in it — beside wha
 a game's `altemulator` also speaks about carries two:
 
 ```json
-{ "code": "core-file-foreign", "data": { "core_file": "citra_libretro.dll", "label": "Citra", "system": "n3ds" } }
+{
+  "code": "core-file-foreign",
+  "data": { "core_file": "citra_libretro.dll", "label": "Citra", "source": "esde", "key": "n3ds" }
+}
 ```
 
 Where you meet the same code, and what it replaces:
@@ -2818,7 +2928,11 @@ core's own `corename`, and the entry routes work — `entry.savefile_location(..
 core and the core question was always answerable there. `systems()` on these arrangements lists the systems the cores
 file under, marked the same way. What stays unchanged: `launchable` (with no frontend there is no entry that decides
 which core runs, issue #783), and a system the readable EmuDeck layers _do_ declare (the catalogue's own answer, never
-overridden by a derivation).
+overridden by a derivation). RetroDECK, and EmuDeck where ES-DE is on the disk, derive the entries of a system they name
+by a cited pair the same way, since no ES-DE catalogue declares one (#784 D57): `emulators_for` lists them,
+`launch_command` names the first and no command, and `launchable` stays `unknown` with `emulator-list-derived` beside
+it. The catalogue's status (sealed, exclusive, unreadable) does not ride these answers, as it rides no firmware answer
+for such a system; RetroDECK's `systems()` lists the catalogue's systems alone.
 
 `unavailable` is a statement about the machine; `unestablished` and `sealed` are statements about atlas, and a client
 that renders either as an absence is telling its user something nobody checked. `exclusive` is a statement about the
@@ -3293,8 +3407,8 @@ asks once instead of looping over `systems()`:
 ```python
 answer = inst.rom_locations()
 for entry in answer.placements:   # one per system, in the order systems() lists them
-    entry.system                  # 'n64'
-    entry.placement               # exactly what rom_location('n64') answers, caveats included
+    entry.system                  # ('esde', 'n64')
+    entry.placement               # exactly what rom_location(('esde', 'n64')) answers, caveats included
 answer.caveats                    # the systems answer's caveats, once for the whole answer
 ```
 
@@ -4103,9 +4217,9 @@ inst.firmware_for_core("puae_libretro.so").cores[0]  # names no system: answers 
 
 That is the one answer the reading turns green. A question naming no system — `firmware_for_core`, `firmware_inventory`
 — finds the core unexcused, because a CD32 or CDTV launch still needs its images. Every PUAE block carries
-`firmware-core-substitute` with `core`, `substitute` (`AROS`) and `systems` (the three computers), on every question:
-the substitute is of limited compatibility, a title it cannot run fails at run time and no file read predicts it, so a
-real kickstart is preferred even where the verdict is green.
+`firmware-core-substitute` with `core`, `substitute` (`AROS`) and `sources` / `keys` (the three computers), on every
+question: the substitute is of limited compatibility, a title it cannot run fails at run time and no file read predicts
+it, so a real kickstart is preferred even where the verdict is green.
 
 The set that disjunction asks over is **the images filed under the system that needs one**, never every image the core
 declares, and where two systems need one it is asked of each: a disjunction inside each system, a conjunction across
@@ -4601,7 +4715,7 @@ UnclaimedFile(
     path="/mnt/sd/retrodeck/bios/psx-devkit.bin",
     identity=FirmwareIdentity(md5="ca5cfc...", sha1=None, size=524288, kind="file"),
     description="DTL-H1100 (v2.2 03-06-96 D)",
-    console="psx",
+    console=("esde", "psx"),
     concerns=(Concern(emulator="DUCKSTATION", relation="recognises"),),
 )
 ```
@@ -4808,13 +4922,13 @@ The firmware caveats spell their multi-valued keys as JSON arrays, the same rule
 [The values inside `data`](#the-values-inside-data)): `regions` on `firmware-path-names-no-file`,
 `firmware-search-unverified` and the region-conditional `core-mode-unestablished`, which carries `unstated` beside it;
 `declared` on `firmware-declaration-unread`; `paths` on `firmware-directory-holds-no-image`; `unreadable` on
-`firmware-scan-incomplete`; `files` on `core-without-systemname`, `system-not-in-catalogue` and
-`system-assignment-derived`; `cores` on `system-assignment-may-hide-cores`; and `database` on `core-without-systemname`
-and `system-assignment-derived`, which carries the systems atlas parsed out of the `.info` rather than that field's own
-pipe-joined spelling. One key here is deliberately not machine-readable and never will be: `description` on
-`firmware-image-identified` and `firmware-image-unlisted` reproduces the core's own format string
-(`BiosTools.cpp:147-155` at 14d19f8) with its column padding intact, for rendering to a person. The fields beside it —
-`zone`, `version`, `date`, `serial` — are the machine-readable halves.
+`firmware-scan-incomplete`; `files` on `core-without-systemname` and `system-assignment-derived`; `cores` on
+`system-assignment-may-hide-cores`; and `database` on `core-without-systemname` and `system-assignment-derived`, which
+carries the systems atlas parsed out of the `.info` rather than that field's own pipe-joined spelling. One key here is
+deliberately not machine-readable and never will be: `description` on `firmware-image-identified` and
+`firmware-image-unlisted` reproduces the core's own format string (`BiosTools.cpp:147-155` at 14d19f8) with its column
+padding intact, for rendering to a person. The fields beside it — `zone`, `version`, `date`, `serial` — are the
+machine-readable halves.
 
 ## Answers as plain JSON
 
@@ -4983,7 +5097,7 @@ inst = pick_installation(installations)          # your policy — every handle 
 if not inst.health().ok:
     return surface_health(inst.health())         # don't sync against a broken installation
 
-system = my_platform_map[rom.platform_slug]      # your table, checked against known_systems() in your own suite
+system = ("romm", rom.platform_slug)             # your source's key as a pair; the platform table translates it
 catalogue = inst.emulators_for(system, content_path=rom.file_path)
 if not catalogue.entries:                        # no entries is four facts — the caveat says which
     return needs_a_core_from_you(catalogue.caveats)

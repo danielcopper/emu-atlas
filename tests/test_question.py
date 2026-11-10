@@ -29,6 +29,7 @@ ROM = "/roms/psx/Game.cue"
 # options file a layer read again for every option a question needed.
 SWANSTATION_INFO = (
     'display_name = "Sony - PlayStation (SwanStation)"\nsystemname = "PlayStation"\n'
+    'database = "Sony - PlayStation"\n'
     'firmware_count = "2"\nfirmware0_desc = "scph5501.bin (PS1 US BIOS)"\n'
     'firmware0_path = "scph5501.bin"\nfirmware0_opt = "true"\n'
     'firmware1_desc = "psxonpsp660.bin (PSP PS1 BIOS)"\nfirmware1_path = "psxonpsp660.bin"\n'
@@ -36,6 +37,7 @@ SWANSTATION_INFO = (
 )
 REARMED_INFO = (
     'display_name = "Sony - PlayStation (PCSX ReARMed)"\nsystemname = "PlayStation"\n'
+    'database = "Sony - PlayStation"\n'
     'firmware_count = "1"\nfirmware0_desc = "scph5501.bin (PS1 US BIOS)"\n'
     'firmware0_path = "scph5501.bin"\nfirmware0_opt = "true"\n'
 )
@@ -225,7 +227,9 @@ class TestOneQuestionParsesEachLayerOnce:
     ):
         build, cfg_dir, files = HANDLES[handle]
         machine = _CountingMachine(files, dirs=["/bios"])
-        build(machine).firmware_for_system("psx", verify=True)
+        # Asked by ES-DE's pair, which every handle names the PlayStation by: a
+        # bare RetroArch's own name for it is the cores' database name.
+        build(machine).firmware_for_system(("esde", "psx"), verify=True)
         options = f"{cfg_dir}/retroarch-core-options.cfg"
         assert (machine.reads[options], parses[OPTIONS]) == (1, 1)
 

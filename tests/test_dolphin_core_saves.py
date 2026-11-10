@@ -280,10 +280,25 @@ class TestWhatTheAnswerStates:
         assert [c.data["dir"] for c in _of(p, "per-game-layer-unread")] == [f"{SAVES}/gc/User/GameSettings"]
 
 
+# The catalogue with a system it holds that is neither console: a name the
+# installation does not hold names no system at all (#784 D53), so the
+# held-but-neither case needs one declared.
+ES_XML_WITH_N64 = ES_XML.replace(
+    "</systemList>",
+    """  <system>
+    <name>n64</name>
+    <path>%ROMPATH%/n64</path>
+    <extension>.z64 .Z64</extension>
+    <command label="Mupen64Plus-Next">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>
+  </system>
+</systemList>""",
+)
+
+
 class TestTheRuleNeedsTheConsole:
-    def _direct(self, system: str | None) -> SavefilePlacement:
+    def _direct(self, system: str | None, *, catalogue: str = ES_XML) -> SavefilePlacement:
         return placed(
-            _install(_machine("gc")).savefile_location(
+            _install(_machine("gc", files={ES: catalogue})).savefile_location(
                 core_so="dolphin_libretro.so",
                 content_path="/mnt/sd/retrodeck/roms/gc/Game (USA).rvz",
                 system=system,
@@ -298,12 +313,20 @@ class TestTheRuleNeedsTheConsole:
         assert "core-suspect" not in _codes(p)
 
     def test_a_system_neither_console_is_unrecorded_and_named(self):
-        [undecided] = _of(self._direct("n64"), "core-mode-unestablished")
+        [undecided] = _of(self._direct("n64", catalogue=ES_XML_WITH_N64), "core-mode-unestablished")
         assert dict(undecided.data) == {
             "core": "dolphin",
             "reason": "content-class-unrecorded",
             "system": "n64",
         }
+
+    def test_a_name_the_catalogue_does_not_hold_names_no_system(self):
+        # Undeclared, n64 is no system here: the rule has nothing to key, and
+        # system-unknown says why (#784 D53).
+        p = self._direct("n64")
+        [undecided] = _of(p, "core-mode-unestablished")
+        assert dict(undecided.data) == {"core": "dolphin", "reason": "content-class-unnamed"}
+        assert [dict(c.data) for c in _of(p, "system-unknown")] == [{"source": "esde", "key": "n64"}]
 
     def test_the_direct_route_with_a_system_answers_the_tree(self):
         assert self._direct("gc").dir == f"{SAVES}/gc/User/GC/<region>/Card A"
