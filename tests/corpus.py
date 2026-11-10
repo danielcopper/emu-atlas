@@ -1,12 +1,13 @@
 """Walking the conformance corpus for the caveat blocks inside it — once, in one place.
 
-Several checks read the same thing out of ``vectors/machines/*.json``: that
-every exported code appears somewhere, that one ``(code, key)`` carries one
-JSON type, that every enumerated value comes from its vocabulary, that the
-generator's two corpus gates fire, and — in the mutation probes — that a
-deliberately broken corpus is caught. Each grew its own recursive walker over
-the nested answer shapes, and walkers that must agree about what a caveat *is*
-are that many chances to disagree. This is that walker.
+Several checks read the same thing out of the vector corpus —
+``vectors/machines/*.json`` by default, every family's directory through
+:func:`caveat_data`: that every exported code appears somewhere, that one
+``(code, key)`` carries one JSON type, that every enumerated value comes from
+its vocabulary, that the generator's two corpus gates fire, and — in the
+mutation probes — that a deliberately broken corpus is caught. Each grew its
+own recursive walker over the nested answer shapes, and walkers that must agree
+about what a caveat *is* are that many chances to disagree. This is that walker.
 
 One of them recognised a caveat by its ``code`` alone rather than by the
 ``{code, data}`` pair. Measured over the shipped corpus the two recognitions
@@ -24,7 +25,12 @@ import json
 from pathlib import Path
 from typing import Any, Iterator
 
-_VECTOR_DIR = Path(__file__).resolve().parents[1] / "vectors" / "machines"
+from scripts.validate_vectors import FAMILIES
+
+_VECTORS = Path(__file__).resolve().parents[1] / "vectors"
+_VECTOR_DIR = _VECTORS / "machines"
+# Every vector family's directory, as the validator knows them: a caveat in any of them is part of the contract.
+CORPORA = tuple(FAMILIES)
 
 
 def caveat_blocks(node: Any) -> Iterator[tuple[str, dict[str, Any]]]:
@@ -57,3 +63,15 @@ def expected_blocks(directory: Path | None = None) -> Iterator[tuple[str, Any]]:
     for path in vector_files(directory):
         for vector in json.loads(path.read_text(encoding="utf-8"))["vectors"]:
             yield f"{path.name}:{vector['name']}", vector["expected"]
+
+
+def caveat_data(root: Path = _VECTORS) -> Iterator[tuple[str, str, str, Any]]:
+    """``(where, code, key, value)`` for every value in every caveat's data, across every family under *root*.
+
+    *where* is ``<family>/<file>:<vector>``; *root* holds one directory per family, as ``vectors/`` does.
+    """
+    for corpus in CORPORA:
+        for where, expected in expected_blocks(root / corpus):
+            for code, data in caveat_blocks(expected):
+                for key, value in data.items():
+                    yield f"{corpus}/{where}", code, key, value

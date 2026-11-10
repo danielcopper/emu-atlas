@@ -468,8 +468,9 @@ class SystemDeclaration:
     SystemData.cpp:795 @ v3.4.1), each token exactly as declared: ES-DE lists
     both cases separately (``.z64 .Z64``), and normalizing would state a
     vocabulary the file does not. ``platforms`` is the ``<platform>`` list the
-    way ES-DE reads it (see :func:`platform_tokens`) — ES-DE's platform ids,
-    one column of the platform table (``esde-platform``).
+    way ES-DE reads it (see :func:`platform_tokens`): tokens naming ES-DE's
+    platform ids (the platform table's ``esde-platform`` column) where they
+    are valid ones, and ``ignore`` or an unknown token as the file writes it.
     """
 
     entries: tuple[EmulatorSpec, ...] = ()

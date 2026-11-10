@@ -173,6 +173,12 @@ def _systems_for_platform(installs, query, name):
     )
 
 
+def _systems_for_platforms(installs, query, name):
+    install = _select(installs, query.get("installation"), name)
+    pairs = [tuple(pair) for pair in query["pairs"]]
+    return with_projected_translation(platform_systems_contract(install.systems_for_platforms(pairs)))
+
+
 def _platform_ids(installs, query, name):
     install = _select(installs, query.get("installation"), name)
     return with_projected_translation(system_platforms_contract(install.platform_ids(query["system"])))
@@ -342,6 +348,7 @@ QUESTIONS = {
     "catalogue": ("catalogue_query", _catalogue),
     "systems": ("systems_query", _systems),
     "systems_for_platform": ("platform_systems_query", _systems_for_platform),
+    "systems_for_platforms": ("platform_pairs_query", _systems_for_platforms),
     "platform_ids": ("platform_ids_query", _platform_ids),
     "roots": ("roots_query", _roots),
     "launchable": ("launchable_query", _launchable),

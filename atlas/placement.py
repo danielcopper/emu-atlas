@@ -1162,9 +1162,8 @@ class Caveat:
 
     One value, several values, or one value per subject — see
     :data:`DataValue`. Sequences arrive as any sequence of strings and are
-    kept as tuples. The mapping form belongs to the pairs the guide documents:
-    the alternative-emulator tally, the card-index options
-    ``core-mode-unestablished`` reads, and the BIOS search's listing.
+    kept as tuples. The mapping form belongs only to the ``(code, key)`` pairs
+    ``docs/how-to-use.md`` lists among the caveat data shapes.
     """
 
     def __post_init__(self) -> None:
