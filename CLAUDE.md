@@ -126,6 +126,8 @@ measures them — so a clean Sonar page does not mean a green gate.
   `deno fmt --check`, `basedpyright atlas tests scripts` (as "Commands" describes them), and
   `PR_TITLE=<title> PR_BODY=<body> python3 scripts/check_vector_breaking_change.py origin/main` with the PR's text, as
   CI runs it.
+- **Not covered by the local gate**: Python 3.12 and 3.13 (CI's `vectors` matrix; the local interpreter is the one
+  `mise.toml` pins), CI's `package` and `bundle` jobs, and Sonar's quality gate (see Commands).
 - **Review checks**: `basedpyright <files>`, `deno fmt --check <files>`
 - **Worktree task**: `mise run worktree-new` (a global mise task from the owner's dotfiles, not in this repository)
 - **Agent rules**:
@@ -138,10 +140,12 @@ measures them — so a clean Sonar page does not mean a green gate.
 
 ## Pitfalls
 
-- **Worktrees**: fresh worktrees need `mise trust && mise run setup` (per-directory venvs). The harness LSP diagnostics
-  resolve against the _main checkout_ while you work in a worktree — trust `mise run test`, not stale diagnostics. The
-  shell cwd resets between Bash calls: use absolute paths into the worktree (`mise -C <wt>`, `git -C <wt>`,
-  `<wt>/.venv/bin/…`).
+- **Worktrees**: fresh worktrees need `mise trust && mise run setup` (per-directory venvs). mise does not rebuild an
+  existing `.venv` when `mise.toml`'s Python moves — it keeps running the old interpreter without a word — so an
+  existing checkout or worktree runs `rm -rf .venv && mise run setup` once after such a move. The harness LSP
+  diagnostics resolve against the _main checkout_ while you work in a worktree — trust `mise run test`, not stale
+  diagnostics. The shell cwd resets between Bash calls: use absolute paths into the worktree (`mise -C <wt>`,
+  `git -C <wt>`, `<wt>/.venv/bin/…`).
 - The `machines` vector family (schema 5) models whole machines as plain data. `vectors/README.md` is the one
   description of its format — every input key, the question each query key asks, and how an expected block is asserted —
   so read it before writing or editing a vector; `tests/test_vectors_readme.py` fails when the validator accepts an
