@@ -326,10 +326,10 @@ mise run setup
 ```
 
 That one command is the whole setup: an editable install plus the dev dependencies, into a local venv. The checks you
-have to pass before pushing are a separate list and live in [`CLAUDE.md`](CLAUDE.md)'s Commands block, among them the
-gate that runs the suite on the oldest interpreter the package supports. `CLAUDE.md` also carries the ground rules —
-never guess, evidence levels are part of the work, upstream citations by `file:line` — and
-[`docs/research/core-audit.md`](docs/research/core-audit.md) pins the method for a rule card.
+have to pass before pushing are a separate list, the gate in [`CLAUDE.md`](CLAUDE.md)'s Pipeline section. That section
+also names what the local gate leaves to CI, such as the suite on the older interpreters the package supports.
+`CLAUDE.md` also carries the ground rules — never guess, evidence levels are part of the work, upstream citations by
+`file:line` — and [`docs/research/core-audit.md`](docs/research/core-audit.md) pins the method for a rule card.
 
 User-facing behavior changes need vectors, and vectors for old generations of an emulator's behavior are never deleted.
 
