@@ -1,4 +1,4 @@
-"""Tests for atlas.systems — the system ids the questions take (ES-DE's system names).
+"""Tests for atlas.systems — the system names one pinned catalogue declares (RetroDECK 0.10.9b's).
 
 Two things are held down here: the loader refuses a list it cannot place, and
 the packaged ids really are the ids the shipped build declares. The second one

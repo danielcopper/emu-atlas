@@ -84,11 +84,12 @@ from .machine import (
     register_core_probe_interpreter,
 )
 
-# --- The vocabulary those questions take -------------------------------------
-# ES-DE's system names, and the two ways to check a name against them. A
-# consumer holding another product's identifiers translates them through the
-# platform table below; for a vocabulary the table does not include, the
-# consumer owns that mapping and validates it here (atlas/systems.py).
+# --- System names --------------------------------------------------------------
+# The system names one pinned catalogue declares, and the two ways to
+# check a name against them (atlas/systems.py). A question about a system takes
+# a name in the installation's own catalogue source or (source, key) pairs of
+# any source the platform table below holds (#784 D43); this list is one
+# catalogue's state, not the set a question takes.
 from .systems import from_esde_system, known_systems, vocabulary_platform_tags
 from .platforms import (
     BROAD_MATCH,
@@ -115,12 +116,27 @@ from .platforms import (
     PLATFORM_PAIR_STATUSES,
     PLATFORM_RELATIONS,
     PLATFORM_SOURCE_KEY_STATUSES,
+    PLATFORM_STATUS_ABSENT,
+    PLATFORM_STATUS_DECLARED,
+    PLATFORM_STATUS_DISABLED,
+    PLATFORM_SYSTEM_STATUSES,
     RELATED_MATCH,
+    RESOLUTION_AMBIGUOUS,
+    RESOLUTION_CONFLICT,
+    RESOLUTION_RESOLVED,
+    RESOLUTION_UNKNOWN,
+    SYSTEM_RESOLUTION_STATUSES,
     PlatformKey,
     PlatformPairAnswer,
     PlatformSourceKeys,
     PlatformSourceVersion,
     PlatformTranslation,
+    LIBRETRO_SOURCE,
+    SYSTEM_TIERS,
+    SystemArgument,
+    SystemCandidate,
+    SystemPair,
+    SystemResolution,
     known_platform_vocabularies,
     translate,
 )
@@ -327,10 +343,8 @@ from .installations import (
     CAVEAT_ENTRY_FORMAT_CONTENT_UNREAD,
     CAVEAT_ENTRY_FORMAT_BUILD_DEPENDENT,
     LAUNCH_VERDICTS,
-    PLATFORM_STATUS_ABSENT,
-    PLATFORM_STATUS_DECLARED,
-    PLATFORM_STATUS_DISABLED,
     PLATFORM_TAGS_CATALOGUE,
+    PLATFORM_TAGS_SOURCES,
     PLATFORM_TAGS_VOCABULARY,
     INSTALLATION_ROOTS,
     PROVENANCE_ASSUMED,
@@ -366,6 +380,8 @@ from .installations import (
     SystemPlatformsAnswer,
     SystemRomPlacement,
     SystemsAnswer,
+    CAVEAT_SYSTEM_AMBIGUOUS,
+    CAVEAT_SYSTEM_PAIRS_CONFLICT,
 )
 from .launch_formats import (
     InstallFirstFormat,
@@ -586,7 +602,6 @@ from .firmware import (
     CAVEAT_SYSTEM_ASSIGNMENT_DERIVED,
     CAVEAT_SYSTEM_ASSIGNMENT_MAY_HIDE_CORES,
     CAVEAT_SYSTEM_FIRMWARE_WORLD_KNOWLEDGE,
-    CAVEAT_SYSTEM_NOT_IN_CATALOGUE,
     CAVEAT_SYSTEM_UNKNOWN,
     CHECKED_MISMATCH,
     CHECKED_NOT_COMPARABLE,
@@ -613,13 +628,13 @@ from .firmware import (
     SOURCE_CARD,
     SOURCE_NONE,
     SOURCE_OVERRIDE,
-    SOURCE_SLUG,
+    SOURCE_CORE,
     SOURCE_SYSTEMNAME,
-    SYSTEMS_WITHOUT_CATALOGUE_ID,
     SYSTEM_FIRMWARE_CANNOT_RUN_WITHOUT,
     SYSTEM_FIRMWARE_CORE_ALTERNATIVE,
     SYSTEM_FIRMWARE_OPEN,
     SYSTEM_FIRMWARE_RUNS_WITHOUT,
+    SYSTEM_SENTINELS,
     ArchiveReason,
     CoreDeclarationState,
     CoreSystemFirmware,
@@ -807,6 +822,9 @@ from .placement import (
     CAVEAT_SAVE_INSIDE_IMAGE,
     CAVEAT_SAVESTATE_INSIDE_IMAGE,
     CAVEAT_SAVESTATE_SUPPORT_MACHINE_DEPENDENT,
+    CAVEAT_SAVE_RECORD_AMBIGUOUS,
+    CAVEAT_SAVE_RECORD_PARTIAL,
+    CAVEAT_SAVE_RECORD_UNRECORDED,
     CAVEAT_SAVE_ROOT_REDIRECTED,
     CAVEAT_SAVE_ROOT_REVOKED,
     CAVEAT_SAVE_ROOT_UNRESOLVABLE,
@@ -987,7 +1005,7 @@ __all__ = [
     "register_core_probe_interpreter",
     "core_probe_interpreter",
     "CoreProbeInterpreter",
-    # The vocabulary the questions take, and how to check a name against it
+    # The system names one pinned catalogue declares, and how to check a name against them
     "from_esde_system",
     "known_systems",
     "vocabulary_platform_tags",
@@ -995,6 +1013,17 @@ __all__ = [
     "known_platform_vocabularies",
     "translate",
     "PlatformTranslation",
+    "SystemArgument",
+    "SystemPair",
+    "SystemResolution",
+    "SystemCandidate",
+    "SYSTEM_TIERS",
+    "SYSTEM_RESOLUTION_STATUSES",
+    "RESOLUTION_RESOLVED",
+    "RESOLUTION_UNKNOWN",
+    "RESOLUTION_AMBIGUOUS",
+    "RESOLUTION_CONFLICT",
+    "LIBRETRO_SOURCE",
     "PlatformPairAnswer",
     "PlatformSourceKeys",
     "PlatformKey",
@@ -1048,10 +1077,12 @@ __all__ = [
     "PlatformSystemsAnswer",
     "PlatformSystemMatch",
     "SystemPlatformsAnswer",
+    "PLATFORM_SYSTEM_STATUSES",
     "PLATFORM_STATUS_DECLARED",
     "PLATFORM_STATUS_DISABLED",
     "PLATFORM_STATUS_ABSENT",
     "PLATFORM_TAGS_CATALOGUE",
+    "PLATFORM_TAGS_SOURCES",
     "PLATFORM_TAGS_VOCABULARY",
     "CAVEAT_PLATFORM_UNMAPPED",
     "CAVEAT_PLATFORM_UNKNOWN",
@@ -1437,9 +1468,10 @@ __all__ = [
     "REDIRECT_SCOPES",
     "SOURCE_OVERRIDE",
     "SOURCE_SYSTEMNAME",
-    "SOURCE_SLUG",
+    "SOURCE_CORE",
     "SOURCE_NONE",
     "SOURCE_CARD",
+    "SYSTEM_SENTINELS",
     "SYSTEM_FIRMWARE_CANNOT_RUN_WITHOUT",
     "SYSTEM_FIRMWARE_CORE_ALTERNATIVE",
     "SYSTEM_FIRMWARE_RUNS_WITHOUT",
@@ -1449,7 +1481,6 @@ __all__ = [
     "EVIDENCE_WORD_DERIVED",
     "EVIDENCE_WORD_OPEN",
     "STATED_EVIDENCE_WORDS",
-    "SYSTEMS_WITHOUT_CATALOGUE_ID",
     # Vocabulary values — the holes a caller fills, and the closed sets the
     # contract serializes them beside. A client branches on `needs` and reads
     # `granularity.value` / `root_kind`, so by the tiering rule (a name a client
@@ -1793,6 +1824,9 @@ __all__ = [
     "CAVEAT_SAVE_INSIDE_IMAGE",
     "CAVEAT_SAVESTATE_INSIDE_IMAGE",
     "CAVEAT_SAVESTATE_SUPPORT_MACHINE_DEPENDENT",
+    "CAVEAT_SAVE_RECORD_AMBIGUOUS",
+    "CAVEAT_SAVE_RECORD_PARTIAL",
+    "CAVEAT_SAVE_RECORD_UNRECORDED",
     "CAVEAT_SAVE_ROOT_REDIRECTED",
     "CAVEAT_SAVE_ROOT_REVOKED",
     "CAVEAT_SAVE_ROOT_UNRESOLVABLE",
@@ -1810,7 +1844,8 @@ __all__ = [
     "CAVEAT_SYMLINK_LOOP",
     "CAVEAT_SYSTEM_ASSIGNMENT_DERIVED",
     "CAVEAT_SYSTEM_FIRMWARE_WORLD_KNOWLEDGE",
-    "CAVEAT_SYSTEM_NOT_IN_CATALOGUE",
+    "CAVEAT_SYSTEM_AMBIGUOUS",
+    "CAVEAT_SYSTEM_PAIRS_CONFLICT",
     "CAVEAT_SYSTEM_ASSIGNMENT_MAY_HIDE_CORES",
     "CAVEAT_SYSTEM_DIRECTORY_CLEARED",
     "CAVEAT_SYSTEM_UNKNOWN",

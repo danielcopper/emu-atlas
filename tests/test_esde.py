@@ -495,13 +495,15 @@ class TestRetroDeckCatalogue:
         assert [e.label for e in entries] == ["Mupen64Plus-Next", "ParaLLEl N64"]
         assert entries[0].core_so == "mupen64plus_next_libretro.so"
 
-    def test_unknown_system_is_empty(self):
-        # The catalogue was read and declares no emulator for this system —
-        # an emptiness that is an answer about the machine, so nothing to
-        # caveat alongside it.
+    def test_an_undeclared_system_is_empty_and_states_it_unknown(self):
+        # The catalogue was read and declares no such system, and the answer
+        # says so (#784 D53): an emptiness about the machine, not a lookup
+        # that found nothing.
         answer = _catalogue_fixture().emulators_for("does-not-exist")
         assert answer.entries == ()
-        assert answer.caveats == ()
+        assert [(c.code, dict(c.data)) for c in answer.caveats] == [
+            (atlas.CAVEAT_SYSTEM_UNKNOWN, {"source": "esde", "key": "does-not-exist"})
+        ]
 
     def test_no_esde_at_all_says_nobody_could_look(self):
         # Without the bundled es_systems.xml there is no catalogue to read, and
@@ -516,7 +518,7 @@ class TestRetroDeckCatalogue:
         assert [c.code for c in listing.caveats] == [atlas.CAVEAT_EMULATOR_CATALOGUE_UNREADABLE]
 
     def test_systems_listing(self):
-        assert _catalogue_fixture().systems().systems == ("dreamcast", "flash", "n64")
+        assert _catalogue_fixture().systems().systems == (("esde", "dreamcast"), ("esde", "flash"), ("esde", "n64"))
 
     def test_custom_overlay_overrides(self):
         rd = _catalogue_fixture(
@@ -565,7 +567,7 @@ class TestEntrySavefileLocation:
         outcome = entry.savefile_location(content_path="/mnt/sd/retrodeck/roms/flash/game")
         assert isinstance(outcome, atlas.Unresolved)
         assert outcome.code == atlas.UNRESOLVED_STANDALONE
-        assert outcome.data["system"] == "flash"
+        assert (outcome.data["source"], outcome.data["key"]) == ("esde", "flash")
 
 
 class TestGamelistAlternative:

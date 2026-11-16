@@ -143,10 +143,10 @@ def _all_optional(text: str) -> bool | None:
 def read_catalogue(directory: Path) -> dict[str, dict[str, bool]]:
     """Every deployed ``.info`` that declares firmware, grouped by its ``systemname``.
 
-    Grouped by the raw ``systemname`` rather than by an atlas system id: that
-    is the unit the catalogue itself groups firmware by, and it is the unit
-    ``atlas/data/system_firmware.json`` is keyed on. The translation into
-    atlas's own ids happens where an answer reads that table
+    Grouped by the raw ``systemname`` rather than by the system it names:
+    that is the unit the catalogue itself groups firmware by, and it is the
+    unit ``atlas/data/system_firmware.json`` is keyed on. The translation
+    into a system happens where an answer reads that table
     (:func:`atlas.firmware.system_firmware_system`) rather than here, so this
     derivation and the file it checks speak one vocabulary.
 

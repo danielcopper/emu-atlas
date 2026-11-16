@@ -177,7 +177,9 @@ def _bare(cfg: str, *, files=None, dirs=()):
             f"{HOME}/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": (
                 f'{cfg}libretro_directory = "{cores}"\nlibretro_info_path = "{cores}"\n'
             ),
-            f"{cores}/mgba_libretro.info": 'corename = "mGBA"\nsystemname = "Game Boy Advance"\n',
+            f"{cores}/mgba_libretro.info": (
+                'corename = "mGBA"\nsystemname = "Game Boy Advance"\ndatabase = "Nintendo - Game Boy Advance"\n'
+            ),
             "/roms/gba/Game.gba": "",
             **(files or {}),
         },
@@ -280,7 +282,7 @@ class TestEverySavestateRouteTakesTheCwd:
         assert (placement.dir, placement.needs) == (f"{LAUNCH}/states", ())
 
     def test_the_entry_question_opens_the_folder_from_the_cwd(self, handle):
-        [entry] = handle().emulators_for("gba").entries
+        [entry] = handle().emulators_for(("esde", "gba")).entries
         placement = state_placed(entry.savestate_location(content_path="/roms/gba/Game.gba", cwd=LAUNCH))
         assert (placement.dir, placement.needs) == (f"{LAUNCH}/states", ())
 

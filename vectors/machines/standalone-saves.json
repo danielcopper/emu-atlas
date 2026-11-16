@@ -2761,7 +2761,8 @@
             "code": "standalone-variant-unestablished",
             "data": {
               "label": "Cemu (Proton)",
-              "system": "wiiu",
+              "source": "esde",
+              "key": "wiiu",
               "variant": "proton"
             }
           }
@@ -2810,7 +2811,8 @@
             "code": "standalone-variant-unestablished",
             "data": {
               "label": "Cemu (Native)",
-              "system": "wiiu",
+              "source": "esde",
+              "key": "wiiu",
               "variant": "flatpak"
             }
           }
@@ -11651,7 +11653,8 @@
             "code": "standalone-variant-unestablished",
             "data": {
               "label": "Vita3K (Standalone)",
-              "system": "psvita",
+              "source": "esde",
+              "key": "psvita",
               "variant": "proton"
             }
           }

@@ -61,6 +61,7 @@ from .installations import (
     SystemsAnswer,
 )
 from .machine import Machine
+from .platforms import SystemArgument
 from .placement import (
     ModPlacement,
     SavefilePlacement,
@@ -143,7 +144,7 @@ class EveryInstallation:
         *,
         content_path: str | None = None,
         core_so: str | None = None,
-        system: str | None = None,
+        system: SystemArgument | None = None,
         cwd: str | None = None,
         appendconfig: Sequence[str] = (),
     ) -> tuple[InstallationAnswer[SavefilePlacement | Unresolved], ...]:
@@ -274,19 +275,19 @@ class EveryInstallation:
         asked = tuple(pairs)  # one frozen copy, so every installation is asked the same pairs
         return self._ask(lambda installation: installation.systems_for_platforms(asked))
 
-    def platform_ids(self, system: str) -> tuple[InstallationAnswer[SystemPlatformsAnswer], ...]:
+    def platform_ids(self, system: SystemArgument) -> tuple[InstallationAnswer[SystemPlatformsAnswer], ...]:
         """Each installation's platform tags for *system*, with every source's keys for it."""
         return self._ask(lambda installation: installation.platform_ids(system))
 
     def emulators_for(
-        self, system: str, *, content_path: str | None = None
+        self, system: SystemArgument, *, content_path: str | None = None
     ) -> tuple[InstallationAnswer[CatalogueAnswer], ...]:
         """Which emulators each installation would launch *system* with."""
         return self._ask(
             lambda installation: installation.emulators_for(system, content_path=content_path)
         )
 
-    def rom_location(self, system: str) -> tuple[InstallationAnswer[RomPlacement], ...]:
+    def rom_location(self, system: SystemArgument) -> tuple[InstallationAnswer[RomPlacement], ...]:
         """Where each installation keeps *system*'s ROMs, or why it states nowhere."""
         return self._ask(lambda installation: installation.rom_location(system))
 
@@ -295,13 +296,13 @@ class EveryInstallation:
         return self._ask(lambda installation: installation.rom_locations())
 
     def launchable(
-        self, system: str, content_path: str, *, label: str | None = None
+        self, system: SystemArgument, content_path: str, *, label: str | None = None
     ) -> tuple[InstallationAnswer[LaunchabilityAnswer], ...]:
         """Whether each installation launches this file as *system* content, and why not."""
         return self._ask(lambda installation: installation.launchable(system, content_path, label=label))
 
     def launch_command(
-        self, system: str, content_path: str, *, label: str | None = None
+        self, system: SystemArgument, content_path: str, *, label: str | None = None
     ) -> tuple[InstallationAnswer[LaunchCommandAnswer], ...]:
         """The command each installation's frontend would run for this file, taken apart, or why not.
 
@@ -314,7 +315,7 @@ class EveryInstallation:
 
     def save_portability(
         self,
-        system: str,
+        system: SystemArgument,
         *,
         source: str,
         target: str,
@@ -364,7 +365,7 @@ class EveryInstallation:
 
     def firmware_for_system(
         self,
-        system: str,
+        system: SystemArgument,
         *,
         verify: bool = False,
         cwd: str | None = None,

@@ -286,7 +286,7 @@ class TestAnExemptionScopedToSystems:
     @pytest.mark.parametrize("systems", [[], "amiga", None])
     def test_systems_that_are_not_a_non_empty_list(self, systems):
         table = _scoped({**_SCOPED, "systems": systems})
-        with pytest.raises(ValueError, match="non-empty list of system ids"):
+        with pytest.raises(ValueError, match="non-empty list of system names"):
             load_system_firmware(table)
 
     @pytest.mark.parametrize("system", ["", "   ", 7])
@@ -351,22 +351,23 @@ class TestEveryCoreThatCannotRunWithoutFirmwareDeclaresForOneSystem:
 
     @staticmethod
     def _systems(core: dict[str, Any]) -> list[str]:
-        """The distinct systems one block declares for, alternatives flattened."""
+        """The distinct systems one block declares for, alternatives flattened, each spelled ``source:key``.
+
+        A requirement whose system nothing names carries the ``_unknown``
+        sentinel instead of a pair (#784 D49), and counts as itself.
+        """
         if not core["requirements"]:
             return sorted(
                 {
-                    caveat["data"]["system"]
+                    f"{caveat['data']['source']}:{caveat['data']['key']}"
                     for caveat in core["caveats"]
                     if caveat["code"] == CAVEAT_SYSTEM_FIRMWARE_WORLD_KNOWLEDGE
                 }
             )
-        return sorted(
-            {
-                option["system"]
-                for entry in core["requirements"]
-                for option in entry.get("alternatives", [entry])
-            }
+        systems = (
+            option["system"] for entry in core["requirements"] for option in entry.get("alternatives", [entry])
         )
+        return sorted({f"{system['source']}:{system['key']}" if isinstance(system, dict) else system for system in systems})
 
     def test_the_corpus_reaches_that_state_at_all(self):
         # A walk that reaches nothing passes every property it states, so the

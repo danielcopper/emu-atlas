@@ -30,6 +30,7 @@ from atlas.oddities import CoreCard, SaveGroup, SaveMode, load_oddities
 from atlas.placement import (
     GRANULARITY_PER_GAME_FILE,
     ROLE_BATTERY,
+    SIZE_FILL_00,
     SIZE_FILL_FF,
     Caveat,
     CAVEAT_SIZE_FIXED_EXCEPT_TRAILING_FILL,
@@ -185,6 +186,71 @@ class TestTheRecord:
         assert record.size(None, MEMORY_SAVE_RAM) is None
         # The files still agree, so the answer keeps naming them.
         assert record.for_system(None) is not None
+
+    def test_a_chosen_set_of_systems_has_to_agree_on_the_claim(self):
+        # The set a resolved system keys (#784 D50): where they state the claim
+        # differently, the size is not established.
+        (record,) = load_save_memory(
+            _doc(
+                {
+                    "gb": _entry(["save_ram"], {"save_ram": _fact(True)}),
+                    "gbc": _entry(["save_ram"], {"save_ram": _fact(True)}),
+                    "sgb": _entry(["save_ram"], {"save_ram": _fact(None)}),
+                }
+            )
+        )
+        fact = record.size_among(("gb", "gbc"), MEMORY_SAVE_RAM)
+        assert fact is not None
+        assert fact.fixed is True
+        assert record.size_among(("gb", "sgb"), MEMORY_SAVE_RAM) is None
+        assert record.size_among((), MEMORY_SAVE_RAM) is None
+        # The fill is part of the claim: two fixed sizes padded with different
+        # bytes do not agree.
+        (padded,) = load_save_memory(
+            _doc(
+                {
+                    "gb": _entry(["save_ram"], {"save_ram": _fact(True, fill=SIZE_FILL_FF)}),
+                    "gbc": _entry(["save_ram"], {"save_ram": _fact(True, fill=SIZE_FILL_00)}),
+                }
+            )
+        )
+        assert padded.size_among(("gb", "gbc"), MEMORY_SAVE_RAM) is None
+        assert padded.size_among(("gb",), MEMORY_SAVE_RAM) is not None
+
+
+class TestTheSystemsARecordHolds:
+    """Several ES-DE names key a record by the ones it holds; one it does not hold is no disagreement (#784 D50)."""
+
+    RECORD_DOC = {
+        "gb": _entry(["save_ram", "rtc"], {"save_ram": _fact(True), "rtc": _fact(True)}),
+        "gbc": _entry(["save_ram", "rtc"], {"save_ram": _fact(True), "rtc": _fact(True)}),
+        "gba": _entry(["save_ram"], {"save_ram": _fact(True)}),
+    }
+
+    def _record(self):
+        (record,) = load_save_memory(_doc(self.RECORD_DOC))
+        return record
+
+    def test_a_name_the_record_does_not_hold_is_uncovered_not_a_disagreement(self):
+        agreed = self._record().agreement(("gb", "sgb", "gbc"))
+        assert agreed.entry is not None
+        assert agreed.entry.memory_types == ("save_ram", "rtc")
+        assert (agreed.held, agreed.uncovered, agreed.differs) == (("gb", "gbc"), ("sgb",), False)
+        assert self._record().agreeing(("gb", "sgb")) == agreed.entry
+
+    def test_two_held_names_that_differ_key_nothing(self):
+        agreed = self._record().agreement(("gb", "gba", "sgb"))
+        assert agreed.entry is None
+        assert (agreed.held, agreed.uncovered, agreed.differs) == (("gb", "gba"), ("sgb",), True)
+
+    def test_no_held_name_keys_nothing_and_is_no_disagreement(self):
+        agreed = self._record().agreement(("sgb", "gbh"))
+        assert (agreed.entry, agreed.held, agreed.differs) == (None, (), False)
+
+    def test_the_size_claim_is_agreed_over_the_names_the_record_holds(self):
+        record = self._record()
+        assert record.size_among(("gb", "sgb"), MEMORY_SAVE_RAM) == record.size("gb", MEMORY_SAVE_RAM)
+        assert record.size_among(("sgb",), MEMORY_SAVE_RAM) is None
 
 
 class TestThePackagedClaims:

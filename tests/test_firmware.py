@@ -39,6 +39,7 @@ from atlas.firmware import (
     CAVEAT_EMULATOR_CATALOGUE_SEALED,
     CAVEAT_EMULATOR_CATALOGUE_UNAVAILABLE,
     CAVEAT_EMULATOR_CATALOGUE_UNREADABLE,
+    CAVEAT_EMULATOR_LIST_DERIVED,
     CAVEAT_FIRMWARE_CONFIGURED_IMAGE_MISSING,
     CAVEAT_FIRMWARE_CONTENT_CONTRADICTORY,
     CAVEAT_FIRMWARE_CONTENT_UNIDENTIFIED,
@@ -76,7 +77,6 @@ from atlas.firmware import (
     CAVEAT_NO_FIRMWARE_REQUIREMENT,
     CAVEAT_STANDALONE_UNSUPPORTED,
     CAVEAT_SYSTEM_ASSIGNMENT_DERIVED,
-    CAVEAT_SYSTEM_NOT_IN_CATALOGUE,
     CAVEAT_SYSTEM_UNKNOWN,
     CHECKED_MISMATCH,
     CHECKED_NOT_COMPARABLE,
@@ -100,12 +100,12 @@ from atlas.firmware import (
     NEED_REQUIRED,
     READER_PS2_BIOS_HEADER,
     SYSTEMNAME_MAP_VERSION,
-    SYSTEMNAME_TO_SLUG,
-    SYSTEMS_WITHOUT_CATALOGUE_ID,
+    SYSTEMNAME_TO_SYSTEM,
     Catalogue,
     CatalogueEntry,
     Concern,
     CoreDeclarations,
+    FirmwareDeclaration,
     CoreFirmware,
     DeclaredDirectory,
     Destination,
@@ -134,9 +134,10 @@ from atlas.firmware import (
     resolve_links,
     save_artifact_paths,
     stated_once,
+    core_systems,
     system_assignment_caveats,
     system_decision,
-    system_for,
+    system_naming,
 )
 from atlas.core_firmware import lookup_core_firmware
 from atlas.distribution_supplied import lookup_distribution_supplied
@@ -193,6 +194,7 @@ from atlas.system_firmware import (
     SystemFirmware,
     load_system_firmware,
 )
+from atlas.platforms import PAIR_KNOWN, SystemNaming, translate
 from atlas.systems import known_systems
 
 import atlas.firmware
@@ -572,20 +574,54 @@ class TestHashTable:
         assert packaged.meta["generated_from"]
 
 
-class TestSystemSlug:
-    """What a declaration belongs to — override, map, or a mechanical slug."""
+class TestSystemDecision:
+    """What a declaration is filed under before an installation names it — override, map, or its core."""
 
     def test_the_per_file_override_wins_over_the_core_systemname(self):
-        assert system_for("gb_bios.bin", "Game Boy/Game Boy Color/Game Boy Advance") == "gb"
+        decided = system_decision("gb_bios.bin", "Game Boy/Game Boy Color/Game Boy Advance")
+        assert decided == (("esde", "gb"), "override")
 
     def test_a_known_systemname_maps(self):
-        assert system_for("dc/dc_boot.bin", "Sega - Dreamcast") == "dreamcast"
+        assert system_decision("dc/dc_boot.bin", "Sega - Dreamcast") == (("esde", "dreamcast"), "systemname")
 
-    def test_an_unknown_systemname_is_slugified_not_dropped(self):
-        assert system_for("weird.bin", "Some New Machine") == "some-new-machine"
+    def test_an_unknown_systemname_leaves_the_naming_to_its_core(self):
+        # No word is formed from the systemname (#784 D45): the core's own
+        # database names, or its packaged pair, decide (core_systems).
+        assert system_decision("weird.bin", "Some New Machine") == (None, "core")
 
     def test_an_empty_systemname_is_the_catch_all(self):
-        assert system_for("weird.bin", "") == "_unknown"
+        assert system_decision("weird.bin", "") == (None, "none")
+
+
+class TestTheSystemsACoreIsNamedBy:
+    """Which systems an installation names one core by (#784 D45, D46, D50) — never a word atlas forms."""
+
+    BARE = system_naming(("libretro",), core_systems=True)
+    ESDE = system_naming(("esde",))
+
+    def test_a_bare_retroarch_names_a_core_by_every_database_name(self):
+        named = core_systems("ep128emu_core_libretro", "128", ("Enterprise - 128", "Amstrad - CPC"), self.BARE)
+        assert named == (("libretro", "Enterprise - 128"), ("libretro", "Amstrad - CPC"))
+
+    def test_a_core_without_a_database_name_is_named_by_its_packaged_pair(self):
+        assert core_systems("numero_libretro", "TI83", (), self.BARE) == (("romm", "ti-83"),)
+
+    def test_an_es_de_frontend_names_a_core_by_the_map_first(self):
+        # The map files "128" under libretro's Enterprise; the core's other
+        # database names are not consulted while the map holds the systemname.
+        named = core_systems("ep128emu_core_libretro", "128", ("Enterprise - 128", "Amstrad - CPC"), self.ESDE)
+        assert named == (("libretro", "Enterprise - 128"),)
+
+    def test_where_the_map_holds_none_the_database_names_are_translated(self):
+        assert core_systems("x_libretro", "Unmapped Thing", ("Atari - 2600",), self.ESDE) == (("esde", "atari2600"),)
+
+    def test_a_database_name_naming_several_systems_names_none(self):
+        named = core_systems("x_libretro", "Unmapped Thing", ("Nintendo - Super Nintendo Entertainment System",), self.ESDE)
+        assert named == ()
+
+    def test_no_name_at_all_names_no_system(self):
+        assert core_systems("x_libretro", "Unmapped Thing", (), self.ESDE) == ()
+        assert core_systems("x_libretro", "", (), self.BARE) == ()
 
 
 class TestReadDeclarations:
@@ -596,7 +632,7 @@ class TestReadDeclarations:
                             f"{INFO_DIR}/snes9x_libretro.so": {"status": "invalid-text"}})
         cores = {c.core_so: c for c in read_core_declarations(machine, INFO_DIR, core_dir=INFO_DIR).cores}
         assert cores["snes9x_libretro.so"].firmware == ()
-        assert cores["snes9x_libretro.so"].system == "snes"
+        assert cores["snes9x_libretro.so"].system == ("esde", "snes")
 
     def test_a_core_without_its_so_is_not_installed(self):
         machine = _machine({f"{INFO_DIR}/flycast_libretro.info": DC_INFO})
@@ -906,7 +942,7 @@ class TestCheckedAxis:
         # name, or keyed by content.
         for identity in (FirmwareIdentity(md5="0" * 32, sha1="1" * 40, size=8, kind="file"), None):
             requirement = FirmwareRequirement(
-                core_so="x.so", system="psx", system_source="systemname", need="required",
+                core_so="x.so", system=("esde", "psx"), system_source="systemname", need="required",
                 file_name="a.bin", path="/bios/a.bin", declared="a.bin", description="",
                 identity=identity, found="file", checked=CHECKED_UNREAD,
             )
@@ -1169,7 +1205,7 @@ class TestRequirementInvariants:
     def test_an_absent_file_cannot_carry_a_verdict(self):
         with pytest.raises(ValueError):
             FirmwareRequirement(
-                core_so="x.so", system="psx", system_source="systemname", need="required",
+                core_so="x.so", system=("esde", "psx"), system_source="systemname", need="required",
                 file_name="a.bin", path="/bios/a.bin", declared="a.bin", description="", identity=None,
                 found="missing", checked="verified",
             )
@@ -1177,7 +1213,7 @@ class TestRequirementInvariants:
     def test_a_present_file_must_state_a_value_of_the_vocabulary(self):
         with pytest.raises(ValueError):
             FirmwareRequirement(
-                core_so="x.so", system="psx", system_source="systemname", need="required",
+                core_so="x.so", system=("esde", "psx"), system_source="systemname", need="required",
                 file_name="a.bin", path="/bios/a.bin", declared="a.bin", description="", identity=None,
                 found="file", checked=None,
             )
@@ -1188,7 +1224,7 @@ class TestRequirementInvariants:
         identity = FirmwareIdentity(md5="0" * 32, sha1=None, size=8, kind="file")
         with pytest.raises(ValueError, match="carries no identity"):
             FirmwareRequirement(
-                core_so=None, system="psx", system_source="card", need="required",
+                core_so=None, system=("esde", "psx"), system_source="card", need="required",
                 file_name="a.bin", path="/bios/a.bin", declared="a.bin", description="",
                 identity=identity, found="file", checked=CHECKED_REFUSED,
             )
@@ -1196,7 +1232,7 @@ class TestRequirementInvariants:
     def test_need_is_only_required_or_optional(self):
         with pytest.raises(ValueError):
             FirmwareRequirement(
-                core_so="x.so", system="psx", system_source="systemname",
+                core_so="x.so", system=("esde", "psx"), system_source="systemname",
                 need="undeclared", file_name="a.bin",  # type: ignore[arg-type]
                 path="/bios/a.bin", declared="a.bin", description="", identity=None, found="missing",
                 checked=None,
@@ -1205,7 +1241,7 @@ class TestRequirementInvariants:
     def test_found_is_only_a_path_kind(self):
         with pytest.raises(ValueError, match="found must be one of"):
             FirmwareRequirement(
-                core_so="x.so", system="psx", system_source="systemname", need="required",
+                core_so="x.so", system=("esde", "psx"), system_source="systemname", need="required",
                 file_name="a.bin", path="/bios/a.bin", declared="a.bin", description="", identity=None,
                 found="gone", checked=None,  # type: ignore[arg-type]
             )
@@ -1213,10 +1249,85 @@ class TestRequirementInvariants:
     def test_system_source_is_only_a_way_the_system_was_arrived_at(self):
         with pytest.raises(ValueError, match="system_source must be one of"):
             FirmwareRequirement(
-                core_so="x.so", system="psx", need="required",
+                core_so="x.so", system=("esde", "psx"), need="required",
                 system_source="guessed", file_name="a.bin",  # type: ignore[arg-type]
                 path="/bios/a.bin", declared="a.bin", description="", identity=None, found="missing",
                 checked=None,
+            )
+
+    def test_a_system_is_a_pair_or_the_sentinel_for_a_core_nothing_named(self):
+        # A bare string naming a system is the old ES-DE-id shape (#784 D47);
+        # the one string left is the statement that a core's system could not
+        # be read.
+        with pytest.raises(ValueError, match="system must be a"):
+            FirmwareRequirement(
+                core_so="x.so", system="psx", system_source="systemname",  # type: ignore[arg-type]
+                need="required", file_name="a.bin", path="/bios/a.bin", declared="a.bin",
+                description="", identity=None, found="missing", checked=None,
+            )
+        unread = FirmwareRequirement(
+            core_so="x.so", system="_unknown", system_source="none", need="required",
+            file_name="a.bin", path="/bios/a.bin", declared="a.bin", description="", identity=None,
+            found="missing", checked=None,
+        )
+        assert unread.system == "_unknown"
+
+    @pytest.mark.parametrize(
+        "system",
+        [
+            pytest.param(("esde",), id="one-part"),
+            pytest.param(("esde", "psx", "1.0"), id="three-parts"),
+            pytest.param(("esde", ""), id="empty-key"),
+            pytest.param(("  ", "psx"), id="blank-source"),
+            pytest.param(("esde", 5), id="non-string-key"),
+            pytest.param(["esde", "psx"], id="a-list"),
+        ],
+    )
+    def test_a_system_pair_is_two_non_empty_strings(self, system):
+        with pytest.raises(ValueError, match="system must be a \\(source, key\\) pair of non-empty strings"):
+            FirmwareRequirement(
+                core_so="x.so", system=system, system_source="systemname",  # type: ignore[arg-type]
+                need="required", file_name="a.bin", path="/bios/a.bin", declared="a.bin",
+                description="", identity=None, found="missing", checked=None,
+            )
+
+    @pytest.mark.parametrize(
+        ("system", "source"),
+        [
+            pytest.param(("esde", "psx"), "none", id="a-pair-from-no-source"),
+            pytest.param("_unknown", "systemname", id="the-sentinel-from-a-source"),
+        ],
+    )
+    def test_the_sentinel_is_the_system_exactly_where_nothing_names_one(self, system, source):
+        with pytest.raises(ValueError, match="exactly where its source is 'none'"):
+            FirmwareRequirement(
+                core_so="x.so", system=system, system_source=source,
+                need="required", file_name="a.bin", path="/bios/a.bin", declared="a.bin",
+                description="", identity=None, found="missing", checked=None,
+            )
+
+    def test_a_declaration_holds_its_filing_to_the_same_rule(self):
+        with pytest.raises(ValueError, match="FirmwareDeclaration: system is '_unknown' exactly where"):
+            FirmwareDeclaration("a.bin", "a.bin", "", "required", ("esde", "psx"), "none", "file")
+        with pytest.raises(ValueError, match="FirmwareDeclaration: system must be a \\(source, key\\) pair"):
+            FirmwareDeclaration("a.bin", "a.bin", "", "required", ("esde", ""), "systemname", "file")
+        with pytest.raises(ValueError, match="CoreDeclarations: system must be a \\(source, key\\) pair"):
+            CoreDeclarations("x.so", "x", "", ("esde",), "systemname", ())  # type: ignore[arg-type]
+        with pytest.raises(ValueError, match="CoreDeclarations: system must be a"):
+            CoreDeclarations("x.so", "x", "", "psx", "systemname", ())  # type: ignore[arg-type]
+        with pytest.raises(ValueError, match="CoreDeclarations: system is '_unknown' exactly where"):
+            CoreDeclarations("x.so", "x", "", ("esde", "psx"), "none", ())
+        with pytest.raises(ValueError, match="CoreDeclarations: system is '_unknown' exactly where"):
+            CoreDeclarations("x.so", "x", "", "_unknown", "core", ())
+        with pytest.raises(ValueError, match="FirmwareDeclaration: system_source must be one of"):
+            FirmwareDeclaration(
+                "a.bin", "a.bin", "", "required", ("esde", "psx"), "guessed", "file"  # type: ignore[arg-type]
+            )
+        with pytest.raises(ValueError, match="CoreDeclarations: system_source must be one of"):
+            CoreDeclarations("x.so", "x", "", ("esde", "psx"), "guessed", ())  # type: ignore[arg-type]
+        with pytest.raises(ValueError, match="FirmwareDeclaration: need must be one of"):
+            FirmwareDeclaration(
+                "a.bin", "a.bin", "", "undeclared", ("esde", "psx"), "systemname", "file"  # type: ignore[arg-type]
             )
 
     def test_the_distribution_states_the_name_it_writes_for_itself(self):
@@ -1236,7 +1347,7 @@ class TestRequirementInvariants:
         supplied = SuppliedBy(distribution="retrodeck", source="/ship/a.bin", card_version="1")
         with pytest.raises(ValueError, match="supplied_by"):
             FirmwareRequirement(
-                core_so="x.so", system="psx", system_source="systemname", need="required",
+                core_so="x.so", system=("esde", "psx"), system_source="systemname", need="required",
                 file_name="a.bin", path="/bios/a.bin", declared="a.bin", description="", identity=None,
                 found="missing", checked=None, supplied_by=supplied,
             )
@@ -2071,7 +2182,7 @@ class TestADeclarationStatesItsOwnShape:
             (True, CAVEAT_FIRMWARE_IMAGE_IDENTIFIED, True),
         ):
             answer = firmware_for_system(
-                machine, _context(machine), system="ps2", catalogue=catalogue, verify=verify
+                machine, _context(machine), system=("esde", "ps2"), catalogue=catalogue, verify=verify
             )
             assert [c.label for c in answer.cores] == ["LRPS2", "PCSX2"]
             verdicts = [r.satisfied for core in answer.cores for r in _plain_requirements(core)]
@@ -2117,7 +2228,7 @@ class TestADeclarationStatesItsOwnShape:
         build = functools.partial(
             FirmwareRequirement,
             core_so=LRPS2_SO,
-            system="ps2",
+            system=("esde", "ps2"),
             system_source="systemname",
             need=NEED_REQUIRED,
             file_name="bios",
@@ -2157,7 +2268,7 @@ class TestADeclarationStatesItsOwnShape:
         assert (
             FirmwareRequirement(
                 core_so=None,
-                system="wiiu",
+                system=("esde", "wiiu"),
                 system_source="card",
                 need=NEED_REQUIRED,
                 file_name="keys.txt",
@@ -2175,7 +2286,7 @@ class TestADeclarationStatesItsOwnShape:
         with pytest.raises(ValueError, match="declared_kind"):
             FirmwareRequirement(
                 core_so="x_libretro.so",
-                system="ps2",
+                system=("esde", "ps2"),
                 system_source="systemname",
                 need=NEED_REQUIRED,
                 file_name="bios",
@@ -2760,15 +2871,12 @@ class TestSystemAssignmentIsVisible:
     """
 
     # What this class is about, named so the tests can assert over it. These
-    # are the codes the two assignment readers emit —
-    # `system_assignment_caveats` (derived, and no systemname at all) and
-    # `catalogue_vocabulary_caveats` (atlas's own spelling for a system no
-    # ES-DE build declares) — plus the may-hide statement a system query adds.
-    # Derived from those functions rather than guessed at.
+    # are the codes the assignment reader emits — `system_assignment_caveats`
+    # (derived, and no systemname at all) — plus the may-hide statement a
+    # system query adds. Derived from those functions rather than guessed at.
     ASSIGNMENT_CODES = (
         CAVEAT_SYSTEM_ASSIGNMENT_DERIVED,
         CAVEAT_CORE_WITHOUT_SYSTEMNAME,
-        CAVEAT_SYSTEM_NOT_IN_CATALOGUE,
         CAVEAT_SYSTEM_ASSIGNMENT_MAY_HIDE_CORES,
     )
 
@@ -2798,8 +2906,8 @@ class TestSystemAssignmentIsVisible:
                             f"{INFO_DIR}/noods_libretro.so": {"status": "invalid-text"}})
         core = firmware_for_core(machine, _context(machine), core_so="noods_libretro.so").cores[0]
         filed = {r.file_name: (r.system, r.system_source) for r in _plain_requirements(core)}
-        assert filed["gba_bios.bin"] == ("gba", SOURCE_OVERRIDE)
-        assert filed["firmware.bin"] == ("nds", SOURCE_SYSTEMNAME)
+        assert filed["gba_bios.bin"] == (("esde", "gba"), SOURCE_OVERRIDE)
+        assert filed["firmware.bin"] == (("esde", "nds"), SOURCE_SYSTEMNAME)
 
     def test_full_override_coverage_states_nothing(self):
         machine = _machine({f"{INFO_DIR}/covered_libretro.info": FULLY_OVERRIDDEN_INFO,
@@ -2828,7 +2936,7 @@ class TestSystemAssignmentIsVisible:
         assert [r.system for r in _plain_requirements(core) if r.file_name == "nds7.bin"] == ["_unknown"]
         # The override still applies where it has a rule, so this is not a
         # blanket "we know nothing about this core".
-        assert [r.system for r in _plain_requirements(core) if r.file_name == "cgb_boot.bin"] == ["gbc"]
+        assert [r.system for r in _plain_requirements(core) if r.file_name == "cgb_boot.bin"] == [("esde", "gbc")]
 
     def test_a_core_declaring_nothing_has_nothing_to_be_unsure_about(self):
         machine = _machine({f"{INFO_DIR}/snes9x_libretro.info": NO_FIRMWARE_INFO,
@@ -2883,7 +2991,7 @@ class TestSystemAssignmentIsVisible:
         answer = firmware_for_core(machine, _context(machine), core_so="vice_x128_libretro.so")
         core = answer.cores[0]
         assert core.caveats == ()
-        assert _plain_requirements(core)[0].system == "c64"
+        assert _plain_requirements(core)[0].system == ("esde", "c64")
 
     def test_the_disagreement_check_needs_both_names_to_be_mappable(self):
         """The known limit of that reading, pinned rather than glossed over.
@@ -2924,7 +3032,7 @@ class TestSystemAssignmentIsVisible:
         # its caveat never gets attached. The answer names the candidates.
         machine = _machine({f"{INFO_DIR}/atari800_libretro.info": ATARI800_INFO,
                             f"{INFO_DIR}/atari800_libretro.so": {"status": "invalid-text"}})
-        answer = firmware_for_system(machine, _context(machine), system="atari5200")
+        answer = firmware_for_system(machine, _context(machine), system=("esde", "atari5200"))
         assert answer.cores == ()
         hiding = next(c for c in answer.caveats if c.code == CAVEAT_SYSTEM_ASSIGNMENT_MAY_HIDE_CORES)
         assert hiding.data["cores"] == ("atari800_libretro.so",)
@@ -2941,19 +3049,19 @@ class TestSystemAssignmentIsVisible:
         cores = read_core_declarations(machine, INFO_DIR, core_dir=INFO_DIR).cores
         noods = next(c for c in cores if c.stem == "noods_libretro")
         assert system_assignment_caveats(noods) != ()
-        answer = firmware_for_system(machine, _context(machine), system="atari5200")
+        answer = firmware_for_system(machine, _context(machine), system=("esde", "atari5200"))
         assert CAVEAT_SYSTEM_ASSIGNMENT_MAY_HIDE_CORES not in [c.code for c in answer.caveats]
 
     def test_a_system_query_that_reaches_every_core_hides_nothing(self):
         machine = _gb_machine()
-        answer = firmware_for_system(machine, _context(machine), system="gb")
+        answer = firmware_for_system(machine, _context(machine), system=("esde", "gb"))
         assert CAVEAT_SYSTEM_ASSIGNMENT_MAY_HIDE_CORES not in [c.code for c in answer.caveats]
 
     def test_the_source_of_every_assignment_is_recorded(self):
-        assert system_decision("gb_bios.bin", "Game Boy/Game Boy Color") == ("gb", "override")
-        assert system_decision("x.bin", "Sega - Dreamcast") == ("dreamcast", "systemname")
-        assert system_decision("x.bin", "Some New Machine") == ("some-new-machine", "slug")
-        assert system_decision("x.bin", "") == ("_unknown", "none")
+        assert system_decision("gb_bios.bin", "Game Boy/Game Boy Color") == (("esde", "gb"), "override")
+        assert system_decision("x.bin", "Sega - Dreamcast") == (("esde", "dreamcast"), "systemname")
+        assert system_decision("x.bin", "Some New Machine") == (None, "core")
+        assert system_decision("x.bin", "") == (None, "none")
 
     def test_the_caveat_travels_with_an_identification_it_is_about(self):
         # identify_firmware hands back requirements without their emulator, so
@@ -2983,7 +3091,7 @@ class TestSystemAssignmentIsVisible:
         assert core.database == ("Nintendo - Game Boy", "Nintendo - Game Boy Advance")
         # The core's own system still comes from systemname, never from
         # database — the two disagree here, and systemname wins.
-        assert core.system == "gba"
+        assert core.system == ("esde", "gba")
 
 
 # Three PlayStation cores over one machine with no BIOS in place. Their
@@ -3536,9 +3644,9 @@ class TestACoreThatOpensANameAndThenSearches:
             "optional",
         ]
         assert core.system_firmware == SYSTEM_FIRMWARE_CANNOT_RUN_WITHOUT
-        assert core.system_firmware_needs == ("psx",)
+        assert core.system_firmware_needs == (("esde", "psx"),)
         option = self._option(core, "ntsc-u")
-        assert (option.need, option.system, option.satisfied) == (NEED_REQUIRED, "psx", True)
+        assert (option.need, option.system, option.satisfied) == (NEED_REQUIRED, ("esde", "psx"), True)
         assert core.requirements_met is True
 
     def test_the_same_declaration_over_an_empty_directory_is_not_green(self):
@@ -3616,7 +3724,7 @@ class TestACoreThatOpensANameAndThenSearches:
         # prefix's md5 and not the file's.
         assert spare.identity is not None
         assert spare.identity.md5 == "c02a6fbb1b27359f84e92fae8bc21316"
-        assert spare.console == "ps3"
+        assert spare.console == ("esde", "ps3")
 
     def test_a_table_that_moved_away_from_the_entry_stops_the_answer(self):
         # Two sources for the hash scope and the unknown policy — the entry
@@ -4370,7 +4478,7 @@ class TestTheSystemBehindTheCoreReachesTheAnswer:
     def test_the_mark_carries_the_system_and_the_evidence_level(self):
         core = self._core(self._psx_machine(), UNDERSTATER_SO)
         (mark,) = self._marks(core)
-        assert mark.data == {"system": "psx", "evidence": EVIDENCE_WORD_VERIFIED}
+        assert mark.data == {"source": "esde", "key": "psx", "evidence": EVIDENCE_WORD_VERIFIED}
 
     def test_the_mark_publishes_a_word_and_not_the_bracket_notation(self):
         # `[V]` is how this repository's research pages write an evidence
@@ -4436,7 +4544,7 @@ class TestTheSystemBehindTheCoreReachesTheAnswer:
             }
         )
         core = self._core(machine, "mgba_libretro.so")
-        assert {r.system for r in _plain_requirements(core)} >= {"gb", "gba"}
+        assert {r.system for r in _plain_requirements(core)} >= {("esde", "gb"), ("esde", "gba")}
         assert core.system_firmware == SYSTEM_FIRMWARE_OPEN
         assert self._marks(core) == ()
 
@@ -4468,7 +4576,7 @@ class TestTheSystemBehindTheCoreReachesTheAnswer:
         }
         context = _context(machine, system_firmware=recorded)
         core = firmware_for_core(machine, context, core_so="mgba_libretro.so").cores[0]
-        assert [(m.data["system"], m.data["evidence"]) for m in self._marks(core)] == [
+        assert [(m.data["key"], m.data["evidence"]) for m in self._marks(core)] == [
             ("gb", EVIDENCE_WORD_DERIVED),
             ("gba", EVIDENCE_WORD_VERIFIED),
         ]
@@ -4533,16 +4641,16 @@ class TestTheSystemBehindTheCoreReachesTheAnswer:
         context = _context(machine, system_firmware=self._only_the_advance_needs_an_image())
         core = firmware_for_core(machine, context, core_so="mgba_libretro.so", verify=True).cores[0]
         assert [(r.file_name, r.system, r.satisfied) for r in _plain_requirements(core)] == [
-            ("gb_bios.bin", "gb", True),
-            ("gba_bios.bin", "gba", False),
+            ("gb_bios.bin", ("esde", "gb"), True),
+            ("gba_bios.bin", ("esde", "gba"), False),
         ]
         assert core.system_firmware == SYSTEM_FIRMWARE_CANNOT_RUN_WITHOUT
-        assert core.system_firmware_needs == ("gba",)
+        assert core.system_firmware_needs == (("esde", "gba"),)
         assert core.requirements_met is False
         # One mark, and it names the Advance — not because that system is the
         # needing one, but because the Game Boy entry is open and a mark rides
         # only an entry that states something.
-        assert [(m.data["system"], m.data["evidence"]) for m in self._marks(core)] == [
+        assert [(m.data["key"], m.data["evidence"]) for m in self._marks(core)] == [
             ("gba", EVIDENCE_WORD_VERIFIED)
         ]
 
@@ -4615,7 +4723,7 @@ class TestTheSystemBehindTheCoreReachesTheAnswer:
                 f"{BIOS_DIR}/gba_bios.bin": {"md5": "11" * 16, "sha1": "22" * 20, "size": 6},
             }
         )
-        assert core.system_firmware_needs == ("gb", "gba")
+        assert core.system_firmware_needs == (("esde", "gb"), ("esde", "gba"))
         assert core.requirements_met is True
 
     def test_one_image_does_not_answer_for_two_needing_systems(self):
@@ -4625,7 +4733,7 @@ class TestTheSystemBehindTheCoreReachesTheAnswer:
         core = self._two_needs(
             {f"{BIOS_DIR}/gb_bios.bin": {"md5": "ee" * 16, "sha1": "ff" * 20, "size": 5}}
         )
-        assert core.system_firmware_needs == ("gb", "gba")
+        assert core.system_firmware_needs == (("esde", "gb"), ("esde", "gba"))
         assert core.requirements_met is False
 
     def test_a_second_needing_system_nobody_judged_leaves_the_answer_unsaid(self):
@@ -4653,8 +4761,8 @@ class TestTheSystemBehindTheCoreReachesTheAnswer:
         # declares and the answer is the one this reading always gave.
         machine = self._psx_machine(bios={f"{BIOS_DIR}/psxonpsp660.bin": "whatever"})
         core = self._core(machine, UNDERSTATER_SO)
-        assert core.system_firmware_needs == ("psx",)
-        assert {r.system for r in _plain_requirements(core)} == {"psx"}
+        assert core.system_firmware_needs == (("esde", "psx"),)
+        assert {r.system for r in _plain_requirements(core)} == {("esde", "psx")}
         assert core.requirements_met is True
 
     def test_a_core_the_table_excuses_names_no_needing_system(self):
@@ -4800,10 +4908,12 @@ class TestTheSystemBehindTheCoreReachesTheAnswer:
         assert seen == {True, False}
 
     def _demo_machine(self) -> FixtureMachine:
+        # Any systemname the map holds: a recorded verdict reaches a core only
+        # through the system the map names for its key (#784 D45).
         return _machine(
             {
                 f"{INFO_DIR}/demo_libretro.info": (
-                    'systemname = "Demo System"\n'
+                    'systemname = "Sega - Saturn"\n'
                     "firmware_count = 1\n"
                     'firmware0_path = "demo.bin"\n'
                     'firmware0_opt = "true"\n'
@@ -4819,11 +4929,11 @@ class TestTheSystemBehindTheCoreReachesTheAnswer:
         entry = {"verdict": verdict, "evidence": evidence, "source": "a fixture"}
         if checked:
             return load_system_firmware(
-                json.dumps({"schema": 1, "spec": "a spec", "systems": {"Demo System": entry}})
+                json.dumps({"schema": 1, "spec": "a spec", "systems": {"Sega - Saturn": entry}})
             )
         return {
-            "Demo System": SystemFirmware(
-                system="Demo System",
+            "Sega - Saturn": SystemFirmware(
+                system="Sega - Saturn",
                 verdict=verdict,
                 evidence=evidence,
                 source="a fixture",
@@ -4941,7 +5051,7 @@ class TestTheSystemBehindTheCoreReachesTheAnswer:
 
     def test_two_table_keys_on_one_system_state_one_mark_per_reading(self):
         # The case the deduplication was really for, kept and scoped to the
-        # marks: two keys landing on one system id. Same level, one mark;
+        # marks: two keys landing on one system. Same level, one mark;
         # different levels, one each, because they are different readings.
         machine = self._psx_machine()
         same = {
@@ -4986,11 +5096,11 @@ class TestTheSystemBehindTheCoreReachesTheAnswer:
         # atlas's own ids, so the join is the systemname map. Both PlayStation
         # spellings the deployed catalogue uses land on the same id, and the
         # entry therefore reaches a core declaring either.
-        assert system_firmware_system("PlayStation") == "psx"
-        assert system_firmware_system("Sony - PlayStation") == "psx"
-        # A systemname nothing maps still answers a word, and nothing is
-        # recorded under it.
-        assert system_firmware_system("Some New Machine") == "some-new-machine"
+        assert system_firmware_system("PlayStation") == ("esde", "psx")
+        assert system_firmware_system("Sony - PlayStation") == ("esde", "psx")
+        # A systemname nothing maps reaches no system: no word is formed from
+        # it (#784 D45), so nothing recorded under it reaches a requirement.
+        assert system_firmware_system("Some New Machine") == "_unknown"
 
 
 # PUAE's declaration cut to three rows that keep its shape: a computer's
@@ -5066,7 +5176,7 @@ class TestAnExemptionScopedToTheSystemAsked:
         machine = machine or self._machine()
         catalogue = Catalogue((CatalogueEntry(label="PUAE", kind="libretro", core_so=AMIGA_SO),))
         answer = firmware_for_system(
-            machine, _context(machine, system_firmware=table), system=system, catalogue=catalogue
+            machine, _context(machine, system_firmware=table), system=("esde", system), catalogue=catalogue
         )
         (core,) = answer.cores
         return core
@@ -5097,7 +5207,7 @@ class TestAnExemptionScopedToTheSystemAsked:
     def test_a_system_the_exemption_does_not_name_answers_as_declared(self, system):
         core = self._asked(system, self._scoped())
         assert core.system_firmware == SYSTEM_FIRMWARE_CANNOT_RUN_WITHOUT
-        assert core.system_firmware_needs == ("amiga",)
+        assert core.system_firmware_needs == (("esde", "amiga"),)
         assert core.requirements_met is False
         assert self._needs(core) == [
             ("kick34005.A500", NEED_REQUIRED),
@@ -5145,7 +5255,7 @@ class TestAnExemptionScopedToTheSystemAsked:
         # Beside the excuse it is why the verdict is green; beside a CD32 it
         # is where the core does start without an image.
         assert self._substitute(self._asked(system, self._scoped())) == [
-            {"core": "puae", "substitute": "AROS", "systems": AMIGA_COMPUTERS}
+            {"core": "puae", "substitute": "AROS", "sources": ("esde",) * len(AMIGA_COMPUTERS), "keys": AMIGA_COMPUTERS}
         ]
 
     def test_a_question_that_names_no_system_names_the_substitute(self):
@@ -5154,7 +5264,7 @@ class TestAnExemptionScopedToTheSystemAsked:
             machine, _context(machine, system_firmware=self._scoped()), core_so=AMIGA_SO
         ).cores[0]
         assert self._substitute(core) == [
-            {"core": "puae", "substitute": "AROS", "systems": AMIGA_COMPUTERS}
+            {"core": "puae", "substitute": "AROS", "sources": ("esde",) * len(AMIGA_COMPUTERS), "keys": AMIGA_COMPUTERS}
         ]
 
     def test_an_exemption_without_systems_names_no_substitute(self):
@@ -5202,7 +5312,7 @@ class TestPerSystemAnswer:
 
     def test_without_a_catalogue_the_cores_own_systemname_enumerates(self):
         machine = _gb_machine()
-        answer = firmware_for_system(machine, _context(machine), system="gb")
+        answer = firmware_for_system(machine, _context(machine), system=("esde", "gb"))
         assert [c.core_so for c in answer.cores] == ["gambatte_libretro.so", "sameboy_libretro.so"]
         assert CAVEAT_EMULATOR_CATALOGUE_UNAVAILABLE in [c.code for c in answer.caveats]
 
@@ -5214,7 +5324,7 @@ class TestPerSystemAnswer:
                 CatalogueEntry(label="TGB Dual", kind="libretro", core_so="tgbdual_libretro.so"),
             )
         )
-        answer = firmware_for_system(machine, _context(machine), system="gb", catalogue=catalogue)
+        answer = firmware_for_system(machine, _context(machine), system=("esde", "gb"), catalogue=catalogue)
         by_label = {c.label: c for c in answer.cores}
         assert by_label["TGB Dual"].declaration == DECLARATION_ABSENT
         assert by_label["TGB Dual"].requirements == ()
@@ -5229,7 +5339,7 @@ class TestPerSystemAnswer:
                 CatalogueEntry(label="SameBoy (Standalone)", kind="standalone", core_so=None),
             )
         )
-        answer = firmware_for_system(machine, _context(machine), system="gb", catalogue=catalogue)
+        answer = firmware_for_system(machine, _context(machine), system=("esde", "gb"), catalogue=catalogue)
         standalone = answer.cores[1]
         assert standalone.declaration == DECLARATION_UNSUPPORTED
         assert [c.code for c in standalone.caveats] == [CAVEAT_STANDALONE_UNSUPPORTED]
@@ -5238,7 +5348,7 @@ class TestPerSystemAnswer:
         # gb_bios.bin is on disk; SameBoy's dmg_boot.bin is byte-identical and
         # still missing, because SameBoy opens dmg_boot.bin and nothing else.
         machine = _gb_machine({f"{BIOS_DIR}/gb_bios.bin": _blob(b"boot!")})
-        answer = firmware_for_system(machine, _context(machine), system="gb")
+        answer = firmware_for_system(machine, _context(machine), system=("esde", "gb"))
         by_core = {r.core_so: r for r in answer.requirements}
         assert by_core["gambatte_libretro.so"].present is True
         assert by_core["sameboy_libretro.so"].present is False
@@ -5597,7 +5707,7 @@ class TestNoDeclarationIsNeverSatisfied:
 
     def test_an_identifier_nothing_covers_says_unknown_not_nothing_needed(self):
         machine = _machine()
-        answer = firmware_for_system(machine, _context(machine), system="n64")
+        answer = firmware_for_system(machine, _context(machine), system=("esde", "n64"))
         assert answer.cores == ()
         codes = [c.code for c in answer.caveats]
         assert CAVEAT_SYSTEM_UNKNOWN in codes
@@ -5610,7 +5720,7 @@ class TestNoDeclarationIsNeverSatisfied:
         # established, which is never "this system needs nothing".
         machine = _machine()
         catalogue = Catalogue((CatalogueEntry(label="TGB Dual", kind="libretro", core_so="tgbdual_libretro.so"),))
-        answer = firmware_for_system(machine, _context(machine), system="gb", catalogue=catalogue)
+        answer = firmware_for_system(machine, _context(machine), system=("esde", "gb"), catalogue=catalogue)
         codes = [c.code for c in answer.caveats]
         assert CAVEAT_FIRMWARE_DECLARATION_UNKNOWN in codes
         assert CAVEAT_NO_FIRMWARE_DECLARATION not in codes
@@ -5632,7 +5742,7 @@ class TestNoDeclarationIsNeverSatisfied:
         # would "nothing declares firmware for it".
         machine = FixtureMachine({})
         context = FirmwareContext(root=BIOS_DIR, cores=(), hashes=load_hashes(TABLE), cores_read=False)
-        answer = firmware_for_system(machine, context, system="gba")
+        answer = firmware_for_system(machine, context, system=("esde", "gba"))
         codes = [c.code for c in answer.caveats]
         assert CAVEAT_SYSTEM_UNKNOWN not in codes
         assert CAVEAT_NO_FIRMWARE_DECLARATION not in codes
@@ -5641,7 +5751,7 @@ class TestNoDeclarationIsNeverSatisfied:
     def test_an_unreadable_catalogue_claims_nothing_either(self):
         machine = _machine()
         answer = firmware_for_system(
-            machine, _context(machine), system="gba", catalogue=Catalogue((), read=False)
+            machine, _context(machine), system=("esde", "gba"), catalogue=Catalogue((), read=False)
         )
         codes = [c.code for c in answer.caveats]
         assert CAVEAT_EMULATOR_CATALOGUE_UNREADABLE in codes
@@ -5656,7 +5766,7 @@ class TestNoDeclarationIsNeverSatisfied:
         machine = _machine()
         hole = Caveat("emulator-catalogue-sealed", "part of the catalogue is sealed away")
         answer = firmware_for_system(
-            machine, _context(machine), system="gba", catalogue=Catalogue((), hole=hole)
+            machine, _context(machine), system=("esde", "gba"), catalogue=Catalogue((), hole=hole)
         )
         codes = [c.code for c in answer.caveats]
         assert "emulator-catalogue-sealed" in codes
@@ -5673,7 +5783,7 @@ class TestNoDeclarationIsNeverSatisfied:
             (CatalogueEntry(label="Demo PSX", kind="libretro", core_so="demo_psx_libretro.so"),),
             hole=hole,
         )
-        answer = firmware_for_system(machine, _context(machine), system="psx", catalogue=catalogue)
+        answer = firmware_for_system(machine, _context(machine), system=("esde", "psx"), catalogue=catalogue)
         assert [c.label for c in answer.cores] == ["Demo PSX"]
         assert answer.cores[0].requirements
         codes = [c.code for c in answer.caveats]
@@ -5704,7 +5814,7 @@ class TestNoDeclarationIsNeverSatisfied:
             hole=hole,
         )
         answer = firmware_for_system(
-            machine, _context(machine), system="atarijaguar", catalogue=catalogue
+            machine, _context(machine), system=("esde", "atarijaguar"), catalogue=catalogue
         )
         assert [c.declaration for c in answer.cores] == [DECLARATION_READ]
         codes = [c.code for c in answer.caveats]
@@ -5870,7 +5980,7 @@ class TestNoDeclarationIsNeverSatisfied:
         # same way. An answer-level caveat here would read as a degradation
         # where there is none.
         machine = _machine({f"{INFO_DIR}/snes9x_libretro.info": NO_FIRMWARE_INFO})
-        answer = firmware_for_system(machine, _context(machine, core_dir=None), system="snes")
+        answer = firmware_for_system(machine, _context(machine, core_dir=None), system=("esde", "snes"))
         assert [(c.declaration, c.requirements) for c in answer.cores] == [(DECLARATION_READ, ())]
         assert [c.code for c in answer.caveats] == [CAVEAT_EMULATOR_CATALOGUE_UNAVAILABLE]
 
@@ -5891,7 +6001,7 @@ class TestNoDeclarationIsNeverSatisfied:
                 CatalogueEntry(label="Flycast (Standalone)", kind="standalone", core_so=None),
             )
         )
-        answer = firmware_for_system(machine, _context(machine), system="snes", catalogue=catalogue)
+        answer = firmware_for_system(machine, _context(machine), system=("esde", "snes"), catalogue=catalogue)
         # The standalone is 'unsupported', not 'absent': it is installed, and
         # what atlas is missing is a source for its rules, not the emulator.
         assert [c.declaration for c in answer.cores] == [DECLARATION_READ, DECLARATION_UNSUPPORTED]
@@ -5914,8 +6024,8 @@ class TestNoDeclarationIsNeverSatisfied:
         catalogue = Catalogue(
             (CatalogueEntry(label="Demo PSX", kind="libretro", core_so="demo_psx_libretro.so"),)
         )
-        through_catalogue = firmware_for_system(machine, context, system="psx", catalogue=catalogue)
-        through_systemname = firmware_for_system(machine, context, system="psx")
+        through_catalogue = firmware_for_system(machine, context, system=("esde", "psx"), catalogue=catalogue)
+        through_systemname = firmware_for_system(machine, context, system=("esde", "psx"))
         for answer in (through_catalogue, through_systemname):
             core = answer.cores[0]
             assert [r.declared for r in _plain_requirements(core)] == ["scph5501.bin"]
@@ -5931,7 +6041,7 @@ class TestNoDeclarationIsNeverSatisfied:
         )
         for answer in (
             firmware_for_core(machine, context, core_so="demo_psx_libretro.so"),
-            firmware_for_system(machine, context, system="psx"),
+            firmware_for_system(machine, context, system=("esde", "psx")),
             firmware_inventory(machine, context),
         ):
             assert answer.root is None
@@ -5988,9 +6098,9 @@ class TestPartialReaderIsNotMisled:
         for machine, answer in (
             (installed, firmware_for_core(installed, _context(installed), core_so="demo_psx_libretro.so")),
             (installed, firmware_inventory(installed, _context(installed), verify=True)),
-            (gb, firmware_for_system(gb, _context(gb), system="gb", verify=True)),
+            (gb, firmware_for_system(gb, _context(gb), system=("esde", "gb"), verify=True)),
             (empty, firmware_for_core(empty, _context(empty), core_so="mgba_libretro.so")),
-            (empty, firmware_for_system(empty, _context(empty), system="n64")),
+            (empty, firmware_for_system(empty, _context(empty), system=("esde", "n64"))),
             (unreadable, firmware_inventory(unreadable, _context(unreadable), verify=True)),
         ):
             yield machine, answer
@@ -6209,7 +6319,7 @@ class TestUnsupportedIsNotAbsent:
 
     def _cores(self):
         machine = _machine({f"{INFO_DIR}/snes9x_libretro.info": NO_FIRMWARE_INFO})
-        answer = firmware_for_system(machine, _context(machine), system="ps3", catalogue=self.CATALOGUE)
+        answer = firmware_for_system(machine, _context(machine), system=("esde", "ps3"), catalogue=self.CATALOGUE)
         return {core.label: core for core in answer.cores}
 
     def test_a_standalone_is_unsupported(self):
@@ -6266,7 +6376,7 @@ class TestBothRoutesCarryWhatWasDeclaredButNotRequired:
         )
         context = _context(machine)
         if through_catalogue:
-            return firmware_for_system(machine, context, system="nes", catalogue=self.CATALOGUE)
+            return firmware_for_system(machine, context, system=("esde", "nes"), catalogue=self.CATALOGUE)
         return firmware_for_core(machine, context, core_so="nestopia_libretro.so")
 
     def test_the_core_route_states_it_on_the_core(self):
@@ -6290,8 +6400,13 @@ class TestBothRoutesCarryWhatWasDeclaredButNotRequired:
         assert [c.requirements for c in self._answer(through_catalogue=True).cores] == [()]
 
 
-class TestASystemTheCatalogueDoesNotNameIsMarked:
-    """The no-catalogue-word family: atlas's own spelling, and never unmarked."""
+class TestASystemNoCatalogueSourceNamesIsACitedPair:
+    """A system no ES-DE build declares is named by a cited pair of another source (#784 D20, D45, D50).
+
+    atlas forms no word of its own for it: the systemname map points it at a
+    key of the source that does name it, and every installation whose own
+    sources lack that key answers by that pair, on every arrangement.
+    """
 
     def _core(self, info: str, stem: str):
         machine = _machine(
@@ -6302,35 +6417,32 @@ class TestASystemTheCatalogueDoesNotNameIsMarked:
         )
         return firmware_for_core(machine, _context(machine), core_so=f"{stem}.so").cores[0]
 
-    def test_the_own_spelling_carries_the_caveat(self):
+    def test_the_ti83_files_under_romm_s_key(self):
         info = 'systemname = "TI83"\nfirmware_count = 1\nfirmware0_path = "ti83.rom"\n'
         core = self._core(info, "numero_libretro")
-        assert _plain_requirements(core)[0].system == "ti83"
-        caveat = next(c for c in core.caveats if c.code == CAVEAT_SYSTEM_NOT_IN_CATALOGUE)
-        assert caveat.data == {
-            "core_so": "numero_libretro.so",
-            "system": "ti83",
-            "files": ("ti83.rom",),
-            "map_version": SYSTEMNAME_MAP_VERSION,
-        }
+        requirement = _plain_requirements(core)[0]
+        assert (requirement.system, requirement.system_source) == (("romm", "ti-83"), "systemname")
 
     def test_the_enterprise_128_is_split_off_the_commodore(self):
         # Map version 1 misfiled ep128emu's "128" under the Commodore c128;
-        # the split gives the Enterprise its own spelling, marked.
+        # the Enterprise is libretro's database name.
         info = (
             'systemname = "128"\n'
             "firmware_count = 1\n"
             'firmware0_path = "ep128emu/roms/exos21.rom"\n'
         )
         core = self._core(info, "ep128emu_core_libretro")
-        assert _plain_requirements(core)[0].system == "ep128"
-        assert CAVEAT_SYSTEM_NOT_IN_CATALOGUE in [c.code for c in core.caveats]
+        assert _plain_requirements(core)[0].system == ("libretro", "Enterprise - 128")
 
-    def test_a_catalogue_id_is_never_marked(self):
+    def test_a_catalogue_id_is_named_in_the_own_source(self):
         info = 'systemname = "Sega - Dreamcast"\nfirmware_count = 1\nfirmware0_path = "dc/dc_boot.bin"\n'
         core = self._core(info, "flycast_libretro")
-        assert _plain_requirements(core)[0].system == "dreamcast"
-        assert CAVEAT_SYSTEM_NOT_IN_CATALOGUE not in [c.code for c in core.caveats]
+        assert _plain_requirements(core)[0].system == ("esde", "dreamcast")
+
+    def test_the_cited_pairs_are_the_map_targets_no_own_key_names(self):
+        cited = system_naming(("esde",)).cited
+        assert {("romm", "ti-83"), ("libretro", "Enterprise - 128"), ("libretro", "BK-0010/BK-0011")} <= cited
+        assert all(source != "esde" for source, _ in cited)
 
     def _ti83_machine(self):
         return _machine(
@@ -6342,88 +6454,82 @@ class TestASystemTheCatalogueDoesNotNameIsMarked:
             }
         )
 
-    def test_the_own_spelling_is_a_question_word_on_the_catalogue_route_too(self):
-        # A catalogue can neither enumerate nor deny a word no build declares,
-        # so the same question answers the same rows with the same mark on a
-        # catalogued arrangement — not system-unknown, and not a claim that
-        # this machine lacks a catalogue.
+    def test_a_cited_pair_is_enumerated_from_the_cores_on_the_catalogue_route_too(self):
+        # A catalogue can neither enumerate nor deny a system no catalogue
+        # source of the installation names, so the same question answers the
+        # same rows on a catalogued arrangement — not system-unknown, and not a
+        # claim that this machine lacks a catalogue.
         machine = self._ti83_machine()
         answer = firmware_for_system(
             machine,
             _context(machine),
-            system="ti83",
+            system=("romm", "ti-83"),
             catalogue=Catalogue(entries=(), read=True),
         )
         assert [c.core_so for c in answer.cores] == ["numero_libretro.so"]
         codes = [c.code for c in answer.caveats]
-        assert CAVEAT_SYSTEM_NOT_IN_CATALOGUE in codes
+        assert codes[0] == CAVEAT_EMULATOR_LIST_DERIVED
         assert CAVEAT_SYSTEM_UNKNOWN not in codes
         assert CAVEAT_EMULATOR_CATALOGUE_UNAVAILABLE not in codes
 
-    def test_the_catalogue_less_route_marks_the_word_the_same_way(self):
-        # Same rows, same answer-level mark — and not the no-catalogue caveat:
-        # the reason this list is derived is the word, not the machine.
+    def test_the_catalogue_less_route_answers_the_same_rows(self):
         machine = self._ti83_machine()
-        answer = firmware_for_system(machine, _context(machine), system="ti83")
+        answer = firmware_for_system(machine, _context(machine), system=("romm", "ti-83"))
         assert [c.core_so for c in answer.cores] == ["numero_libretro.so"]
-        codes = [c.code for c in answer.caveats]
-        assert CAVEAT_SYSTEM_NOT_IN_CATALOGUE in codes
-        assert CAVEAT_EMULATOR_CATALOGUE_UNAVAILABLE not in codes
 
-    def test_a_word_outside_the_set_is_still_unknown_on_the_catalogue_route(self):
-        # The discriminating direction: the retired slug "dc" is neither an id
-        # nor a published own spelling, so a catalogued arrangement whose
-        # catalogue declares no such system answers system-unknown.
+    def test_an_own_key_nothing_declares_is_still_unknown_on_the_catalogue_route(self):
+        # The discriminating direction: the retired slug "dc" is no ES-DE
+        # name, so a catalogued arrangement whose catalogue declares no such
+        # system answers system-unknown.
         machine = self._ti83_machine()
         answer = firmware_for_system(
             machine,
             _context(machine),
-            system="dc",
+            system=("esde", "dc"),
             catalogue=Catalogue(entries=(), read=True),
         )
         assert answer.cores == ()
         assert CAVEAT_SYSTEM_UNKNOWN in [c.code for c in answer.caveats]
 
-    def test_an_own_spelling_with_nothing_filed_is_empty_not_unknown(self):
-        # The word is published vocabulary, so nothing filing under it is a
-        # machine fact: the answer keeps the own-spelling mark and states the
-        # established absence (no-firmware-declaration) at answer level —
-        # with zero cores there is no entry to say it per emulator, unlike
-        # the id-with-declaration-less-emulators shape this mirrors.
-        # system-unknown would blame the identifier for the machine; it
-        # fires only for words in neither vocabulary.
+    def test_a_cited_pair_no_installed_core_files_under_is_unknown(self):
+        # A cited pair is held only where a core it is cited for is installed
+        # (#784 D50): with none, the pair names nothing here, and the empty
+        # answer says the system is unknown, not that it needs nothing.
         machine = _machine(
             {
                 f"{INFO_DIR}/snes9x_libretro.info": NO_FIRMWARE_INFO,
                 f"{INFO_DIR}/snes9x_libretro.so": {"status": "invalid-text"},
             }
         )
-        for catalogue in (None, Catalogue(entries=(), read=True)):
-            answer = firmware_for_system(
-                machine, _context(machine), system="ti83", catalogue=catalogue
-            )
-            assert answer.cores == ()
-            assert [c.code for c in answer.caveats] == [
-                CAVEAT_SYSTEM_NOT_IN_CATALOGUE,
-                CAVEAT_NO_FIRMWARE_DECLARATION,
-            ]
+        answer = firmware_for_system(
+            machine, _context(machine), system=("romm", "ti-83"), catalogue=Catalogue(entries=(), read=True)
+        )
+        assert answer.cores == ()
+        assert [c.code for c in answer.caveats] == [CAVEAT_EMULATOR_LIST_DERIVED, CAVEAT_SYSTEM_UNKNOWN]
 
 
-class TestTheMapSpeaksTheCatalogueVocabulary:
-    """The packaged map's target set is the packaged id set — guarded, not assumed.
+class TestTheMapsTargetsAreNamesTheirSourcesSpell:
+    """The packaged map's targets are names their sources spell — guarded, not assumed.
 
     The map is world knowledge, so what holds it to its own account is tests:
-    every value must be an id a question can take or a declared own spelling,
-    and the day one stops being either, the suite says so instead of a query
-    for a system that is right there coming back ``system-unknown``.
+    every ES-DE value must be an id a question can take, every other value a
+    key its source holds in the platform table, and the day one stops being
+    that, the suite says so instead of a query for a system that is right
+    there coming back ``system-unknown``.
     """
 
-    def test_every_systemname_maps_into_the_vocabulary_or_the_declared_markers(self):
+    def test_every_esde_target_is_a_catalogue_id(self):
         ids = set(known_systems())
         strays = {
-            name: value
-            for name, value in SYSTEMNAME_TO_SLUG.items()
-            if value not in ids and value not in SYSTEMS_WITHOUT_CATALOGUE_ID
+            name: key for name, (source, key) in SYSTEMNAME_TO_SYSTEM.items() if source == "esde" and key not in ids
+        }
+        assert strays == {}
+
+    def test_every_other_target_is_a_key_of_its_source(self):
+        others = {name: pair for name, pair in SYSTEMNAME_TO_SYSTEM.items() if pair[0] != "esde"}
+        assert others, "the guard below would pass over an empty set"
+        strays = {
+            name: pair for name, pair in others.items() if translate([pair]).pairs[0].status != PAIR_KNOWN
         }
         assert strays == {}
 
@@ -6437,11 +6543,16 @@ class TestTheMapSpeaksTheCatalogueVocabulary:
         }
         assert strays == {}
 
-    def test_the_own_spellings_are_not_catalogue_ids(self):
-        # The family exists because the catalogue lacks these words. One of
-        # them turning up as an id is the family entry's retirement notice,
-        # and this is the test that serves it.
-        assert set(SYSTEMS_WITHOUT_CATALOGUE_ID) & set(known_systems()) == set()
+    def test_a_target_outside_es_de_names_a_system_es_de_does_not(self):
+        # The map points away from ES-DE only because no ES-DE build names
+        # the system. One of those systems turning up under an ES-DE name is
+        # the entry's notice to point at that name instead, and this is the
+        # test that serves it.
+        esde = SystemNaming(("esde",))
+        named = {
+            name: esde.named(pair) for name, pair in SYSTEMNAME_TO_SYSTEM.items() if pair[0] != "esde"
+        }
+        assert {name: target for name, target in named.items() if target is not None} == {}
 
     def test_the_ruled_values_hold(self):
         # The map-version-2 re-pointings, pinned one by one: the map is world
@@ -6467,19 +6578,22 @@ class TestTheMapSpeaksTheCatalogueVocabulary:
             "PC Engine/SuperGrafx": "pcenginecd",
             "PC Engine/SuperGrafx/CD": "pcenginecd",
             "C128": "c64",
-            "128": "ep128",
-            "BK-0010/BK-0011(M)": "bk",
-            "TI83": "ti83",
             "Arcade (various)": "arcade",
             "Game engine": "scummvm",
             "Wolfenstein 3D Game Engine": "ports",
         }
-        assert {name: SYSTEMNAME_TO_SLUG.get(name) for name in ruled} == ruled
+        cited = {
+            "128": ("libretro", "Enterprise - 128"),
+            "BK-0010/BK-0011(M)": ("libretro", "BK-0010/BK-0011"),
+            "TI83": ("romm", "ti-83"),
+        }
+        expected = {**{name: ("esde", key) for name, key in ruled.items()}, **cited}
+        assert {name: SYSTEMNAME_TO_SYSTEM.get(name) for name in expected} == expected
 
     def test_the_rpg_maker_xp_entry_is_gone(self):
-        # Deliberately unmapped: no shipped .info carries it, so it files
-        # mechanically like any other systemname the map does not know.
-        assert "RPG Maker XP/VX/VX Ace Game Engine" not in SYSTEMNAME_TO_SLUG
+        # Deliberately unmapped: no shipped .info carries it, so its core's own
+        # name decides like any other systemname the map does not know.
+        assert "RPG Maker XP/VX/VX Ace Game Engine" not in SYSTEMNAME_TO_SYSTEM
 
     def test_the_ruled_override_rows_hold(self):
         # The user-ruled per-file rows, pinned like the map values above.
@@ -6588,18 +6702,19 @@ class TestTheRecordedJoinsStillHoldOnTheDeployedBuild:
                 failures.append(f"{name}: commands no longer launch {sorted(missing)}")
         assert failures == []
 
-    def test_the_own_spellings_are_still_absent_from_the_build(self):
-        # The other half of the family's evidence: bk, ti83 and ep128 are own
-        # spellings because the build declares no such system — and neither a
-        # c128 nor a cdimono2, which is what files the C128 under c64 and
-        # same_cdi's cdimono2.zip under cdimono1.
+    def test_the_cited_systems_are_still_absent_from_the_build(self):
+        # The other half of the evidence: the BK, the TI-83 and the Enterprise
+        # file under another source's key because the build declares no such
+        # system — under the words map version 2 spelled them with, or any
+        # other — and neither a c128 nor a cdimono2, which is what files the
+        # C128 under c64 and same_cdi's cdimono2.zip under cdimono1.
         declared = set(self._systems())
-        assert declared & (set(SYSTEMS_WITHOUT_CATALOGUE_ID) | {"c128", "cdimono2"}) == set()
+        assert declared & {"bk", "ti83", "ep128", "c128", "cdimono2"} == set()
 
 
 def _region_option(file_name: str, regions: tuple[str, ...], *, found: PathKind = "missing") -> FirmwareRequirement:
     return FirmwareRequirement(
-        core_so=None, system="psx", system_source="card", need="required",
+        core_so=None, system=("esde", "psx"), system_source="card", need="required",
         file_name=file_name, path=f"/bios/{file_name}", declared=file_name, description="",
         identity=None, found=found, checked=CHECKED_UNKNOWN if found == "file" else None,
         regions=regions,
@@ -6619,7 +6734,7 @@ class TestAlternativesAreOneOfSeveralNotSeveralNeeds:
 
     def test_every_option_must_state_its_regions(self):
         unscoped = FirmwareRequirement(
-            core_so=None, system="psx", system_source="card", need="required",
+            core_so=None, system=("esde", "psx"), system_source="card", need="required",
             file_name="scph5501.bin", path="/bios/scph5501.bin", declared="scph5501.bin",
             description="", identity=None, found="missing", checked=None,
         )
@@ -6821,7 +6936,7 @@ class TestAPartialReaderOfAGroupIsNotMisled:
 def _card_requirement(file_name: str, **overrides: object) -> FirmwareRequirement:
     """One requirement of a packaged card — missing at its destination by default."""
     fields: dict[str, object] = {
-        "core_so": None, "system": "psx", "system_source": "card", "need": NEED_REQUIRED,
+        "core_so": None, "system": ("esde", "psx"), "system_source": "card", "need": NEED_REQUIRED,
         "file_name": file_name, "path": f"/bios/{file_name}", "declared": file_name,
         "description": "", "identity": None, "found": "missing", "checked": None,
     }
@@ -6932,12 +7047,12 @@ class TestAPackagedDeclarationIsJudged:
         # The absence reaches the verdict at the console level and nowhere
         # else: where the table records no need for that system, an empty
         # card is still a card that established nothing.
-        searched = replace(_packaged_core(), absent_by_search=("psx",))
+        searched = replace(_packaged_core(), absent_by_search=(("esde", "psx"),))
         assert searched.requirements_met is None
         needing = replace(
             searched,
             system_firmware=SYSTEM_FIRMWARE_CANNOT_RUN_WITHOUT,
-            system_firmware_needs=("psx",),
+            system_firmware_needs=(("esde", "psx"),),
         )
         assert needing.system_firmware_met is False
         assert needing.requirements_met is False
@@ -6945,11 +7060,11 @@ class TestAPackagedDeclarationIsJudged:
     def test_an_absence_found_by_a_search_stands_only_on_an_empty_packaged_card(self):
         stating = _packaged_core(_card_requirement("scph5501.bin"))
         with pytest.raises(ValueError, match="absence demonstrated by a search"):
-            replace(stating, absent_by_search=("psx",))
+            replace(stating, absent_by_search=(("esde", "psx"),))
         with pytest.raises(ValueError, match="absence demonstrated by a search"):
             CoreFirmware(
                 core_so="swanstation_libretro.so", label=None, declaration=DECLARATION_READ,
-                requirements=(), caveats=(), absent_by_search=("psx",),
+                requirements=(), caveats=(), absent_by_search=(("esde", "psx"),),
             )
 
 
@@ -7160,7 +7275,7 @@ class TestAnIdentifiedImageIsVerified:
         core = self._core(machine, verify=verify)
         assert core.requirements == ()
         assert core.system_firmware == SYSTEM_FIRMWARE_CANNOT_RUN_WITHOUT
-        assert core.system_firmware_needs == ("psx",)
+        assert core.system_firmware_needs == (("esde", "psx"),)
         assert core.system_firmware_met is False
         assert core.requirements_met is False
         # The caveat that states it is the one the search always answered
@@ -7169,7 +7284,7 @@ class TestAnIdentifiedImageIsVerified:
         codes = self._codes(core)
         assert CAVEAT_FIRMWARE_PATH_NAMES_NO_FILE in codes
         marks = [c.data for c in core.caveats if c.code == CAVEAT_SYSTEM_FIRMWARE_WORLD_KNOWLEDGE]
-        assert [mark["system"] for mark in marks] == ["psx"]
+        assert [(mark["source"], mark["key"]) for mark in marks] == [("esde", "psx")]
 
     def test_a_search_scoped_beside_a_named_key_demonstrates_nothing_on_its_own(self):
         # A named key took a region away, so the empty search speaks for the
@@ -7566,7 +7681,7 @@ firmware0_opt = "false"
         standalone_token="CEMU",
     )
     CATALOGUE = InventoryCatalogue(
-        by_system={"psx": Catalogue((DUCKSTATION,)), "wiiu": Catalogue((CEMU,))}
+        by_system={("esde", "psx"): Catalogue((DUCKSTATION,)), ("esde", "wiiu"): Catalogue((CEMU,))}
     )
 
     def _machine(
@@ -7655,7 +7770,7 @@ firmware0_opt = "false"
         # about the tree this answer is about.
         rpcs3 = CatalogueEntry(label="RPCS3 (Standalone)", kind="standalone", core_so=None)
         answer = self._answer(
-            {}, catalogue=InventoryCatalogue(by_system={"ps3": Catalogue((rpcs3,))})
+            {}, catalogue=InventoryCatalogue(by_system={("esde", "ps3"): Catalogue((rpcs3,))})
         )
         assert [core.emulator for core in answer.cores] == [self.PSX_CORE]
 
@@ -7697,7 +7812,7 @@ firmware0_opt = "false"
         assert found.identity.sha1 is None
         assert found.known_as == ()
         assert found.description == self.DEVKIT_NAME
-        assert found.console == "psx"
+        assert found.console == ("esde", "psx")
         assert found.concerns == (Concern(emulator="DUCKSTATION", relation=RELATION_RECOGNISES),)
 
     def test_bytes_both_tables_know_carry_the_libretro_identity_and_both_concerns(self):
@@ -7711,7 +7826,7 @@ firmware0_opt = "false"
         assert found.identity.sha1 == "bb" * 20
         assert found.known_as == ("scph5501.bin", "scph7003.bin")
         assert found.description == "scph5501.bin, scph7003.bin"
-        assert found.console == "psx"
+        assert found.console == ("esde", "psx")
         assert found.concerns == (
             Concern(emulator="DUCKSTATION", relation=RELATION_RECOGNISES),
             Concern(emulator=self.PSX_CORE, relation=RELATION_DECLARES),
@@ -7725,7 +7840,7 @@ firmware0_opt = "false"
         )
         found = self._found(answer, "handheld.rom")
         assert found.description == "gba_bios.bin"
-        assert found.console == "gba"
+        assert found.console == ("esde", "gba")
         assert found.concerns == (
             Concern(emulator="mgba_libretro.so", relation=RELATION_DECLARES),
         )
@@ -7742,7 +7857,7 @@ firmware0_opt = "false"
         )
         found = self._found(answer, "/boot.bin")
         assert found.known_as == ("dc/dc_boot.bin",)
-        assert found.console == "dreamcast"
+        assert found.console == ("esde", "dreamcast")
         assert found.concerns == (
             Concern(emulator="flycast_libretro.so", relation=RELATION_DECLARES),
         )
@@ -7842,7 +7957,7 @@ firmware0_opt = "false"
             infos={},
             search=self.SEARCH,
             catalogue=InventoryCatalogue(
-                by_system={"psx": Catalogue((self.DUCKSTATION,))}, hole=hole
+                by_system={("esde", "psx"): Catalogue((self.DUCKSTATION,))}, hole=hole
             ),
         )
         assert [core.emulator for core in answer.cores] == ["DUCKSTATION"]
@@ -7863,7 +7978,7 @@ firmware0_opt = "false"
             },
             search=self.SEARCH,
             infos={},
-            catalogue=InventoryCatalogue(by_system={"psx": Catalogue((self.DUCKSTATION,))}),
+            catalogue=InventoryCatalogue(by_system={("esde", "psx"): Catalogue((self.DUCKSTATION,))}),
         )
         assert [core.declaration for core in answer.cores] == [
             DECLARATION_UNREADABLE,
@@ -7903,7 +8018,7 @@ firmware0_opt = "false"
             machine,
             self._context(machine),
             catalogue=InventoryCatalogue(
-                by_system={"wiiu": Catalogue((self.CEMU,))}, hole=hole
+                by_system={("esde", "wiiu"): Catalogue((self.CEMU,))}, hole=hole
             ),
             verify=True,
         )
@@ -8112,7 +8227,7 @@ class TestALaunchsOwnXdgPinningReachesTheAnswer:
         # content question: without the hash there is a directory and a count,
         # and the file a launch opens is what these tests are about.
         answer = firmware_for_system(
-            machine, context, system="psx", catalogue=Catalogue((entry,)), verify=True
+            machine, context, system=("esde", "psx"), catalogue=Catalogue((entry,)), verify=True
         )
         return answer.cores[0]
 

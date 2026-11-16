@@ -15,15 +15,16 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+from typing import Any
 
 import pytest
 
-from atlas import __version__
+from atlas import CAVEAT_SYSTEM_PAIRS_CONFLICT, __version__
 from atlas.cli import run
 from atlas.installations import RETRODECK_JSON_SUFFIX
 from atlas.machine import FixtureMachine
 from tests.empty_home import assert_nothing_the_empty_home_holds_is_detected
-from tests.platform_projection import with_projected_translation
+from tests.platform_projection import with_projected_resolutions, with_projected_translation
 from tests.test_machine_vectors import fixture_machine, load_vectors
 
 # expected key → the input key carrying its query (the library runner's own
@@ -72,6 +73,14 @@ def _pair_flag(pair: list[str]) -> str:
     return f"{pair[0]}:{pair[1]}" + (f"@{pair[2]}" if len(pair) == 3 else "")
 
 
+def _system_argv(system, *, flag: bool = False) -> list[str]:
+    """A vector's system as the CLI spells it (#784 D49): a bare name as SYSTEM (or ``--system``), pairs as ``--pair``."""
+    if isinstance(system, str):
+        return ["--system", system] if flag else [system]
+    pairs = [system] if isinstance(system[0], str) else system
+    return [part for pair in pairs for part in ("--pair", _pair_flag(pair))]
+
+
 def _firmware_argv(query) -> list[str]:
     """The CLI spelling of the firmware question, whose kind names the command."""
     flags = (
@@ -83,26 +92,35 @@ def _firmware_argv(query) -> list[str]:
     if kind == "core":
         return ["firmware-for-core", "--core", query["core_so"]] + flags
     if kind == "system":
-        return ["firmware-for-system", "--system", query["system"]] + flags
+        return ["firmware-for-system", *_system_argv(query["system"], flag=True)] + flags
     return ["firmware-inventory"] + flags
+
+
+_PLACEMENT_QUESTIONS = (
+    "savefile_location",
+    "savestate_location",
+    "screenshot_location",
+    "texture_pack_location",
+    "mod_location",
+)
+
+
+def _placement_argv(question: str, query) -> list[str]:
+    """The CLI spelling of one placement question, selector not included."""
+    return (
+        [question.replace("_", "-")]
+        + _flag("--content", query.get("content_path"))
+        + _flag("--core", query.get("core_so"))
+        + (_system_argv(query["system"], flag=True) if "system" in query else [])
+        + _flag("--cwd", query.get("cwd"))
+        + _flag("--appendconfig", query.get("appendconfig"))
+    )
 
 
 def _question_argv(question: str, query) -> list[str]:
     """The CLI spelling of one question, selector not included."""
-    if question in (
-        "savefile_location",
-        "savestate_location",
-        "screenshot_location",
-        "texture_pack_location",
-        "mod_location",
-    ):
-        return (
-            [question.replace("_", "-")]
-            + _flag("--content", query.get("content_path"))
-            + _flag("--core", query.get("core_so"))
-            + _flag("--cwd", query.get("cwd"))
-            + _flag("--appendconfig", query.get("appendconfig"))
-        )
+    if question in _PLACEMENT_QUESTIONS:
+        return _placement_argv(question, query)
     if question == "soft_patch_candidates":
         return ["soft-patch-candidates", query["content_path"]] + _flag("--core", query.get("core_so"))
     if question == "systems":
@@ -112,26 +130,26 @@ def _question_argv(question: str, query) -> list[str]:
     if question == "systems_for_platforms":
         return ["systems-for-platforms"] + [part for pair in query["pairs"] for part in ("--pair", _pair_flag(pair))]
     if question == "platform_ids":
-        return ["platform-ids", query["system"]]
+        return ["platform-ids", *_system_argv(query["system"])]
     if question == "roots":
         return ["roots"]
     # "catalogue" is the expected block's name for the question, "emulators_for"
     # the aggregate query's — one spelling answers both.
     if question in ("emulators_for", "catalogue"):
-        return ["emulators-for", query["system"]] + _flag("--content", query.get("content_path"))
+        return ["emulators-for", *_system_argv(query["system"])] + _flag("--content", query.get("content_path"))
     if question == "rom_location":
-        return ["rom-location", query["system"]]
+        return ["rom-location", *_system_argv(query["system"])]
     if question == "rom_locations":
         return ["rom-locations"]
     if question == "launchable":
-        return ["launchable", query["system"], query["content_path"]] + _flag("--label", query.get("label"))
+        return ["launchable", *_system_argv(query["system"]), query["content_path"]] + _flag("--label", query.get("label"))
     if question == "launch_command":
-        return ["launch-command", "--system", query["system"], "--content", query["content_path"]] + _flag(
+        return ["launch-command", *_system_argv(query["system"], flag=True), "--content", query["content_path"]] + _flag(
             "--label", query.get("label")
         )
     if question == "save_portability":
         return (
-            ["save-portability", query["system"], "--source", query["source"], "--target", query["target"]]
+            ["save-portability", *_system_argv(query["system"]), "--source", query["source"], "--target", query["target"]]
             + _flag("--content", query.get("content_path"))
             + _flag("--cwd", query.get("cwd"))
             + _flag("--appendconfig", query.get("appendconfig"))
@@ -167,8 +185,9 @@ def _argv_for(key: str, query, expected, name: str) -> list[str]:
     return _question_argv(key, query) + ["--installation", selector]
 
 
-# The two platform answers carry a translation, which the vectors assert in its
-# projection (vectors/README.md); the CLI prints the full contract.
+# The platform answers carry a translation, and every answer to a question that
+# names a system its resolution's, which the vectors assert in their projection
+# (vectors/README.md); the CLI prints the full contract.
 _PROJECTED = frozenset({"systems_for_platform", "systems_for_platforms", "platform_ids"})
 
 
@@ -195,7 +214,7 @@ def test_the_cli_answers_every_vector_byte_for_byte(vector, capsys):
         exit_code = run(argv, home=inp["home"], machine=machine)
         out = capsys.readouterr().out
         assert exit_code == 0, f"{name}: {argv} exited {exit_code}"
-        answer = json.loads(out)
+        answer = with_projected_resolutions(json.loads(out))
         if key in _PROJECTED:
             answer = with_projected_translation(answer)
         assert answer == expectation, rationale
@@ -300,3 +319,76 @@ def test_python_dash_m_atlas_speaks_from_a_real_machine(tmp_path):
     )
     assert completed.returncode == 0
     assert_nothing_the_empty_home_holds_is_detected(json.loads(completed.stdout), str(tmp_path))
+
+
+def _system_pairs_vector(name: str) -> dict[str, Any]:
+    """One vector of vectors/machines/system-pairs.json, by name."""
+    return next(v for v in load_vectors() if v.values[0]["name"] == name).values[0]  # type: ignore[index]
+
+
+class TestASystemIsANameOrPairs:
+    """``SYSTEM`` for a bare name, ``--pair SOURCE:KEY[@VERSION]`` for pairs, repeatable; never both (#784 D49)."""
+
+    VECTOR = "a-pair-in-another-source-goes-through-the-table"
+
+    def _ask(self, argv: list[str], capsys) -> dict[str, Any]:
+        vector = _system_pairs_vector(self.VECTOR)
+        exit_code = run([*argv, "--installation", "retrodeck"], home=vector["input"]["home"],
+                        machine=fixture_machine(vector["input"]))
+        assert exit_code == 0
+        return json.loads(capsys.readouterr().out)
+
+    def test_a_pair_names_the_system_through_the_table(self, capsys):
+        answer = self._ask(["emulators-for", "--pair", "libretro:Nintendo - Game Boy Advance"], capsys)
+        assert answer["resolution"]["system"] == {"source": "esde", "key": "gba"}
+        assert [entry["label"] for entry in answer["entries"]] == ["mGBA"]
+
+    def test_repeated_pairs_are_asked_together(self, capsys):
+        answer = self._ask(
+            ["emulators-for", "--pair", "libretro:Nintendo - Game Boy Advance", "--pair", "romm:psx"], capsys
+        )
+        assert answer["resolution"]["system"] is None
+        assert [c["code"] for c in answer["caveats"]] == [CAVEAT_SYSTEM_PAIRS_CONFLICT]
+
+    def test_a_bare_name_is_the_installations_own(self, capsys):
+        answer = self._ask(["emulators-for", "gba"], capsys)
+        assert answer["resolution"] == {
+            "status": "resolved",
+            "system": {"source": "esde", "key": "gba"},
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": None,
+        }
+
+    @pytest.mark.parametrize(
+        "argv",
+        [
+            ["emulators-for", "gba", "--pair", "romm:gba"],
+            ["platform-ids", "gba", "--pair", "romm:gba"],
+            ["rom-location", "gba", "--pair", "romm:gba"],
+            ["launchable", "gba", "/roms/gba/Game.gba", "--pair", "romm:gba"],
+            ["launch-command", "--system", "gba", "--pair", "romm:gba", "--content", "/roms/gba/Game.gba"],
+            ["save-portability", "gba", "--pair", "romm:gba", "--source", "A", "--target", "B"],
+            ["firmware-for-system", "--system", "gba", "--pair", "romm:gba"],
+            ["savefile-location", "--system", "gba", "--pair", "romm:gba", "--core", "mgba_libretro.so"],
+        ],
+        ids=lambda argv: argv[0],
+    )
+    def test_a_name_and_a_pair_together_is_a_usage_error(self, argv, capsys):
+        with pytest.raises(SystemExit) as excinfo:
+            run(argv, home="/home/deck", machine=FixtureMachine({}))
+        assert excinfo.value.code == 2
+        assert "name the system once" in capsys.readouterr().err
+
+    @pytest.mark.parametrize("argv", [["emulators-for"], ["firmware-for-system"]], ids=lambda argv: argv[0])
+    def test_no_system_is_a_usage_error(self, argv, capsys):
+        with pytest.raises(SystemExit) as excinfo:
+            run(argv, home="/home/deck", machine=FixtureMachine({}))
+        assert excinfo.value.code == 2
+        assert "needs a system" in capsys.readouterr().err
+
+    @pytest.mark.parametrize("pair", ["romm", "romm:", ":gba", "romm:gba@"])
+    def test_a_pair_that_is_not_source_key_is_a_usage_error(self, pair):
+        with pytest.raises(SystemExit) as excinfo:
+            run(["emulators-for", "--pair", pair], home="/home/deck", machine=FixtureMachine({}))
+        assert excinfo.value.code == 2

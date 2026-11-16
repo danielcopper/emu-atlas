@@ -80,7 +80,10 @@
             ".ZIP"
           ],
           "entry": {
-            "system": "wii",
+            "system": {
+              "source": "esde",
+              "key": "wii"
+            },
             "label": "Dolphin (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -102,7 +105,17 @@
           "installers": null,
           "boots": null,
           "opens": null,
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "wii"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -182,7 +195,10 @@
             ".ZIP"
           ],
           "entry": {
-            "system": "wii",
+            "system": {
+              "source": "esde",
+              "key": "wii"
+            },
             "label": "Dolphin (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -204,7 +220,17 @@
           "installers": null,
           "boots": null,
           "opens": null,
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "wii"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -285,7 +311,10 @@
             ".ZIP"
           ],
           "entry": {
-            "system": "gc",
+            "system": {
+              "source": "esde",
+              "key": "gc"
+            },
             "label": "PrimeHack (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -307,7 +336,17 @@
           "installers": null,
           "boots": null,
           "opens": null,
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "gc"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -388,7 +427,10 @@
             ".ZIP"
           ],
           "entry": {
-            "system": "gc",
+            "system": {
+              "source": "esde",
+              "key": "gc"
+            },
             "label": "PrimeHack (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -410,7 +452,17 @@
           "installers": null,
           "boots": null,
           "opens": null,
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "gc"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -490,7 +542,10 @@
             ".ZIP"
           ],
           "entry": {
-            "system": "wii",
+            "system": {
+              "source": "esde",
+              "key": "wii"
+            },
             "label": "Dolphin (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -520,7 +575,17 @@
                 "extension": ".rvz"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "wii"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -600,7 +665,10 @@
             ".ZIP"
           ],
           "entry": {
-            "system": "wii",
+            "system": {
+              "source": "esde",
+              "key": "wii"
+            },
             "label": "Dolphin (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -630,7 +698,17 @@
                 "extension": ".ISO"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "wii"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -712,7 +790,10 @@
             ".ZIP"
           ],
           "entry": {
-            "system": "wii",
+            "system": {
+              "source": "esde",
+              "key": "wii"
+            },
             "label": "Dolphin (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -742,7 +823,17 @@
                 "extension": ".bin"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "wii"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -825,7 +916,10 @@
             ".ZIP"
           ],
           "entry": {
-            "system": "wii",
+            "system": {
+              "source": "esde",
+              "key": "wii"
+            },
             "label": "Dolphin (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -868,7 +962,8 @@
             {
               "code": "frontend-name-unscanned",
               "data": {
-                "system": "wii",
+                "source": "esde",
+                "key": "wii",
                 "kind": "directory",
                 "extension": ".",
                 "names": [
@@ -910,7 +1005,17 @@
                 "reason": "directory-without-token"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "wii"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -992,7 +1097,10 @@
             ".ZIP"
           ],
           "entry": {
-            "system": "primehack",
+            "system": {
+              "source": "retrodeck",
+              "key": "primehack"
+            },
             "label": "PrimeHack (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -1022,7 +1130,17 @@
                 "extension": ".bin"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "retrodeck",
+              "key": "primehack"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -1102,7 +1220,10 @@
             ".ZIP"
           ],
           "entry": {
-            "system": "wii",
+            "system": {
+              "source": "esde",
+              "key": "wii"
+            },
             "label": "Dolphin (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -1132,7 +1253,17 @@
                 "extension": ".zip"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "wii"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -1218,7 +1349,10 @@
             ".ZIP"
           ],
           "entry": {
-            "system": "wii",
+            "system": {
+              "source": "esde",
+              "key": "wii"
+            },
             "label": "Dolphin (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -1241,7 +1375,17 @@
           "installers": null,
           "boots": null,
           "opens": null,
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "wii"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -1309,7 +1453,10 @@
             ".ZIP"
           ],
           "entry": {
-            "system": "consolearcade",
+            "system": {
+              "source": "esde",
+              "key": "consolearcade"
+            },
             "label": "Dolphin (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -1340,7 +1487,17 @@
                 "extension": ".iso"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "consolearcade"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -1418,7 +1575,10 @@
             ".ZSO"
           ],
           "entry": {
-            "system": "ps2",
+            "system": {
+              "source": "esde",
+              "key": "ps2"
+            },
             "label": "PCSX2 (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -1448,7 +1608,17 @@
                 "extension": ".iso"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps2"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -1526,7 +1696,10 @@
             ".ZSO"
           ],
           "entry": {
-            "system": "ps2",
+            "system": {
+              "source": "esde",
+              "key": "ps2"
+            },
             "label": "PCSX2 (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -1556,7 +1729,17 @@
                 "extension": ".ngr"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps2"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -1634,7 +1817,10 @@
             ".ZSO"
           ],
           "entry": {
-            "system": "ps2",
+            "system": {
+              "source": "esde",
+              "key": "ps2"
+            },
             "label": "PCSX2 (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -1667,7 +1853,8 @@
             {
               "code": "frontend-name-unscanned",
               "data": {
-                "system": "ps2",
+                "source": "esde",
+                "key": "ps2",
                 "kind": "file",
                 "extension": ".nrg",
                 "names": [
@@ -1704,7 +1891,17 @@
                 "reason": "token-not-listed"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps2"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -1782,7 +1979,10 @@
             ".ZSO"
           ],
           "entry": {
-            "system": "ps2",
+            "system": {
+              "source": "esde",
+              "key": "ps2"
+            },
             "label": "PCSX2 (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -1812,7 +2012,17 @@
                 "extension": ".NRG"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps2"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -1892,7 +2102,10 @@
             ".ZIP"
           ],
           "entry": {
-            "system": "ps2",
+            "system": {
+              "source": "esde",
+              "key": "ps2"
+            },
             "label": "PCSX2 (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -1914,7 +2127,17 @@
           "installers": null,
           "boots": null,
           "opens": null,
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps2"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -1992,7 +2215,10 @@
             ".ZSO"
           ],
           "entry": {
-            "system": "ps2",
+            "system": {
+              "source": "esde",
+              "key": "ps2"
+            },
             "label": "PCSX2 (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -2014,7 +2240,17 @@
           "installers": null,
           "boots": null,
           "opens": null,
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps2"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -2092,7 +2328,10 @@
             ".ZSO"
           ],
           "entry": {
-            "system": "ps2",
+            "system": {
+              "source": "esde",
+              "key": "ps2"
+            },
             "label": "PCSX2 (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -2114,7 +2353,17 @@
           "installers": null,
           "boots": null,
           "opens": null,
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps2"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -2192,7 +2441,10 @@
             ".ZSO"
           ],
           "entry": {
-            "system": "ps2",
+            "system": {
+              "source": "esde",
+              "key": "ps2"
+            },
             "label": "PCSX2 (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -2222,7 +2474,17 @@
                 "extension": ".iso"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps2"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -2287,7 +2549,10 @@
             ".ZIP"
           ],
           "entry": {
-            "system": "psp",
+            "system": {
+              "source": "esde",
+              "key": "psp"
+            },
             "label": "PPSSPP (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -2317,7 +2582,17 @@
                 "extension": ".iso"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psp"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -2380,7 +2655,10 @@
             ".ZIP"
           ],
           "entry": {
-            "system": "psp",
+            "system": {
+              "source": "esde",
+              "key": "psp"
+            },
             "label": "PPSSPP (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -2423,7 +2701,8 @@
             {
               "code": "frontend-name-unscanned",
               "data": {
-                "system": "psp",
+                "source": "esde",
+                "key": "psp",
                 "kind": "directory",
                 "extension": ".",
                 "names": [
@@ -2447,7 +2726,17 @@
                 "reason": "directory-without-token"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psp"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -2510,7 +2799,10 @@
             ".ZIP"
           ],
           "entry": {
-            "system": "psp",
+            "system": {
+              "source": "esde",
+              "key": "psp"
+            },
             "label": "PPSSPP (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -2543,7 +2835,8 @@
             {
               "code": "frontend-name-unscanned",
               "data": {
-                "system": "psp",
+                "source": "esde",
+                "key": "psp",
                 "kind": "directory",
                 "extension": ".",
                 "names": [
@@ -2567,7 +2860,17 @@
                 "reason": "directory-without-token"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psp"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -2633,7 +2936,10 @@
             ".ZIP"
           ],
           "entry": {
-            "system": "psp",
+            "system": {
+              "source": "esde",
+              "key": "psp"
+            },
             "label": "PPSSPP (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -2665,7 +2971,8 @@
             {
               "code": "frontend-name-unscanned",
               "data": {
-                "system": "psp",
+                "source": "esde",
+                "key": "psp",
                 "kind": "directory",
                 "extension": ".",
                 "names": [
@@ -2689,7 +2996,17 @@
                 "reason": "directory-without-token"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psp"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -2754,7 +3071,10 @@
             ".ZIP"
           ],
           "entry": {
-            "system": "psp",
+            "system": {
+              "source": "esde",
+              "key": "psp"
+            },
             "label": "PPSSPP (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -2784,7 +3104,17 @@
                 "extension": ".zip"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psp"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -2849,7 +3179,10 @@
             ".ZIP"
           ],
           "entry": {
-            "system": "psp",
+            "system": {
+              "source": "esde",
+              "key": "psp"
+            },
             "label": "PPSSPP (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -2879,7 +3212,17 @@
                 "extension": ".ZIP"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psp"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -2944,7 +3287,10 @@
             ".ZIP"
           ],
           "entry": {
-            "system": "psp",
+            "system": {
+              "source": "esde",
+              "key": "psp"
+            },
             "label": "PPSSPP (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -2966,7 +3312,17 @@
           "installers": null,
           "boots": null,
           "opens": null,
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psp"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -3031,7 +3387,10 @@
             ".ZIP"
           ],
           "entry": {
-            "system": "psp",
+            "system": {
+              "source": "esde",
+              "key": "psp"
+            },
             "label": "PPSSPP (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -3061,7 +3420,17 @@
                 "extension": ".iso"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psp"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -3152,7 +3521,10 @@
             ".ZIP"
           ],
           "entry": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "DuckStation (Legacy) (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -3182,7 +3554,17 @@
                 "extension": ".chd"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -3273,7 +3655,10 @@
             ".ZIP"
           ],
           "entry": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "DuckStation (Legacy) (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -3303,7 +3688,17 @@
                 "extension": ".psexe"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -3394,7 +3789,10 @@
             ".ZIP"
           ],
           "entry": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "DuckStation (Legacy) (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -3416,7 +3814,17 @@
           "installers": null,
           "boots": null,
           "opens": null,
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -3507,7 +3915,10 @@
             ".ZIP"
           ],
           "entry": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "DuckStation (Legacy) (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -3529,7 +3940,17 @@
           "installers": null,
           "boots": null,
           "opens": null,
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -3620,7 +4041,10 @@
             ".ZIP"
           ],
           "entry": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "DuckStation (Legacy) (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -3650,7 +4074,17 @@
                 "extension": ".ccd"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -3743,7 +4177,10 @@
             ".ZIP"
           ],
           "entry": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "DuckStation (Legacy) (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -3784,7 +4221,17 @@
               "present": false
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -3875,7 +4322,10 @@
             ".ZIP"
           ],
           "entry": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "DuckStation (Legacy) (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -3905,7 +4355,17 @@
                 "extension": ".chd"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     }

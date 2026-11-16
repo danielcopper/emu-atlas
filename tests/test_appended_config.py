@@ -426,6 +426,11 @@ def _emudeck_gba():
     return atlas.EmuDeck(HOME, machine)
 
 
+# Asked by ES-DE's pair, which every handle names the Game Boy Advance by: a bare RetroArch's own
+# name for it is the core's database name (#784 D10).
+GBA = ("esde", "gba")
+
+
 def _bare_gba():
     cores = f"{HOME}/.var/app/org.libretro.RetroArch/config/retroarch/cores"
     machine = FixtureMachine(
@@ -433,7 +438,9 @@ def _bare_gba():
             f"{HOME}/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": (
                 f'savefile_directory = "{HOME}/saves"\nlibretro_directory = "{cores}"\nlibretro_info_path = "{cores}"\n'
             ),
-            f"{cores}/mgba_libretro.info": 'corename = "mGBA"\nsystemname = "Game Boy Advance"\n',
+            f"{cores}/mgba_libretro.info": (
+                'corename = "mGBA"\nsystemname = "Game Boy Advance"\ndatabase = "Nintendo - Game Boy Advance"\n'
+            ),
             REDIRECT: LAUNCHER_FILE,
         },
         dirs=[f"{HOME}/saves", *LAUNCHER_DIRS],
@@ -445,13 +452,13 @@ def _bare_gba():
 @pytest.mark.parametrize("handle", [_retrodeck_gba, _emudeck_gba, _bare_gba], ids=["retrodeck", "emudeck", "bare"])
 class TestALibretroEntryReadsTheAppendedFiles:
     def test_the_save_lands_where_the_appended_file_puts_it(self, handle):
-        [entry] = handle().emulators_for("gba").entries
+        [entry] = handle().emulators_for(GBA).entries
         placement = entry.savefile_location(content_path="/roms/gba/Game.gba", appendconfig=[REDIRECT])
         assert isinstance(placement, atlas.SavefilePlacement)
         assert placement.dir == f"{HOME}/launcher/saves"
 
     def test_the_states_land_where_the_appended_file_puts_them(self, handle):
-        [entry] = handle().emulators_for("gba").entries
+        [entry] = handle().emulators_for(GBA).entries
         placement = entry.savestate_location(content_path="/roms/gba/Game.gba", appendconfig=[REDIRECT])
         assert isinstance(placement, atlas.SavestatePlacement)
         assert placement.dir == f"{HOME}/launcher/states"

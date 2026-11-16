@@ -261,6 +261,10 @@ class EmulatorSpec:
     emulator: str | None = None
     declared_index: int | None = None
     selection: str | None = None
+    # The source whose keys *system* is spelled in: the catalogue's own name is
+    # ES-DE's on every ES-DE frontend, RetroDECK's for a system only RetroDECK's
+    # catalogue names, and a derived entry's is its core's (#784 D47).
+    catalogue_source: str = "esde"
 
     def __post_init__(self) -> None:
         if self.kind not in CATALOGUE_KINDS:

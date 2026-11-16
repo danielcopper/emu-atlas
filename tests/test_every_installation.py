@@ -144,7 +144,7 @@ class TestItDelegates:
     def test_the_handles_state_their_own_catalogue_refusals(self):
         # The two arrangements refuse for different reasons, and the aggregate
         # keeps both — collapsing them would be exactly the merge it must not do.
-        answers = _every(_coexistence()).emulators_for("n64")
+        answers = _every(_coexistence()).emulators_for(("libretro", "Nintendo - Nintendo 64"))
         assert [a.answer.caveats[0].code for a in answers] == [
             "emulator-catalogue-unreadable",
             "emulator-catalogue-unavailable",
@@ -163,14 +163,16 @@ class TestItDelegates:
                     f'savefile_directory = "~/ra-saves"\n{FLAT_LAYOUT}'
                     f'libretro_directory = "{cores_dir}"\nlibretro_info_path = "{info_dir}"\n'
                 ),
-                f"{info_dir}/mgba_libretro.info": 'corename = "mGBA"\nsystemname = "Game Boy Advance"\n',
+                f"{info_dir}/mgba_libretro.info": (
+                    'corename = "mGBA"\nsystemname = "Game Boy Advance"\ndatabase = "Nintendo - Game Boy Advance"\n'
+                ),
             },
             cores={f"{cores_dir}/mgba_libretro.so": {"library_name": "mGBA"}},
             dirs=COEXISTENCE_DIRS,
         )
         handles = _handles(machine)
-        asked = [a.answer for a in atlas.EveryInstallation(handles).launchable("gba", ROM, label="VBA-M")]
-        direct = [handle.launchable("gba", ROM, label="VBA-M") for handle in handles]
+        asked = [a.answer for a in atlas.EveryInstallation(handles).launchable(("esde", "gba"), ROM, label="VBA-M")]
+        direct = [handle.launchable(("esde", "gba"), ROM, label="VBA-M") for handle in handles]
         assert [launchable_contract(a) for a in asked] == [launchable_contract(a) for a in direct]
         assert atlas.CAVEAT_LAUNCH_COMMAND_LABEL_UNKNOWN in [c.code for c in asked[-1].caveats]
 

@@ -1,10 +1,11 @@
 # Firmware system assignment — the standing grind list
 
 Which declared firmware files still _inherit_ their system from the core's own `systemname` instead of carrying a
-per-file source. The vocabulary switch (map version 2) made every filing an ES-DE id or a declared own spelling; what it
-deliberately did not do is invent per-file knowledge. A file on this list is filed correctly _as far as the machine
-says_ — and the answer marks it (`system-assignment-derived`, or `core-without-systemname` where nothing says anything)
-until an entry here is worked off.
+per-file source. The vocabulary switch (map version 2) filed under ES-DE ids where ES-DE named the system, and under
+atlas's own spellings or a slug where it did not; map version 3 files the systems no ES-DE build names under another
+source's key (#784 D20); what neither did is invent per-file knowledge. A file on this list is filed correctly _as far
+as the machine says_ — and the answer marks it (`system-assignment-derived`, or `core-without-systemname` where nothing
+says anything) until an entry here is worked off.
 
 Snapshot: the `.info` set RetroDECK 0.10.9b deploys (`components/retroarch/rd_extras/cores/`: 292 `.info` files, minus
 the two shipped template stems `00_example_libretro` and `puzzlescript_libretro` = 290 read), re-read 2026-09-17 — **167
@@ -22,8 +23,9 @@ by re-running the derivation over that directory (`atlas.firmware._declarations_
    generous multi-system reading is deliberate;
 3. for `_unknown` cores, any on-machine source for a systemname at all.
 
-An entry whose file belongs to a system **without a catalogue id** (Videoton TVC below) cannot move to an id — it needs
-a `SYSTEMS_WITHOUT_CATALOGUE_ID` ruling first, like `bk`/`ti83`/`ep128`.
+An entry whose file belongs to a system **no ES-DE build names** (Videoton TVC below) cannot move to an ES-DE id: the
+per-file override table names ES-DE systems only, so such a file waits until a rule can name another source's pair, the
+way the systemname map names the BK, the TI-83 and the Enterprise.
 
 ## No systemname at all (`_unknown`, `core-without-systemname`)
 
@@ -31,8 +33,9 @@ a `SYSTEMS_WITHOUT_CATALOGUE_ID` ruling first, like `bk`/`ti83`/`ep128`.
   `nds7.bin`, `nds9.bin`, `firmware.bin`); the descs name GB/GBC/NDS, so most are cheap override candidates — the
   generic `firmware.bin` is not (deliberately unclaimed, see the override table's note). Its `gba_bios.bin` and the two
   covered Game Boy Color boot ROMs are filed by rule already.
-- **galaksija** — `galaksija/CHRGEN.BIN`, `ROM1.BIN`, `ROM2.BIN`. The machine (Galaksija) has no catalogue id either;
-  needs the own-spelling ruling before any filing.
+- **galaksija** — `galaksija/CHRGEN.BIN`, `ROM1.BIN`, `ROM2.BIN`. No ES-DE build names the Galaksija; the core is named
+  by RomM's `galaksija` (`atlas/data/core_systems.json`), but with no systemname its files stay `_unknown` until a
+  per-file rule names a pair for them.
 
 ## Multi-system cores, one filing per file still to establish
 
@@ -41,8 +44,8 @@ Per core: the systemname everything inherits from, and the declared files (paths
 - **atari800** (`Atari 8-bit Family`) → `atari800`: `ATARIBAS.ROM`, `ATARIOSA.ROM`, `ATARIOSB.ROM`, `ATARIXL.ROM`,
   `BB01R4_OS.ROM`, `XEGAME.ROM`. The 5200 BIOS already has its override; these six are 400/800/XL/XE/XEGS material —
   candidates for `atari800`/`atarixe` per desc.
-- **bk** (`BK-0010/BK-0011(M)`) → `bk` (own spelling): the eight `bk/*.ROM` dumps. Model variants of one machine; a
-  per-file split (BK-0010 vs 0011M) only matters if the family ever gets ids.
+- **bk** (`BK-0010/BK-0011(M)`) → libretro `BK-0010/BK-0011`: the eight `bk/*.ROM` dumps. Model variants of one machine;
+  a per-file split (BK-0010 vs 0011M) only matters if the family ever gets ids.
 - **bluemsx** (`MSX/SVI/ColecoVision/SG-1000`) → `msx`: `Databases/msxromdb.xml`, `Machines/Shared Roms/MSX.rom`
   (folder-shaped declarations).
 - **desmume**, **desmume2015**, **melonds**, **melondsds**, **noods** (`Nintendo DS`) → `nds`: `firmware.bin` and
@@ -52,10 +55,10 @@ Per core: the systemname everything inherits from, and the declared files (paths
   name is the same DSi-specific class as the `dsi_*` rows already ruled — so it meets the admission criterion and is the
   next cheap row, in a change of its own rather than this one.
 - **dolphin** (`GameCube / Wii`) → `gc`: `dolphin-emu/Sys/codehandler.bin` (one file serving both systems).
-- **ep128emu_core** (`128`) → `ep128` (own spelling): 22 `ep128emu/roms/*` files. The Enterprise 64/128 rows are home;
-  the rest inherit wrongly and their descs say so — `cpc464.rom`/`cpc664.rom`/`cpc6128.rom`/`cpc_amsdos.rom` (Amstrad
-  CPC → `amstradcpc`), `zx128.rom`/`zx48.rom` (ZX Spectrum → `zxspectrum`), `tvc22_sys.rom`/`tvc22_ext.rom`/
-  `tvcfileio.rom`/`tvc_dos12d.rom` (Videoton TVC → **no catalogue id exists**).
+- **ep128emu_core** (`128`) → libretro `Enterprise - 128`: 22 `ep128emu/roms/*` files. The Enterprise 64/128 rows are
+  home; the rest inherit wrongly and their descs say so — `cpc464.rom`/`cpc664.rom`/`cpc6128.rom`/`cpc_amsdos.rom`
+  (Amstrad CPC → `amstradcpc`), `zx128.rom`/`zx48.rom` (ZX Spectrum → `zxspectrum`), `tvc22_sys.rom`/`tvc22_ext.rom`/
+  `tvcfileio.rom`/`tvc_dos12d.rom` (Videoton TVC → **no ES-DE name exists**).
 - **fbneo_cps12** [info-only] (`CP System I/II`) → `cps`: `fbneo/hiscore.dat`.
 - **fceumm** (`Nintendo Entertainment System`) → `nes`: `nes.pal`, `gamegenie.nes` (multi-system by database: NES + FDS;
   the FDS BIOS override already exists, these two are NES-side).

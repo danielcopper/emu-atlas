@@ -96,7 +96,10 @@
             ".MDS"
           ],
           "entry": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "SwanStation",
             "kind": "libretro",
             "core_so": "swanstation_libretro.so",
@@ -138,7 +141,17 @@
               "present": false
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -235,7 +248,10 @@
             ".MDS"
           ],
           "entry": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "Beetle PSX HW",
             "kind": "libretro",
             "core_so": "mednafen_psx_hw_libretro.so",
@@ -277,7 +293,17 @@
               "present": false
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -375,7 +401,10 @@
             ".MDS"
           ],
           "entry": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "SwanStation",
             "kind": "libretro",
             "core_so": "swanstation_libretro.so",
@@ -435,7 +464,17 @@
               "present": false
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -534,7 +573,10 @@
             ".MDS"
           ],
           "entry": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "Beetle PSX HW",
             "kind": "libretro",
             "core_so": "mednafen_psx_hw_libretro.so",
@@ -594,7 +636,17 @@
               "present": false
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -688,7 +740,10 @@
             ".MDS"
           ],
           "entry": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "Beetle PSX",
             "kind": "libretro",
             "core_so": "mednafen_psx_libretro.so",
@@ -735,7 +790,17 @@
                 "effect": "stops"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -828,7 +893,10 @@
             ".MDS"
           ],
           "entry": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "SwanStation",
             "kind": "libretro",
             "core_so": "swanstation_libretro.so",
@@ -870,7 +938,17 @@
               "present": false
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -966,7 +1044,10 @@
             ".MDS"
           ],
           "entry": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "SwanStation",
             "kind": "libretro",
             "core_so": "swanstation_libretro.so",
@@ -1008,7 +1089,17 @@
                 "effect": "stops"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -1105,7 +1196,10 @@
             ".MDS"
           ],
           "entry": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "Beetle PSX",
             "kind": "libretro",
             "core_so": "mednafen_psx_libretro.so",
@@ -1155,7 +1249,17 @@
                 "file": "/mnt/sd/retrodeck/roms/psx/Game/Game (Track 2).wav"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -1252,7 +1356,10 @@
             ".MDS"
           ],
           "entry": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "Beetle PSX",
             "kind": "libretro",
             "core_so": "mednafen_psx_libretro.so",
@@ -1300,7 +1407,17 @@
                 "effect": "stops"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -1392,7 +1509,10 @@
             ".M3U"
           ],
           "entry": {
-            "system": "saturn",
+            "system": {
+              "source": "esde",
+              "key": "saturn"
+            },
             "label": "Beetle Saturn",
             "kind": "libretro",
             "core_so": "mednafen_saturn_libretro.so",
@@ -1434,7 +1554,17 @@
               "present": false
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "saturn"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -1526,7 +1656,10 @@
             ".M3U"
           ],
           "entry": {
-            "system": "saturn",
+            "system": {
+              "source": "esde",
+              "key": "saturn"
+            },
             "label": "Beetle Saturn",
             "kind": "libretro",
             "core_so": "mednafen_saturn_libretro.so",
@@ -1572,7 +1705,17 @@
                 "effect": "goes-on"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "saturn"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -1664,7 +1807,10 @@
             ".M3U"
           ],
           "entry": {
-            "system": "pcenginecd",
+            "system": {
+              "source": "esde",
+              "key": "pcenginecd"
+            },
             "label": "Beetle PCE",
             "kind": "libretro",
             "core_so": "mednafen_pce_libretro.so",
@@ -1706,7 +1852,17 @@
               "present": false
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "pcenginecd"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -1803,7 +1959,10 @@
             ".MDS"
           ],
           "entry": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "Beetle PSX",
             "kind": "libretro",
             "core_so": "mednafen_psx_libretro.so",
@@ -1847,7 +2006,17 @@
                 "file": "/mnt/sd/retrodeck/roms/psx/Game/Game.ccd"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -1946,7 +2115,10 @@
             ".MDS"
           ],
           "entry": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "SwanStation",
             "kind": "libretro",
             "core_so": "swanstation_libretro.so",
@@ -1988,7 +2160,17 @@
               "present": true
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -2085,7 +2267,10 @@
             ".MDS"
           ],
           "entry": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "DuckStation (Legacy) (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -2133,7 +2318,17 @@
               "present": false
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -2234,7 +2429,10 @@
             ".MDS"
           ],
           "entry": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "DuckStation (Legacy) (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -2296,7 +2494,17 @@
                 "file": "/mnt/sd/retrodeck/roms/psx/Game/Game.ppf"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -2395,7 +2603,10 @@
             ".MDS"
           ],
           "entry": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "DuckStation (Legacy) (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -2457,7 +2668,17 @@
                 "file": "/mnt/sd/retrodeck/roms/psx/Game/Game.ppf"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -2566,7 +2787,10 @@
             ".MDS"
           ],
           "entry": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "DuckStation (Legacy) (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -2670,7 +2894,17 @@
                 "file": "/mnt/sd/retrodeck/roms/psx/Game/Disc2.ppf"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -2771,7 +3005,10 @@
             ".MDS"
           ],
           "entry": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "DuckStation (Legacy) (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -2819,7 +3056,17 @@
               "present": false
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -2919,7 +3166,10 @@
             ".MDS"
           ],
           "entry": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "DuckStation (Legacy) (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -2981,7 +3231,17 @@
                 "setting": "[CDROM] LoadImagePatches"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -3082,7 +3342,10 @@
             ".MDS"
           ],
           "entry": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "DuckStation (Legacy) (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -3151,7 +3414,17 @@
                 "file": "/mnt/sd/retrodeck/roms/psx/Game/Game.ppf"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -3254,7 +3527,10 @@
             ".MDS"
           ],
           "entry": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "DuckStation (Legacy) (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -3323,7 +3599,17 @@
                 "file": "/mnt/sd/retrodeck/roms/psx/Game/Game.ppf"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -3423,7 +3709,10 @@
             ".MDS"
           ],
           "entry": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "SwanStation",
             "kind": "libretro",
             "core_so": "swanstation_libretro.so",
@@ -3471,7 +3760,17 @@
               "present": true
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -3568,7 +3867,10 @@
             ".MDS"
           ],
           "entry": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "SwanStation",
             "kind": "libretro",
             "core_so": "swanstation_libretro.so",
@@ -3624,7 +3926,17 @@
                 "setting": "swanstation_CDROM_LoadImagePatches"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -3724,7 +4036,10 @@
             ".MDS"
           ],
           "entry": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "SwanStation",
             "kind": "libretro",
             "core_so": "swanstation_libretro.so",
@@ -3780,7 +4095,17 @@
                 "setting": "swanstation_CDROM_LoadImagePatches"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -3878,7 +4203,10 @@
             ".MDS"
           ],
           "entry": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "SwanStation",
             "kind": "libretro",
             "core_so": "swanstation_libretro.so",
@@ -3934,7 +4262,17 @@
                 "setting": "swanstation_CDROM_LoadImagePatches"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -4031,7 +4369,10 @@
             ".MDS"
           ],
           "entry": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "DuckStation (Fullscreen)",
             "kind": "standalone",
             "core_so": null,
@@ -4062,7 +4403,17 @@
                 "extension": ".cue"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -4152,7 +4503,10 @@
             ".MDS"
           ],
           "entry": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "SwanStation",
             "kind": "libretro",
             "core_so": "swanstation_libretro.so",
@@ -4188,7 +4542,17 @@
                 "effect": "stops"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -4285,7 +4649,10 @@
             ".MDS"
           ],
           "entry": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "PCSX ReARMed",
             "kind": "libretro",
             "core_so": "pcsx_rearmed_libretro.so",
@@ -4308,7 +4675,17 @@
           "installers": null,
           "boots": null,
           "opens": null,
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -4402,7 +4779,10 @@
             ".MDS"
           ],
           "entry": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "Beetle PSX",
             "kind": "libretro",
             "core_so": "mednafen_psx_libretro.so",
@@ -4445,7 +4825,17 @@
                 "effect": "stops"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -4538,7 +4928,10 @@
             ".MDS"
           ],
           "entry": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "SwanStation",
             "kind": "libretro",
             "core_so": "swanstation_libretro.so",
@@ -4580,7 +4973,17 @@
               "present": false
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -4677,7 +5080,10 @@
             ".MDS"
           ],
           "entry": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "SwanStation",
             "kind": "libretro",
             "core_so": "swanstation_libretro.so",
@@ -4734,7 +5140,17 @@
                 "effect": "goes-on"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -4823,7 +5239,10 @@
             ".MDS"
           ],
           "entry": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "SwanStation",
             "kind": "libretro",
             "core_so": "swanstation_libretro.so",
@@ -4854,7 +5273,17 @@
                 "file": "/mnt/sd/retrodeck/roms/psx/Game/Game.cue"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -4947,7 +5376,10 @@
             ".MDS"
           ],
           "entry": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "SwanStation",
             "kind": "libretro",
             "core_so": "swanstation_libretro.so",
@@ -4983,7 +5415,17 @@
                 "effect": "stops"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -5076,7 +5518,10 @@
             ".MDS"
           ],
           "entry": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "SwanStation",
             "kind": "libretro",
             "core_so": "swanstation_libretro.so",
@@ -5114,7 +5559,17 @@
                 "file": "/mnt/sd/retrodeck/roms/psx/Game/Game.chd"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -5205,7 +5660,10 @@
             ".MDS"
           ],
           "entry": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "SwanStation",
             "kind": "libretro",
             "core_so": "swanstation_libretro.so",
@@ -5246,7 +5704,17 @@
                 "effect": "stops"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -5338,7 +5806,10 @@
             ".MDS"
           ],
           "entry": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "SwanStation",
             "kind": "libretro",
             "core_so": "swanstation_libretro.so",
@@ -5369,7 +5840,17 @@
                 "file": "/mnt/sd/retrodeck/roms/psx/Game/Game.cue"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -5476,7 +5957,10 @@
             ".MDS"
           ],
           "entry": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "SwanStation",
             "kind": "libretro",
             "core_so": "swanstation_libretro.so",
@@ -5604,7 +6088,17 @@
                 "file": "/mnt/sd/retrodeck/roms/psx/Game/Level 16.m3u"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -5700,7 +6194,10 @@
             ".MDS"
           ],
           "entry": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "Beetle PSX HW",
             "kind": "libretro",
             "core_so": "mednafen_psx_hw_libretro.so",
@@ -5763,7 +6260,17 @@
                 "effect": "goes-on"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -5855,7 +6362,10 @@
             ".MDS"
           ],
           "entry": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "Beetle PSX HW",
             "kind": "libretro",
             "core_so": "mednafen_psx_hw_libretro.so",
@@ -5916,7 +6426,17 @@
                 "effect": "stops"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -6014,7 +6534,10 @@
             ".MDS"
           ],
           "entry": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "Beetle PSX",
             "kind": "libretro",
             "core_so": "mednafen_psx_libretro.so",
@@ -6052,7 +6575,17 @@
                 "file": "/mnt/sd/retrodeck/roms/psx/Game/Game.toc"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -6141,7 +6674,10 @@
             ".M3U"
           ],
           "entry": {
-            "system": "pcfx",
+            "system": {
+              "source": "esde",
+              "key": "pcfx"
+            },
             "label": "Beetle PC-FX",
             "kind": "libretro",
             "core_so": "mednafen_pcfx_libretro.so",
@@ -6177,7 +6713,17 @@
               "present": false
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "pcfx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -6268,7 +6814,10 @@
             ".M3U"
           ],
           "entry": {
-            "system": "pcenginecd",
+            "system": {
+              "source": "esde",
+              "key": "pcenginecd"
+            },
             "label": "Beetle PCE FAST",
             "kind": "libretro",
             "core_so": "mednafen_pce_fast_libretro.so",
@@ -6319,7 +6868,17 @@
                 "effect": "stops"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "pcenginecd"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -6409,7 +6968,10 @@
             ".M3U"
           ],
           "entry": {
-            "system": "pcenginecd",
+            "system": {
+              "source": "esde",
+              "key": "pcenginecd"
+            },
             "label": "Beetle PCE",
             "kind": "libretro",
             "core_so": "mednafen_pce_libretro.so",
@@ -6460,7 +7022,17 @@
                 "effect": "stops"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "pcenginecd"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -6550,7 +7122,10 @@
             ".M3U"
           ],
           "entry": {
-            "system": "pcenginecd",
+            "system": {
+              "source": "esde",
+              "key": "pcenginecd"
+            },
             "label": "Beetle PCE",
             "kind": "libretro",
             "core_so": "mednafen_pce_libretro.so",
@@ -6615,7 +7190,17 @@
                 "effect": "stops"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "pcenginecd"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -6707,7 +7292,10 @@
             ".MDS"
           ],
           "entry": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "SwanStation",
             "kind": "libretro",
             "core_so": "swanstation_libretro.so",
@@ -6770,7 +7358,17 @@
                 "extension": ".cue"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -6839,7 +7437,10 @@
             ".M3U"
           ],
           "entry": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "DuckStation (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -6897,7 +7498,8 @@
             {
               "code": "emulator-catalogue-sealed",
               "data": {
-                "system": "psx"
+                "source": "esde",
+                "key": "psx"
               }
             },
             {
@@ -6907,7 +7509,17 @@
                 "file": "/home/deck/Emulation/roms/psx/Game/Game.ppf"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -6976,7 +7588,10 @@
             ".M3U"
           ],
           "entry": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "SwanStation",
             "kind": "libretro",
             "core_so": "swanstation_libretro.so",
@@ -7028,10 +7643,21 @@
             {
               "code": "emulator-catalogue-sealed",
               "data": {
-                "system": "psx"
+                "source": "esde",
+                "key": "psx"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -7108,7 +7734,10 @@
             ".M3U"
           ],
           "entry": {
-            "system": "dreamcast",
+            "system": {
+              "source": "esde",
+              "key": "dreamcast"
+            },
             "label": "Flycast",
             "kind": "libretro",
             "core_so": "flycast_libretro.so",
@@ -7150,7 +7779,17 @@
               "present": true
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "dreamcast"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -7228,7 +7867,10 @@
             ".M3U"
           ],
           "entry": {
-            "system": "dreamcast",
+            "system": {
+              "source": "esde",
+              "key": "dreamcast"
+            },
             "label": "Flycast",
             "kind": "libretro",
             "core_so": "flycast_libretro.so",
@@ -7276,7 +7918,8 @@
             {
               "code": "frontend-name-unscanned",
               "data": {
-                "system": "dreamcast",
+                "source": "esde",
+                "key": "dreamcast",
                 "kind": "directory",
                 "extension": ".",
                 "names": [
@@ -7294,7 +7937,17 @@
                 "reason": "directory-without-token"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "dreamcast"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -7368,7 +8021,10 @@
             ".M3U"
           ],
           "entry": {
-            "system": "dreamcast",
+            "system": {
+              "source": "esde",
+              "key": "dreamcast"
+            },
             "label": "Flycast",
             "kind": "libretro",
             "core_so": "flycast_libretro.so",
@@ -7413,7 +8069,17 @@
                 "effect": "stops"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "dreamcast"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -7487,7 +8153,10 @@
             ".M3U"
           ],
           "entry": {
-            "system": "dreamcast",
+            "system": {
+              "source": "esde",
+              "key": "dreamcast"
+            },
             "label": "Flycast",
             "kind": "libretro",
             "core_so": "flycast_libretro.so",
@@ -7523,7 +8192,17 @@
               "present": true
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "dreamcast"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -7600,7 +8279,10 @@
             ".M3U"
           ],
           "entry": {
-            "system": "dreamcast",
+            "system": {
+              "source": "esde",
+              "key": "dreamcast"
+            },
             "label": "Flycast",
             "kind": "libretro",
             "core_so": "flycast_libretro.so",
@@ -7642,7 +8324,17 @@
               "present": true
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "dreamcast"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -7730,7 +8422,10 @@
             ".M3U"
           ],
           "entry": {
-            "system": "dreamcast",
+            "system": {
+              "source": "esde",
+              "key": "dreamcast"
+            },
             "label": "Flycast",
             "kind": "libretro",
             "core_so": "flycast_libretro.so",
@@ -7802,7 +8497,17 @@
               "present": true
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "dreamcast"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -7876,7 +8581,10 @@
             ".M3U"
           ],
           "entry": {
-            "system": "segacd",
+            "system": {
+              "source": "esde",
+              "key": "segacd"
+            },
             "label": "Genesis Plus GX",
             "kind": "libretro",
             "core_so": "genesis_plus_gx_libretro.so",
@@ -7918,7 +8626,17 @@
               "present": false
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "segacd"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -7989,7 +8707,10 @@
             ".M3U"
           ],
           "entry": {
-            "system": "segacd",
+            "system": {
+              "source": "esde",
+              "key": "segacd"
+            },
             "label": "Genesis Plus GX",
             "kind": "libretro",
             "core_so": "genesis_plus_gx_libretro.so",
@@ -8030,7 +8751,17 @@
                 "effect": "stops"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "segacd"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -8104,7 +8835,10 @@
             ".M3U"
           ],
           "entry": {
-            "system": "segacd",
+            "system": {
+              "source": "esde",
+              "key": "segacd"
+            },
             "label": "Genesis Plus GX",
             "kind": "libretro",
             "core_so": "genesis_plus_gx_libretro.so",
@@ -8138,7 +8872,17 @@
                 "effect": "stops"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "segacd"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -8212,7 +8956,10 @@
             ".M3U"
           ],
           "entry": {
-            "system": "segacd",
+            "system": {
+              "source": "esde",
+              "key": "segacd"
+            },
             "label": "Genesis Plus GX",
             "kind": "libretro",
             "core_so": "genesis_plus_gx_libretro.so",
@@ -8250,7 +8997,17 @@
                 "file": "/mnt/sd/retrodeck/roms/segacd/Game/Game (Track 01).bin"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "segacd"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -8320,7 +9077,10 @@
             ".M3U"
           ],
           "entry": {
-            "system": "segacd",
+            "system": {
+              "source": "esde",
+              "key": "segacd"
+            },
             "label": "Genesis Plus GX",
             "kind": "libretro",
             "core_so": "genesis_plus_gx_libretro.so",
@@ -8358,7 +9118,17 @@
                 "file": "/mnt/sd/retrodeck/roms/segacd/Game/Game.bin"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "segacd"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -8461,7 +9231,10 @@
             ".M3U"
           ],
           "entry": {
-            "system": "segacd",
+            "system": {
+              "source": "esde",
+              "key": "segacd"
+            },
             "label": "Genesis Plus GX",
             "kind": "libretro",
             "core_so": "genesis_plus_gx_libretro.so",
@@ -8590,7 +9363,17 @@
                 "limit": "4"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "segacd"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -8665,7 +9448,10 @@
             ".M3U"
           ],
           "entry": {
-            "system": "segacd",
+            "system": {
+              "source": "esde",
+              "key": "segacd"
+            },
             "label": "Genesis Plus GX",
             "kind": "libretro",
             "core_so": "genesis_plus_gx_libretro.so",
@@ -8727,7 +9513,17 @@
                 "file": "/mnt/sd/retrodeck/roms/segacd/Game/"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "segacd"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -8798,7 +9594,10 @@
             ".M3U"
           ],
           "entry": {
-            "system": "segacd",
+            "system": {
+              "source": "esde",
+              "key": "segacd"
+            },
             "label": "Genesis Plus GX",
             "kind": "libretro",
             "core_so": "genesis_plus_gx_libretro.so",
@@ -8839,7 +9638,17 @@
                 "effect": "stops"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "segacd"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -8910,7 +9719,10 @@
             ".M3U"
           ],
           "entry": {
-            "system": "segacd",
+            "system": {
+              "source": "esde",
+              "key": "segacd"
+            },
             "label": "Genesis Plus GX",
             "kind": "libretro",
             "core_so": "genesis_plus_gx_libretro.so",
@@ -8942,7 +9754,17 @@
                 "effect": "unestablished"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "segacd"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -9017,7 +9839,10 @@
             ".M3U"
           ],
           "entry": {
-            "system": "segacd",
+            "system": {
+              "source": "esde",
+              "key": "segacd"
+            },
             "label": "Genesis Plus GX",
             "kind": "libretro",
             "core_so": "genesis_plus_gx_libretro.so",
@@ -9064,7 +9889,17 @@
                 "effect": "stops"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "segacd"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -9139,7 +9974,10 @@
             ".M3U"
           ],
           "entry": {
-            "system": "segacd",
+            "system": {
+              "source": "esde",
+              "key": "segacd"
+            },
             "label": "PicoDrive",
             "kind": "libretro",
             "core_so": "picodrive_libretro.so",
@@ -9162,7 +10000,17 @@
           "installers": null,
           "boots": null,
           "opens": null,
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "segacd"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     }

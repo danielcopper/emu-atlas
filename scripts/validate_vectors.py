@@ -100,7 +100,10 @@ _ENTRY_QUERY_FIELDS = frozenset({"installation", "system", "label", "content_pat
 APPENDCONFIG = "appendconfig"
 _LAUNCH_QUERY_FIELDS = frozenset({"cwd", APPENDCONFIG})
 QUERY_FAMILY_FIELDS: dict[str, frozenset[str]] = {
-    "savefile_query": _PLACEMENT_QUERY_FIELDS | _LAUNCH_QUERY_FIELDS,
+    # The save question alone takes the content's system: it keys a core's
+    # recorded file set (#784 D44), and every other placement answers the same
+    # with or without one.
+    "savefile_query": _PLACEMENT_QUERY_FIELDS | _LAUNCH_QUERY_FIELDS | {"system"},
     "savestate_query": _PLACEMENT_QUERY_FIELDS | _LAUNCH_QUERY_FIELDS,
     "screenshot_query": _PLACEMENT_QUERY_FIELDS,
     "texture_query": _PLACEMENT_QUERY_FIELDS,
@@ -181,7 +184,7 @@ KNOWN_SAVE_MEMORIES = {
 # The regions a part is kept apart for (#577 D21), mirrored from
 # atlas.save_formats.SAVE_REGIONS.
 KNOWN_SAVE_REGIONS = {"USA", "EUR", "JAP"}
-SAVE_PORTABILITY_FIELDS = {"verdict", "source", "target", "parts", "caveats"}
+SAVE_PORTABILITY_FIELDS = {"verdict", "source", "target", "parts", "caveats", "resolution"}
 SAVE_PART_FIELDS = {"memory", "slot", "region", "verdict", "source_group", "target_group", "moves", "conversion"}
 # The launchability verdicts — the vocabulary expected.launchable.verdict draws
 # from, mirrored from atlas.installations.LAUNCH_VERDICTS.
@@ -254,13 +257,25 @@ PLATFORM_PARTS_UNESTABLISHED = "platform-parts-unestablished"
 # The translation's caveats a handle answer repeats: why a pair is unknown, and that pairs meet through parts or
 # overlaps.
 PLATFORM_LIFTED_CODES = PLATFORM_UNKNOWN_PAIR_CODES | {PLATFORM_PARTS_UNESTABLISHED}
-# The columns a handle reads system names from (a match names one of their keys): ES-DE's on every
-# handle, RetroDECK's own on a RetroDECK.
-PLATFORM_CATALOGUE_COLUMNS = frozenset({"esde", "retrodeck"})
 KNOWN_PLATFORM_RELATIONS = {"exactMatch", "broadMatch", "narrowMatch", "relatedMatch"}
 KNOWN_PLATFORM_PAIR_STATUSES = {"known", "unknown"}
 KNOWN_PLATFORM_INTERSECTION_STATUSES = {"agreed", "conflict", "unknown"}
 KNOWN_PLATFORM_STATUSES = {"declared", "disabled", "absent"}
+# A system an answer names, as a pair (#784 D47), and how the system a question
+# was asked about was resolved (D44, D49): the tiers that may name it — related
+# systems never do — and the codes one of which says why none was named.
+SYSTEM_PAIR_FIELDS = {"source", "key"}
+RESOLUTION_FIELDS = {"status", "system", "relation", "candidates", "translation"}
+RESOLUTION_RELATIONS = {"exactMatch", "broadMatch", "narrowMatch"}
+# How the resolution ended (D52), mirroring atlas.platforms' SYSTEM_RESOLUTION_STATUSES, each unresolved status
+# with the caveat code that states its reason beside it.
+RESOLUTION_STATUS_REASONS = {
+    "resolved": None,
+    "unknown": "system-unknown",
+    "ambiguous": "system-ambiguous",
+    "conflict": "system-pairs-conflict",
+}
+UNRESOLVED_SYSTEM_CODES = {code for code in RESOLUTION_STATUS_REASONS.values() if code is not None}
 KNOWN_PLATFORM_TAG_SOURCES = {"catalogue", "vocabulary"}
 # The roots question (issue #612) is answered by two arrangements alone. Its
 # entries come in one fixed order, and the vocabularies mirror
@@ -344,7 +359,7 @@ KNOWN_FILE_MEMBERSHIP_LIMITS = {"other-games-loaded", "maker-code-not-compared"}
 # them at once, and a firmware core carries the position of the catalogue row it was
 # built from under the same name.
 DECLARED_INDEX = "declared_index"
-FIRMWARE_FIELDS = {"root", "hash_checked", "cores", "unclaimed", "caveats"}
+FIRMWARE_FIELDS = {"root", "hash_checked", "cores", "unclaimed", "caveats", "resolution"}
 FIRMWARE_CORE_FIELDS = {
     "core_so",
     "emulator",
@@ -436,7 +451,11 @@ KNOWN_DECLARATION_STATES = {"read", "unreadable", "absent", "unsupported", "pack
 # by whichever side an inequality left it on.
 JUDGED_DECLARATIONS = {"read", "packaged"}
 UNJUDGED_DECLARATIONS = {"unreadable", "absent", "unsupported"}
-KNOWN_SYSTEM_SOURCES = {"override", "systemname", "slug", "none", "card"}
+KNOWN_SYSTEM_SOURCES = {"override", "systemname", "core", "none", "card"}
+# The sentinel a requirement's system carries where nothing names the core's
+# system: a statement about the core, not a system, so it is the one bare
+# string a system field may hold (#784 D49).
+UNKNOWN_SYSTEM = "_unknown"
 # What is recorded about the SYSTEM behind a core, and therefore world
 # knowledge rather than a reading of the fixture. `null` is the fifth state
 # beside these four, and it means nothing is recorded — never "nothing is
@@ -655,6 +674,9 @@ KNOWN_CAVEAT_CODES = {
     "file-names-unestablished",
     "file-membership-by-header",
     "file-set-across-systems",
+    "save-record-ambiguous",
+    "save-record-partial",
+    "save-record-unrecorded",
     "file-set-claims-merged",
     "file-set-directories-unread",
     "file-set-spans-roots",
@@ -715,7 +737,8 @@ KNOWN_CAVEAT_CODES = {
     "firmware-installer-download",
     "firmware-content-unidentified",
     "system-unknown",
-    "system-not-in-catalogue",
+    "system-ambiguous",
+    "system-pairs-conflict",
     "rom-path-undeclared",
     "rom-path-unresolved",
     "frontend-settings-unreadable",
@@ -844,11 +867,15 @@ KNOWN_CAVEAT_CODES = {
 # different thing to a client — nothing declares firmware, nothing declared
 # became a requirement, what is declared could not be established, the
 # identifier is unknown here, the named core is absent — and none of them may
-# be read as "nothing needed".
+# be read as "nothing needed". An answer whose asked pairs named no single
+# system has no cores because no system was named, which the ambiguous and
+# conflict codes state (#784 D44).
 NOTHING_READ_CODES = {
     "no-firmware-declaration",
     "firmware-declaration-unknown",
     "system-unknown",
+    "system-ambiguous",
+    "system-pairs-conflict",
     "core-not-installed",
     "core-file-foreign",
 }
@@ -933,18 +960,22 @@ def _validate_query(name: str, query: Any, family: str = "savefile_query") -> No
     fields = QUERY_FAMILY_FIELDS[family]
     if not keys or not keys <= fields:
         fail(f"{name}: input.{family} keys must be a non-empty subset of {sorted(fields)}")
-    for key in keys:
+    for key in keys - {"system"}:
         if not isinstance(query[key], str) or not query[key]:
             fail(f"{name}: input.{family}.{key} must be a non-empty string")
+    if "system" in query:
+        _validate_system_argument(f"{name}: input.{family}.system", query["system"])
     _validate_cwd(name, family, query)
     _validate_appendconfig(name, family, query)
     _validate_handle_selector(name, family, query)
 
 
 def _validate_firmware_query_fields(name: str, query: Any) -> None:
-    for key in ("installation", "kind", "core_so", "system", "cwd", "content_path"):
+    for key in ("installation", "kind", "core_so", "cwd", "content_path"):
         if key in query and (not isinstance(query[key], str) or not query[key]):
             fail(f"{name}: input.firmware_query.{key} must be a non-empty string")
+    if "system" in query:
+        _validate_system_argument(f"{name}: input.firmware_query.system", query["system"])
     if "verify" in query and not isinstance(query["verify"], bool):
         fail(f"{name}: input.firmware_query.verify must be a boolean")
     _validate_cwd(name, "firmware_query", query)
@@ -999,7 +1030,8 @@ def _validate_entry_query(name: str, query: Any, family: str = "entry_savefile_q
         named = [key for key in ("label", "content_path", "cwd", APPENDCONFIG, "installation") if key in fields]
         optional = "/".join(f"'{field}'" for field in named)
         fail(f"{name}: input.{family} must carry 'system' plus optional {optional}")
-    for key in keys:
+    _validate_system_argument(f"{name}: input.{family}.system", query["system"])
+    for key in keys - {"system"}:
         if not isinstance(query[key], str) or not query[key]:
             fail(f"{name}: input.{family}.{key} must be a non-empty string")
     _validate_cwd(name, family, query)
@@ -1016,7 +1048,8 @@ def _validate_catalogue_query(name: str, query: Any) -> None:
             f"{name}: input.catalogue_query must carry 'system' plus optional "
             "'content_path'/'installation'"
         )
-    for key in keys:
+    _validate_system_argument(f"{name}: input.catalogue_query.system", query["system"])
+    for key in keys - {"system"}:
         if not isinstance(query[key], str) or not query[key]:
             fail(f"{name}: input.catalogue_query.{key} must be a non-empty string")
     _validate_handle_selector(name, "catalogue_query", query)
@@ -1031,8 +1064,7 @@ def _validate_rom_location_query(name: str, query: Any) -> None:
             f"{name}: input.rom_location_query must carry 'system' plus optional "
             f"{sorted(fields - {'system'})}"
         )
-    if not isinstance(query["system"], str) or not query["system"]:
-        fail(f"{name}: input.rom_location_query.system must be a non-empty string")
+    _validate_system_argument(f"{name}: input.rom_location_query.system", query["system"])
     _validate_handle_selector(name, "rom_location_query", query)
 
 
@@ -1069,7 +1101,8 @@ def _validate_launch_command_query(name: str, query: Any) -> None:
             f"{name}: input.launch_command_query must carry 'system' and 'content_path' plus "
             "optional 'label' and 'installation'"
         )
-    for key in keys:
+    _validate_system_argument(f"{name}: input.launch_command_query.system", query["system"])
+    for key in keys - {"system"}:
         if not isinstance(query[key], str) or not query[key]:
             fail(f"{name}: input.launch_command_query.{key} must be a non-empty string")
     if not query["content_path"].startswith("/"):
@@ -1088,7 +1121,8 @@ def _validate_save_portability_query(name: str, query: Any) -> None:
             f"{name}: input.save_portability_query must carry 'system', 'source' and 'target' plus "
             "optional 'content_path', 'cwd', 'appendconfig' and 'installation'"
         )
-    for key in keys:
+    _validate_system_argument(f"{name}: input.save_portability_query.system", query["system"])
+    for key in keys - {"system"}:
         if not isinstance(query[key], str) or not query[key]:
             fail(f"{name}: input.save_portability_query.{key} must be a non-empty string")
     if query["source"] == query["target"]:
@@ -1110,7 +1144,8 @@ def _validate_launchable_query(name: str, query: Any) -> None:
             f"{name}: input.launchable_query must carry 'system' and 'content_path' plus "
             "optional 'label' and 'installation'"
         )
-    for key in keys:
+    _validate_system_argument(f"{name}: input.launchable_query.system", query["system"])
+    for key in keys - {"system"}:
         if not isinstance(query[key], str) or not query[key]:
             fail(f"{name}: input.launchable_query.{key} must be a non-empty string")
     _validate_handle_selector(name, "launchable_query", query)
@@ -1145,8 +1180,7 @@ def _validate_platform_ids_query(name: str, query: Any) -> None:
         fail(
             f"{name}: input.platform_ids_query must carry 'system' plus optional 'installation'"
         )
-    if not isinstance(query["system"], str) or not query["system"]:
-        fail(f"{name}: input.platform_ids_query.system must be a non-empty string")
+    _validate_system_argument(f"{name}: input.platform_ids_query.system", query["system"])
     _validate_handle_selector(name, "platform_ids_query", query)
 
 
@@ -1182,7 +1216,9 @@ def _validate_aggregate_query(name: str, query: Any) -> None:
             f"{name}: input.aggregate_query takes no 'installation' — the aggregate asks every "
             "detected handle; use the query family of a single question to name one"
         )
-    for key in set(query):
+    if "system" in query:
+        _validate_system_argument(f"{name}: input.aggregate_query.system", query["system"])
+    for key in set(query) - {"system"}:
         if not isinstance(query[key], str) or not query[key]:
             fail(f"{name}: input.aggregate_query.{key} must be a non-empty string")
     _validate_aggregate_question(name, query)
@@ -2566,9 +2602,11 @@ def _validate_requirement_fields(
     name: str, entry: Any, fields: set[str] = FIRMWARE_REQUIREMENT_FIELDS
 ) -> None:
     _require_exact(name, entry, fields, "each firmware requirement")
-    for key in ("system", "file_name", "path", "declared"):
+    for key in ("file_name", "path", "declared"):
         if not isinstance(entry[key], str) or not entry[key]:
             fail(f"{name}: firmware requirement {key} must be a non-empty string")
+    if entry["system"] != UNKNOWN_SYSTEM:
+        _validate_system_pair(f"{name}: firmware requirement system", entry["system"])
     # core_so is null exactly for a card-declared requirement: a standalone
     # emulator has no .so, and inventing one would collide with the real
     # namespace.
@@ -2582,8 +2620,8 @@ def _validate_requirement_fields(
         fail(f"{name}: firmware requirement system_source must be one of {sorted(KNOWN_SYSTEM_SOURCES)}")
     if entry["declared_kind"] not in KNOWN_DECLARED_KINDS:
         fail(f"{name}: firmware requirement declared_kind must be one of {sorted(KNOWN_DECLARED_KINDS)}")
-    if entry["system_source"] == "none" and entry["system"] != "_unknown":
-        fail(f"{name}: with no source for the system the slug must be '_unknown'")
+    if (entry["system_source"] == "none") != (entry["system"] == UNKNOWN_SYSTEM):
+        fail(f"{name}: a requirement's system is {UNKNOWN_SYSTEM!r} exactly where nothing names it")
 
 
 def _validate_requirement_path(
@@ -3190,7 +3228,7 @@ def _needing_system_is_on_the_wire(core: Any) -> bool:
     """
     if core["system_firmware"] != "cannot-run-without-firmware":
         return True
-    return len({image["system"] for image in _declared_images(core)}) <= 1
+    return len({_system_identity(image["system"]) for image in _declared_images(core)}) <= 1
 
 
 def _declaration_verdict(core: Any) -> bool | None:
@@ -3379,8 +3417,8 @@ def _validate_unclaimed(
     if not isinstance(known_as, list) or not all(isinstance(n, str) and n for n in known_as):
         fail(f"{name}: unclaimed known_as must be a list of non-empty names")
     _validate_concerns(name, entry["concerns"])
-    if not isinstance(entry["console"], (str, type(None))) or entry["console"] == "":
-        fail(f"{name}: an unclaimed file's console must be a non-empty system id or null")
+    if entry["console"] is not None:
+        _validate_system_pair(f"{name}: an unclaimed file's console", entry["console"])
     if identity is None:
         _validate_unidentified(name, entry)
     else:
@@ -3478,9 +3516,12 @@ def _validate_firmware_coverage(name: str, firmware: Any, cores: Any) -> None:
             )
 
 
-def _validate_firmware(name: str, firmware: Any, *, for_content: bool = False) -> None:
-    """A firmware answer; *for_content* says the question named the game's content (``firmware_query.content_path``)."""
+def _validate_firmware(name: str, firmware: Any, *, for_content: bool = False, asked: bool = True) -> None:
+    """A firmware answer; *for_content* says the question named the game's content (``firmware_query.content_path``),
+    *asked* that it was the question about a system (``firmware_query.kind`` is ``system``).
+    """
     _require_exact(name, firmware, FIRMWARE_FIELDS, "firmware")
+    _validate_resolution(f"{name}: expected.firmware", firmware, asked=asked)
     root = firmware["root"]
     if root is not None and (not isinstance(root, str) or not root):
         fail(f"{name}: firmware.root must be null or a non-empty string")
@@ -3632,8 +3673,7 @@ def _validate_emulator(name: str, entry: Any) -> None:
     if selection is not None and not isinstance(selection, str):
         fail(f"{name}: emulator selection must be null or a string")
     _validate_declared_index(name, entry, "emulator")
-    if not isinstance(entry["system"], str) or not entry["system"]:
-        fail(f"{name}: emulator system must be a non-empty string")
+    _validate_system_pair(f"{name}: emulator system", entry["system"])
     _validate_caveats(name, entry["caveats"])
     _validate_launch(name, entry)
 
@@ -3705,9 +3745,10 @@ def _validate_rom_location(name: str, placement: Any, label: str = "expected.rom
     *label* is where the placement sits, for the complaint: the per-system
     question's block, or one entry of the every-system one.
     """
-    fields = {"dir", "physical_dir", "extensions", "caveats"}
+    fields = {"dir", "physical_dir", "extensions", "caveats", "resolution"}
     if not isinstance(placement, dict) or set(placement) != fields:
         fail(f"{name}: {label} must carry exactly {sorted(fields)}")
+    _validate_resolution(f"{name}: {label}", placement)
     _validate_rom_location_dirs(name, placement, label)
     if not isinstance(placement["extensions"], list) or not all(
         isinstance(e, str) and e for e in placement["extensions"]
@@ -3739,13 +3780,15 @@ def _validate_rom_locations(name: str, answer: Any) -> None:
     _require_exact(name, answer, {"placements", "caveats"}, "expected.rom_locations")
     if not isinstance(answer["placements"], list):
         fail(f"{name}: expected.rom_locations.placements must be a list")
-    systems: list[str] = []
+    systems: list[tuple[str, str]] = []
     for entry in answer["placements"]:
         _require_exact(name, entry, {"system", "placement"}, "each expected.rom_locations entry")
-        if not isinstance(entry["system"], str) or not entry["system"]:
-            fail(f"{name}: expected.rom_locations entries name their system as a non-empty string")
-        _validate_rom_location(name, entry["placement"], f"expected.rom_locations[{entry['system']}]")
-        systems.append(entry["system"])
+        _validate_system_pair(f"{name}: an expected.rom_locations entry's system", entry["system"])
+        system = (entry["system"]["source"], entry["system"]["key"])
+        _validate_rom_location(name, entry["placement"], f"expected.rom_locations[{system}]")
+        if entry["placement"]["resolution"]["system"] != entry["system"]:
+            fail(f"{name}: expected.rom_locations[{system}] is resolved to another system")
+        systems.append(system)
     if len(set(systems)) != len(systems):
         fail(f"{name}: expected.rom_locations names a system more than once")
     _validate_caveats(name, answer["caveats"])
@@ -3790,8 +3833,9 @@ def _validate_declared_indexes(name: str, entries: list[Any], *, derived: bool) 
 
 def _validate_catalogue(name: str, catalogue: Any) -> None:
     """A catalogue answer: the entries, and why there are none when there are none."""
-    if not isinstance(catalogue, dict) or set(catalogue) != {"entries", "caveats"}:
-        fail(f"{name}: expected.catalogue must be {{'entries': [...], 'caveats': [...]}}")
+    if not isinstance(catalogue, dict) or set(catalogue) != {"entries", "caveats", "resolution"}:
+        fail(f"{name}: expected.catalogue must be {{'entries': [...], 'caveats': [...], 'resolution': ...}}")
+    _validate_resolution(f"{name}: expected.catalogue", catalogue)
     if not isinstance(catalogue["entries"], list):
         fail(f"{name}: expected.catalogue.entries must be a list")
     for entry in catalogue["entries"]:
@@ -3840,12 +3884,13 @@ def _validate_lifted(where: str, answer: dict[str, Any]) -> None:
 def _validate_platform_match_reasons(name: str, answer: dict[str, Any], label: str) -> None:
     """Each match is a system the translation names, or a declared system carrying an exact platform tag of it."""
     intersection = answer["translation"]["intersection"]
-    named = {k["key"] for s in intersection if s["source"] in PLATFORM_CATALOGUE_COLUMNS for k in s["keys"]}
+    # A match is named as a pair, so its source says which column of the intersection names it.
+    named = {(s["source"], k["key"]) for s in intersection for k in s["keys"]}
     exact = {
         k["key"] for s in intersection if s["source"] == "esde-platform" for k in s["keys"] if k["relation"] == "exactMatch"
     }
     for match in answer["matches"]:
-        if match["system"] in named:
+        if _system_identity(match["system"]) in named:
             continue
         if match["status"] == "declared" and exact & set(match["platforms"]):
             continue
@@ -3998,8 +4043,7 @@ def _validate_platform_match(name: str, match: Any) -> None:
     fields = {"system", "status", "platforms", "tags_source"}
     if not isinstance(match, dict) or set(match) != fields:
         fail(f"{name}: each systems_for_platform match must carry exactly {sorted(fields)}")
-    if not isinstance(match["system"], str) or not match["system"]:
-        fail(f"{name}: a match's system must be a non-empty string")
+    _validate_system_pair(f"{name}: a match's system", match["system"])
     if match["status"] not in KNOWN_PLATFORM_STATUSES:
         fail(f"{name}: a match's status must be one of {sorted(KNOWN_PLATFORM_STATUSES)}")
     if match["tags_source"] not in KNOWN_PLATFORM_TAG_SOURCES:
@@ -4012,11 +4056,20 @@ def _validate_platform_match(name: str, match: Any) -> None:
 
 def _validate_platform_ids(name: str, answer: Any) -> None:
     """A reverse platform answer: the tags, the projected translation, and the qualifying status."""
-    fields = {"system", "status", "tags_source", "platforms", "translation", "caveats"}
+    fields = {"system", "status", "tags_source", "platforms", "translation", "caveats", "resolution"}
     if not isinstance(answer, dict) or set(answer) != fields:
         fail(f"{name}: expected.platform_ids must carry exactly {sorted(fields)}")
-    if not isinstance(answer["system"], str) or not answer["system"]:
-        fail(f"{name}: expected.platform_ids.system must be a non-empty string")
+    _validate_resolution(f"{name}: expected.platform_ids", answer)
+    if answer["resolution"]["system"] != answer["system"]:
+        fail(f"{name}: expected.platform_ids answers for another system than its resolution names")
+    if answer["system"] is None:
+        # Pairs naming no single system: the asked pairs' translation, and nothing about a system.
+        if answer["status"] is not None or answer["tags_source"] is not None or answer["platforms"]:
+            fail(f"{name}: expected.platform_ids names no system and still states its status or tags")
+        validate_translation_projection(f"{name}: expected.platform_ids.translation", answer["translation"])
+        _validate_caveats(name, answer["caveats"])
+        return
+    _validate_system_pair(f"{name}: expected.platform_ids.system", answer["system"])
     if answer["status"] not in KNOWN_PLATFORM_STATUSES:
         fail(f"{name}: expected.platform_ids.status must be one of {sorted(KNOWN_PLATFORM_STATUSES)}")
     if answer["tags_source"] not in KNOWN_PLATFORM_TAG_SOURCES:
@@ -4048,9 +4101,21 @@ def _validate_launchable(name: str, answer: Any) -> None:
     rides the three verdicts that name an entry, and is ``null`` there too
     wherever the entry's own open was not read.
     """
-    fields = {"verdict", "extension", "accepted", "entry", "alternatives", "installers", "boots", "opens", "caveats"}
+    fields = {
+        "verdict",
+        "extension",
+        "accepted",
+        "entry",
+        "alternatives",
+        "installers",
+        "boots",
+        "opens",
+        "caveats",
+        "resolution",
+    }
     if not isinstance(answer, dict) or set(answer) != fields:
         fail(f"{name}: expected.launchable must carry exactly {sorted(fields)}")
+    _validate_resolution(f"{name}: expected.launchable", answer)
     if answer["verdict"] not in KNOWN_LAUNCH_VERDICTS:
         fail(f"{name}: expected.launchable.verdict must be one of {sorted(KNOWN_LAUNCH_VERDICTS)}")
     if not isinstance(answer["extension"], str) or not answer["extension"]:
@@ -4156,7 +4221,8 @@ def _validate_launch_command(name: str, answer: Any) -> None:
     says why: a caveat of its own, or the entry's own launch reason where the
     entry is not startable.
     """
-    _require_exact(name, answer, {"entry", "command", "caveats"}, "expected.launch_command")
+    _require_exact(name, answer, {"entry", "command", "caveats", "resolution"}, "expected.launch_command")
+    _validate_resolution(f"{name}: expected.launch_command", answer)
     entry, command = answer["entry"], answer["command"]
     if entry is not None:
         _validate_emulator(name, entry)
@@ -4202,6 +4268,7 @@ def _validate_save_part(name: str, part: Any) -> None:
 def _validate_save_portability(name: str, answer: Any) -> None:
     """A pair: the two entries, one verdict per part, and a summary no milder than its most severe part."""
     _require_exact(name, answer, SAVE_PORTABILITY_FIELDS, "expected.save_portability")
+    _validate_resolution(f"{name}: expected.save_portability", answer)
     for side in ("source", "target"):
         if answer[side] is not None:
             _validate_emulator(name, answer[side])
@@ -4308,10 +4375,12 @@ def _validate_systems(name: str, answer: Any) -> None:
     """A systems answer: every system the installation lists, and why none when none."""
     if not isinstance(answer, dict) or set(answer) != {"systems", "caveats"}:
         fail(f"{name}: expected.systems must be {{'systems': [...], 'caveats': [...]}}")
-    if not isinstance(answer["systems"], list) or not all(
-        isinstance(s, str) and s for s in answer["systems"]
-    ):
-        fail(f"{name}: expected.systems.systems must be a list of non-empty strings")
+    if not isinstance(answer["systems"], list):
+        fail(f"{name}: expected.systems.systems must be a list")
+    for system in answer["systems"]:
+        _validate_system_pair(f"{name}: each expected.systems system", system)
+    if len({_system_identity(system) for system in answer["systems"]}) != len(answer["systems"]):
+        fail(f"{name}: expected.systems names a system more than once")
     _validate_caveats(name, answer["caveats"])
     unread = _no_catalogue_codes_in(answer["caveats"])
     derived = any(c["code"] == "emulator-list-derived" for c in answer["caveats"])
@@ -4581,7 +4650,10 @@ def _block_checks(expected: dict[str, Any], inp: dict[str, Any]) -> tuple[_Block
         _BlockCheck(
             "firmware",
             lambda name, block: _validate_firmware(
-                name, block, for_content="content_path" in inp.get("firmware_query", {})
+                name,
+                block,
+                for_content="content_path" in inp.get("firmware_query", {}),
+                asked=inp.get("firmware_query", {}).get("kind") == "system",
             ),
         ),
         _BlockCheck(
@@ -4640,6 +4712,107 @@ def _validate_pairs(name: str, pairs: Any) -> None:
             or not all(isinstance(part, str) and part for part in pair)
         ):
             fail(f"{name}: each input pair is [source, key] or [source, key, version], all non-empty strings")
+
+
+def _validate_system_pair(where: str, pair: Any) -> None:
+    """A system an answer names (#784 D47): a ``{source, key}`` object, both non-empty strings."""
+    if (
+        not isinstance(pair, dict)
+        or set(pair) != SYSTEM_PAIR_FIELDS
+        or not all(isinstance(pair[part], str) and pair[part] for part in SYSTEM_PAIR_FIELDS)
+    ):
+        fail(f"{where} must be a {{source, key}} object of non-empty strings, got {pair!r}")
+
+
+def _system_identity(system: Any) -> Any:
+    """A system field as a set member: the pair as a tuple, the sentinel as itself."""
+    return (system["source"], system["key"]) if isinstance(system, dict) else system
+
+
+def _validate_resolution(where: str, answer: dict[str, Any], *, asked: bool = True) -> None:
+    """How the system the question was asked about was resolved (#784 D44, D49, D52).
+
+    ``resolution`` is ``null`` exactly where the question was asked about no
+    system (*asked* false), which only a firmware question can be. Otherwise
+    its ``status`` says how it ended: ``resolved`` names the one system the
+    question answered for and the tier that named it; ``ambiguous`` lists two or
+    more ``candidates`` with their catalogue status; ``unknown`` and
+    ``conflict`` name neither — and the answer's own caveats carry the code
+    stating the reason of every status but ``resolved``. Related systems are
+    never a tier. ``translation`` is the platform table's answer for the pairs
+    that went through it, in the projection, or ``null``.
+    """
+    resolution = answer["resolution"]
+    if (resolution is None) == asked:
+        fail(f"{where}.resolution is null exactly where the question named no system")
+    if resolution is None:
+        return
+    _require_exact(where, resolution, RESOLUTION_FIELDS, "resolution")
+    status, system, relation = resolution["status"], resolution["system"], resolution["relation"]
+    candidates = resolution["candidates"]
+    if status not in RESOLUTION_STATUS_REASONS:
+        fail(f"{where}.resolution.status must be one of {sorted(RESOLUTION_STATUS_REASONS)}")
+    if (status == "resolved") != (system is not None):
+        fail(f"{where}.resolution names a system exactly when its status is resolved")
+    if (system is None) != (relation is None):
+        fail(f"{where}.resolution states a relation exactly for a resolved system")
+    if system is not None:
+        _validate_system_pair(f"{where}.resolution.system", system)
+        if relation not in RESOLUTION_RELATIONS:
+            fail(f"{where}.resolution.relation must be one of {sorted(RESOLUTION_RELATIONS)}")
+    _validate_candidates(where, status, candidates)
+    _validate_resolution_translation(where, resolution)
+    reason = RESOLUTION_STATUS_REASONS[status]
+    if reason is not None and reason not in {c["code"] for c in answer["caveats"]}:
+        fail(f"{where}.resolution is {status} and the answer does not state {reason}")
+
+
+def _validate_resolution_translation(where: str, resolution: dict[str, Any]) -> None:
+    """What the table's translation says, the resolution says too (the type's rules, :class:`SystemResolution`).
+
+    Only an agreed translation names candidates or a system the pairs are not
+    exactly, and a table conflict is the resolution's conflict. An unknown
+    resolution may carry no translation: a name read live that the
+    installation does not hold names nothing here too (#784 D53).
+    """
+    translation = resolution["translation"]
+    if translation is not None:
+        validate_translation_projection(f"{where}.resolution.translation", translation)
+    intersection = None if translation is None else translation["intersection_status"]
+    if (resolution["candidates"] or resolution["relation"] not in (None, "exactMatch")) and intersection != "agreed":
+        fail(f"{where}.resolution names candidates or a relation other than exactMatch without an agreed translation")
+    if intersection == "conflict" and resolution["status"] != "conflict":
+        fail(f"{where}.resolution is {resolution['status']} beside a table conflict")
+
+
+def _validate_candidates(where: str, status: str, candidates: Any) -> None:
+    """A resolution's candidates: two or more systems with their catalogue status, exactly where it is ambiguous."""
+    if not isinstance(candidates, list) or (status == "ambiguous") != (len(candidates) >= 2) or (
+        candidates and status != "ambiguous"
+    ):
+        fail(f"{where}.resolution.candidates lists two or more systems, exactly where the status is ambiguous")
+    for candidate in candidates:
+        _require_exact(where, candidate, {"system", "status"}, "each resolution candidate")
+        _validate_system_pair(f"{where}.resolution.candidates[].system", candidate["system"])
+        if candidate["status"] not in KNOWN_PLATFORM_STATUSES:
+            fail(f"{where}.resolution.candidates[].status must be one of {sorted(KNOWN_PLATFORM_STATUSES)}")
+    if len({(c["system"]["source"], c["system"]["key"]) for c in candidates}) != len(candidates):
+        fail(f"{where}.resolution.candidates names each system once")
+
+
+def _validate_system_argument(where: str, system: Any) -> None:
+    """A question's system (#784 D10, D49): a bare name, one pair, or a non-empty list of pairs.
+
+    A pair is ``[source, key]`` or ``[source, key, version]``, every part a
+    non-empty string, as the platform questions take them.
+    """
+    def is_pair(value: Any) -> bool:
+        return isinstance(value, list) and len(value) in (2, 3) and all(isinstance(p, str) and p for p in value)
+
+    named = isinstance(system, str) and bool(system)
+    listed = isinstance(system, list) and bool(system) and all(is_pair(pair) for pair in system)
+    if not (named or is_pair(system) or listed):
+        fail(f"{where} must be a non-empty name, a [source, key(, version)] pair or a non-empty list of pairs")
 
 
 def validate_platform_table_vector(vector: dict[str, Any]) -> None:

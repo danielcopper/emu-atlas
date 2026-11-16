@@ -16,7 +16,8 @@ data. The rule for what serializes:
   ``*provenance`` is where one field's own value came from.
   ``FirmwareRequirement.system_source`` is neither and keeps its name: it is a
   closed vocabulary naming *which rule* assigned the system (an override, the
-  core's ``systemname``, a slug, or nothing), so it is data a client branches
+  core's ``systemname``, the system the core itself is named by, a standalone
+  card, or nothing), so it is data a client branches
   on and it serializes. ``InstallationRoot.provenance`` is the one
   ``provenance`` that serializes, for the same reason: it is not prose but a
   closed vocabulary (:data:`~atlas.installations.ROOT_PROVENANCES`) saying
@@ -40,6 +41,7 @@ from .disc_opens import Opened
 from .distribution_labels import distribution_label
 from .every_installation import InstallationAnswer
 from .firmware import (
+    SystemFiling,
     FirmwareAlternatives,
     FirmwareAnswer,
     FirmwareIdentification,
@@ -66,7 +68,7 @@ from .installations import (
 )
 from .launch import Launcher
 from .launch_command import LaunchCommand, LauncherScript
-from .platforms import PlatformSourceKeys, PlatformTranslation
+from .platforms import PlatformSourceKeys, PlatformTranslation, SystemPair, SystemResolution
 from .placement import (
     Caveat,
     FileGroup,
@@ -448,10 +450,45 @@ def _supplied_by_contract(supplied: SuppliedBy | None) -> dict[str, Any] | None:
     }
 
 
+def system_contract(system: SystemPair) -> dict[str, str]:
+    """A system as an answer names it: ``{source, key}``, the shape ``translation.pairs`` has (#784 D47)."""
+    return {"source": system[0], "key": system[1]}
+
+
+def _filing_contract(system: SystemFiling) -> dict[str, str] | str:
+    """A declared file's system: its pair, or the ``_unknown`` sentinel where nothing names it (#784 D49)."""
+    return system if isinstance(system, str) else system_contract(system)
+
+
+def resolution_contract(resolution: SystemResolution | None) -> dict[str, Any] | None:
+    """How the system a question named was resolved (#784 D44, D49) — ``null`` on a question that names none.
+
+    ``status`` says how it ended (D52). ``system`` and ``relation`` are ``null`` together, where the asked pairs
+    named no single system; ``candidates`` lists the systems they named alike,
+    each with its status, where they named several; ``translation`` is the
+    table's answer for the pairs that went through it, in the projection every
+    translation is asserted in, and ``null`` where every pair was read live.
+    """
+    if resolution is None:
+        return None
+    return {
+        "status": resolution.status,
+        "system": None if resolution.system is None else system_contract(resolution.system),
+        "relation": resolution.relation,
+        "candidates": [
+            {"system": system_contract(candidate.system), "status": candidate.status}
+            for candidate in resolution.candidates
+        ],
+        "translation": None
+        if resolution.translation is None
+        else platform_translation_contract(resolution.translation),
+    }
+
+
 def _requirement_contract(requirement: FirmwareRequirement) -> dict[str, Any]:
     return {
         "core_so": requirement.core_so,
-        "system": requirement.system,
+        "system": _filing_contract(requirement.system),
         "system_source": requirement.system_source,
         "need": requirement.need,
         "file_name": requirement.file_name,
@@ -653,7 +690,7 @@ def firmware_contract(answer: FirmwareAnswer) -> dict[str, Any]:
                 "identity": _identity_contract(f.identity),
                 "known_as": list(f.known_as),
                 "description": f.description,
-                "console": f.console,
+                "console": None if f.console is None else system_contract(f.console),
                 "concerns": [
                     {"emulator": c.emulator, "relation": c.relation} for c in f.concerns
                 ],
@@ -661,6 +698,7 @@ def firmware_contract(answer: FirmwareAnswer) -> dict[str, Any]:
             for f in answer.unclaimed
         ],
         "caveats": _caveats_contract(answer.caveats),
+        "resolution": resolution_contract(answer.resolution),
     }
 
 
@@ -718,7 +756,7 @@ def emulator_contract(entry: EmulatorEntry) -> dict[str, Any]:
     thing a client acts on.
     """
     return {
-        "system": entry.system,
+        "system": system_contract(entry.system),
         "label": entry.label,
         "kind": entry.kind,
         "core_so": entry.core_so,
@@ -754,6 +792,7 @@ def catalogue_contract(answer: CatalogueAnswer) -> dict[str, Any]:
     return {
         "entries": [emulator_contract(e) for e in answer.entries],
         "caveats": _caveats_contract(answer.caveats),
+        "resolution": resolution_contract(answer.resolution),
     }
 
 
@@ -792,6 +831,7 @@ def launchable_contract(answer: LaunchabilityAnswer) -> dict[str, Any]:
         "boots": None if answer.boots is None else _boot_body(answer.boots),
         "opens": None if answer.opens is None else [_opened_body(opened) for opened in answer.opens],
         "caveats": _caveats_contract(answer.caveats),
+        "resolution": resolution_contract(answer.resolution),
     }
 
 
@@ -830,6 +870,7 @@ def launch_command_contract(answer: LaunchCommandAnswer) -> dict[str, Any]:
         "entry": emulator_contract(answer.entry) if answer.entry is not None else None,
         "command": _launch_command_body(answer.command) if answer.command is not None else None,
         "caveats": _caveats_contract(answer.caveats),
+        "resolution": resolution_contract(answer.resolution),
     }
 
 
@@ -877,7 +918,7 @@ def _launcher_script_body(script: LauncherScript) -> dict[str, Any]:
 def systems_contract(answer: SystemsAnswer) -> dict[str, Any]:
     """The stable form of a systems answer — every system the installation lists, or why none."""
     return {
-        "systems": list(answer.systems),
+        "systems": [system_contract(system) for system in answer.systems],
         "caveats": _caveats_contract(answer.caveats),
     }
 
@@ -946,7 +987,7 @@ def platform_systems_contract(answer: PlatformSystemsAnswer) -> dict[str, Any]:
         "translation": platform_translation_contract(answer.translation),
         "matches": [
             {
-                "system": m.system,
+                "system": system_contract(m.system),
                 "status": m.status,
                 "platforms": list(m.platforms),
                 "tags_source": m.tags_source,
@@ -968,12 +1009,13 @@ def system_platforms_contract(answer: SystemPlatformsAnswer) -> dict[str, Any]:
     were read off the machine or taken from the vocabulary snapshot.
     """
     return {
-        "system": answer.system,
+        "system": None if answer.system is None else system_contract(answer.system),
         "status": answer.status,
         "tags_source": answer.tags_source,
         "platforms": list(answer.platforms),
         "translation": platform_translation_contract(answer.translation),
         "caveats": _caveats_contract(answer.caveats),
+        "resolution": resolution_contract(answer.resolution),
     }
 
 
@@ -992,6 +1034,7 @@ def rom_placement_contract(placement: RomPlacement) -> dict[str, Any]:
         "physical_dir": placement.physical_dir,
         "extensions": list(placement.extensions),
         "caveats": _caveats_contract(placement.caveats),
+        "resolution": resolution_contract(placement.resolution),
     }
 
 
@@ -1006,7 +1049,7 @@ def rom_locations_contract(answer: RomLocationsAnswer) -> dict[str, Any]:
     """
     return {
         "placements": [
-            {"system": entry.system, "placement": rom_placement_contract(entry.placement)}
+            {"system": system_contract(entry.system), "placement": rom_placement_contract(entry.placement)}
             for entry in answer.placements
         ],
         "caveats": _caveats_contract(answer.caveats),
@@ -1074,6 +1117,7 @@ def save_portability_contract(answer: SavePortabilityAnswer) -> dict[str, Any]:
             for part in answer.parts
         ],
         "caveats": _caveats_contract(answer.caveats),
+        "resolution": resolution_contract(answer.resolution),
     }
 
 

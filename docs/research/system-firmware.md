@@ -239,9 +239,9 @@ it leaves out are `galaksija` and `skyemu`, which name no system between them.
 
 Four things about the derivation are worth stating rather than leaving to be discovered:
 
-- **It groups by the raw `systemname`.** That is the unit the catalogue itself groups firmware by. Translating into
-  atlas's ES-DE vocabulary is not free — `Game Boy/Game Boy Color` is one `systemname` over two catalogue systems — so
-  the translation happens where the answer reads the table rather than here; see
+- **It groups by the raw `systemname`.** That is the unit the catalogue itself groups firmware by. Translating into a
+  system name is not free — `Game Boy/Game Boy Color` is one `systemname` over two catalogue systems — so the
+  translation happens where the answer reads the table rather than here; see
   [What the answer carries](#what-the-answer-carries).
 - **It skips a core stating no `systemname`.** An empty string names no system, and lumping such cores together would
   invent one and could manufacture a disagreement between two unrelated emulators. `atlas.firmware.system_decision`
@@ -336,16 +336,16 @@ substitute, so the core has to be nameable. `cores_supplying_an_alternative` is 
 `cannot-run-without-firmware` entry only, and each core carries its own reason: a bare exemption excuses by assertion.
 
 An exemption takes one of two shapes. **A reason alone** excuses the core wherever the entry reaches, for a catalogue
-entry that declares everything optional and is _correct_ to. **An object** adds `systems`, the atlas system ids it holds
-on, and `substitute`, what the core starts them on; the two come together or not at all. That shape is for a core whose
-`.info` marks required the images its substitute stands in for, on some of the systems one `systemname` covers but not
-all. PUAE is the case: its `.info` marks four kickstarts required, the core boots its built-in AROS kickstart whenever
-the one it would use is missing and never refuses to load over it, and a CD32 disc does not boot under AROS — while
-`amiga`, `amiga600`, `amiga1200`, `amigacd32` and `cdtv` are all one `systemname`, `Amiga`, and every image is filed
-under `amiga`. So the exemption names the three computers. On a question naming one of them the core is excused and its
-rows filed under the system the excusing entry reaches — `amiga`, whichever computer is named — read `need: optional`,
-because the launch needs none of them in particular; on a question about `amigacd32`, `cdtv` or no system at all it
-answers its declaration.
+entry that declares everything optional and is _correct_ to. **An object** adds `systems`, the ES-DE names of the
+systems it holds on, and `substitute`, what the core starts them on; the two come together or not at all. That shape is
+for a core whose `.info` marks required the images its substitute stands in for, on some of the systems one `systemname`
+covers but not all. PUAE is the case: its `.info` marks four kickstarts required, the core boots its built-in AROS
+kickstart whenever the one it would use is missing and never refuses to load over it, and a CD32 disc does not boot
+under AROS — while `amiga`, `amiga600`, `amiga1200`, `amigacd32` and `cdtv` are all one `systemname`, `Amiga`, and every
+image is filed under `amiga`. So the exemption names the three computers. On a question naming one of them the core is
+excused and its rows filed under the system the excusing entry reaches — `amiga`, whichever computer is named — read
+`need: optional`, because the launch needs none of them in particular; on a question about `amigacd32`, `cdtv` or no
+system at all it answers its declaration.
 
 **What the field is for, precisely, because it is easy to overstate.** It is what keeps a system's requirement off a
 core that carries its own substitute: the answer reads it, and a core named here is reported
@@ -410,10 +410,10 @@ enters a firmware answer — and states what it says on every core of that answe
   same core already says, so a mark there would restate the field rather than degrade the answer. `open` means the same
   thing as a verdict and as an evidence level, and because of this it never reaches a client as an evidence level.
 - **`firmware-core-substitute`** rides on a core whose exemption names a substitute, on every question about it —
-  excused or not — carrying `core` (the table's spelling), `substitute` and `systems`. The substitute is of limited
-  compatibility: a title it cannot run fails at run time, which no file read predicts, so a real image is preferred even
-  where the verdict is green. Beside a question about a system it does not cover, it says where the core does start
-  without an image.
+  excused or not — carrying `core` (the table's spelling), `substitute`, and the systems it covers as the parallel
+  `sources` and `keys`. The substitute is of limited compatibility: a title it cannot run fails at run time, which no
+  file read predicts, so a real image is preferred even where the verdict is green. Beside a question about a system it
+  does not cover, it says where the core does start without an image.
 
 **The declaration moves in two places.** Every `need` on a requirement is `firmware<N>_opt` inverted, so SwanStation's
 images still read `optional`, except where something beside a row already states what the launch needs — and then only
@@ -421,10 +421,10 @@ to `optional`. One is a row beside a route's alternatives group; the other is a 
 scoped to systems covers, where the excused core's rows filed under the system the excusing entry reaches (for PUAE,
 `amiga`) read `optional`. The requirement list is the emulator's statement; the verdict beside it is atlas's.
 
-The keys here are `systemname` strings and an answer speaks atlas's system ids, so the join is the systemname map
-(`atlas.firmware.system_firmware_system`). A key naming several machines therefore reaches the one id that map rules for
-it — `Game Boy/Game Boy Color` reaches `gb` — and not its siblings. That is narrower than the entry rather than wider,
-which is the safe direction: widening would state a recorded verdict about a machine nobody recorded it for.
+The keys here are `systemname` strings and an answer names systems as pairs, so the join is the systemname map
+(`atlas.firmware.system_firmware_system`). A key naming several machines therefore reaches the one system that map rules
+for it — `Game Boy/Game Boy Color` reaches `gb` — and not its siblings. That is narrower than the entry rather than
+wider, which is the safe direction: widening would state a recorded verdict about a machine nobody recorded it for.
 
 ## Scope
 

@@ -1258,7 +1258,7 @@ Read by `atlas.launch_formats`, behind the `needs-installation` verdict of the l
 files are the distribution form of the content itself: a PSN `.pkg` has to be installed into `dev_hdd0` by RPCS3 before
 anything can launch, and for digital-only titles no other form exists — so "this entry does not start it, pick another
 file" is the wrong advice. That is world knowledge about a platform, written nowhere on the machine, so it lives here:
-keyed by the atlas system id and the exact extension token ES-DE would derive (case-sensitive, leading dot), each entry
+keyed by ES-DE's system name and the exact extension token ES-DE would derive (case-sensitive, leading dot), each entry
 with its statement and its citation. The table is consulted before any entry is asked, whatever the system's accept-list
 says: the record is about the platform's format, and the question is the emulator's (issue #776).
 
@@ -1445,18 +1445,21 @@ answers stop carrying it. No code names an arrangement's evidence state. Re-pinn
 — every fixture stating the old version is a drifted machine afterwards, and the runner enforces it
 (`docs/re-verification.md`, step 5).
 
-## `system_ids.json` — the whole system vocabulary
+## `system_ids.json` — one catalogue's system names
 
-Every id a question about a system can take, read by `atlas.systems`. One list, nothing else in the file.
+The system names one pinned catalogue (RetroDECK 0.10.9b's) declares, read by `atlas.systems` (`known_systems()`,
+`from_esde_system()`). It is not the set a question takes: a question about a system takes a name in the installation's
+own catalogue source or a pair of any source of the platform table (#784 D43), and #797 replaces this list with the
+table.
 
 ```json
 "systems": ["3do", "gb", "n64", …]
 ```
 
-The ids are **ES-DE's system names**, because that is what a frontend catalogue declares and what the questions answer
-about. Cited to the `es_systems.xml` of a pinned build, so the set is checkable rather than an opinion: a name that file
-does not declare is not an id, however plausible. Commented-out blocks are not declarations and are not included — the
-guard test parses the file with ElementTree, which drops them, and asserts set-identity with this list.
+The ids are **ES-DE's system names**, cited to the `es_systems.xml` of a pinned build, so the set is checkable rather
+than an opinion: a name that file does not declare is not an id, however plausible. Commented-out blocks are not
+declarations and are not included — the guard test parses the file with ElementTree, which drops them, and asserts
+set-identity with this list.
 
 Schema 2 added `platforms`: each system's `<platform>` tags from the same build, read the way ES-DE reads them
 (lowercased, `readList`-split, `ignore` clears the list). This is the snapshot column the platform questions fall back
@@ -1472,6 +1475,25 @@ and folders, the distributions' folders, libretro's database names, the scraper 
 id and a platform column that does not cover exactly the id set each fail the load. A vocabulary whose own account of
 itself does not add up would answer "not an id" for names that are, and a caller validating against it would delete the
 mapping that was right.
+
+## `core_systems.json` — the system a core without a database name is named by
+
+A bare RetroArch names its systems by the libretro database names its cores' `.info` files declare (#784 D46). A core
+that declares none would be named by nothing, so this file states, per core, the pair it is named by instead — keyed by
+the `.so` short name, read by `atlas.firmware.packaged_core_systems`:
+
+```json
+"numero": {"source": "romm", "key": "ti-83", "systemname": "TI83", "citation": "…"}
+```
+
+Each entry is a hand judgement from a table source that spells the system, with its citation: the deployed `.info` line
+that states the core's `systemname` and no database line, and the source's own line for the key. `systemname` is the
+core's own word as that `.info` states it, empty where it states none. `tests/test_core_systems_tripwire.py` holds every
+entry against the deployed cores — a core that gains a database name or changes its `systemname` turns it red — and
+holds the other direction too: every deployed core without a database name is entered here or reviewed there as a core
+no system names (a game, a player, a tool, or a system no table source spells). Each pair is a key its source holds in
+the platform table. A bare RetroArch names a core here by its pair, translated into libretro's key where the table names
+exactly one.
 
 ## `platform_table.json`, `platform_overrides.json`, `platform_excluded.json` — the platform table
 
@@ -1683,9 +1705,9 @@ Shape:
 }
 ```
 
-- Keys are libretro `systemname` strings **verbatim**, not atlas system ids. That is the unit the `.info` catalogue
-  groups firmware by and therefore the unit the derivation produces; translating is not free (`Game Boy/Game Boy Color`
-  is one `systemname` over two catalogue systems), so the answer translates at its own edge, through
+- Keys are libretro `systemname` strings **verbatim**, not system names. That is the unit the `.info` catalogue groups
+  firmware by and therefore the unit the derivation produces; translating is not free (`Game Boy/Game Boy Color` is one
+  `systemname` over two catalogue systems), so the answer translates at its own edge, through
   `atlas.firmware.system_firmware_system`.
 - `verdict` — `cannot-run-without-firmware`, `runs-without-firmware`, or `open`. **`open` is a value, not an absence**:
   it is how a system whose cores contradict each other becomes visible without anyone claiming to know whether it boots.
@@ -1697,17 +1719,17 @@ Shape:
 - `cores_supplying_an_alternative` — the cores that run a system needing firmware without a file, because the core
   itself supplies a substitute. An exemption takes one of two shapes. A reason alone excuses the core wherever the entry
   reaches, for a declaration that is **correct** as it stands: PCSX ReARMed's HLE BIOS, all-optional, the case the field
-  was written around. An object adds `systems` (atlas system ids) and `substitute`, which come together or not at all,
-  for a core whose `.info` marks required the images its substitute stands in for on some of the systems it runs: PUAE's
-  AROS kickstart starts the Amiga computers, and a CD32 disc does not boot under it, while all five Amiga systems are
-  one `systemname`. That exemption holds only on a question naming one of its systems, and there the core's rows filed
-  under the system the excusing entry reaches (for PUAE, `amiga`, whichever computer is named) read `need: optional`; a
-  question about another system, or about none, answers the declaration. The firmware answer reads the field: an excused
-  core is `core-supplies-an-alternative` where its unexcused siblings are `cannot-run-without-firmware`, and a core
-  whose exemption names a substitute carries `firmware-core-substitute` on every question. It is not what makes the
-  derivation pass, which compares whole systems and never consults it. On a `cannot-run-without-firmware` entry only,
-  and each core names its own reason rather than being a bare exemption. It is not a completeness claim: a core absent
-  from it is one nobody has looked at, never one judged to be understating.
+  was written around. An object adds `systems` (the systems' ES-DE names) and `substitute`, which come together or not
+  at all, for a core whose `.info` marks required the images its substitute stands in for on some of the systems it
+  runs: PUAE's AROS kickstart starts the Amiga computers, and a CD32 disc does not boot under it, while all five Amiga
+  systems are one `systemname`. That exemption holds only on a question naming one of its systems, and there the core's
+  rows filed under the system the excusing entry reaches (for PUAE, `amiga`, whichever computer is named) read
+  `need: optional`; a question about another system, or about none, answers the declaration. The firmware answer reads
+  the field: an excused core is `core-supplies-an-alternative` where its unexcused siblings are
+  `cannot-run-without-firmware`, and a core whose exemption names a substitute carries `firmware-core-substitute` on
+  every question. It is not what makes the derivation pass, which compares whole systems and never consults it. On a
+  `cannot-run-without-firmware` entry only, and each core names its own reason rather than being a bare exemption. It is
+  not a completeness claim: a core absent from it is one nobody has looked at, never one judged to be understating.
 - **`tests/test_system_firmware_tripwire.py` is what keeps the file honest.** It recomputes the catalogue disagreements
   from the deployed `.info` files at run time and fails when it finds a system this table records no verdict for, and it
   fails when an exempted core no longer declares what its exemption excuses — everything optional for an exemption

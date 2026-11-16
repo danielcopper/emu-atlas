@@ -3,8 +3,8 @@
 Some files are the distribution form of the content itself — a PSN ``.pkg``
 — and an emulator has to install them before anything can launch. That fact
 is written nowhere on the machine, so it lives here: marked, versioned,
-cited, keyed by the atlas system id and the exact extension token ES-DE would
-derive. The resolver consults it before any entry is asked, whatever the
+cited, keyed by ES-DE's system name and the exact extension token ES-DE
+would derive. The resolver consults it before any entry is asked, whatever the
 system's accept-list says (issue #776). Each record names the emulators that
 install the format (issue #717), so the verdict can name them as data rather
 than prose. The cards record what a standalone emulator's own loader reads:

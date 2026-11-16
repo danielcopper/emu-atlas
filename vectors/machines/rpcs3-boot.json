@@ -69,7 +69,10 @@
             ".PS3DIR"
           ],
           "entry": {
-            "system": "ps3",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
             "label": "RPCS3 Directory (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -94,7 +97,17 @@
             "disc_root": "/mnt/sd/retrodeck/roms/ps3/Game.ps3"
           },
           "opens": null,
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -163,7 +176,10 @@
             ".PS3DIR"
           ],
           "entry": {
-            "system": "ps3",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
             "label": "RPCS3 Directory (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -192,7 +208,8 @@
             {
               "code": "frontend-name-unscanned",
               "data": {
-                "system": "ps3",
+                "source": "esde",
+                "key": "ps3",
                 "kind": "directory",
                 "extension": ".",
                 "names": [
@@ -207,7 +224,17 @@
                 "reason": "directory-without-token"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -276,7 +303,10 @@
             ".PS3DIR"
           ],
           "entry": {
-            "system": "ps3",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
             "label": "RPCS3 Directory (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -305,7 +335,8 @@
             {
               "code": "frontend-name-unscanned",
               "data": {
-                "system": "ps3",
+                "source": "esde",
+                "key": "ps3",
                 "kind": "directory",
                 "extension": ".pkg",
                 "names": [
@@ -320,7 +351,17 @@
                 "reason": "token-not-listed"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -385,7 +426,10 @@
             ".PS3DIR"
           ],
           "entry": {
-            "system": "ps3",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
             "label": "RPCS3 Directory (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -415,7 +459,17 @@
                 "path": "/mnt/sd/retrodeck/roms/ps3/Game.ps3/PS3_GAME/USRDIR/EBOOT.BIN"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -484,7 +538,10 @@
             ".PS3DIR"
           ],
           "entry": {
-            "system": "ps3",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
             "label": "RPCS3 Directory (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -514,7 +571,17 @@
                 "path": "/mnt/sd/retrodeck/roms/ps3/Game.ps3/PS3_GAME/USRDIR/EBOOT.BIN"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -579,7 +646,10 @@
             ".PS3DIR"
           ],
           "entry": {
-            "system": "ps3",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
             "label": "RPCS3 Directory (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -604,7 +674,17 @@
             "disc_root": null
           },
           "opens": null,
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -668,7 +748,10 @@
             ".PS3DIR"
           ],
           "entry": {
-            "system": "ps3",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
             "label": "RPCS3 Directory (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -698,7 +781,17 @@
                 "path": "/mnt/sd/retrodeck/roms/ps3/Game.ps3"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -758,7 +851,10 @@
             ".PS3DIR"
           ],
           "entry": {
-            "system": "ps3",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
             "label": "RPCS3 Directory (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -788,7 +884,17 @@
                 "path": "/mnt/sd/retrodeck/roms/ps3/Game.ps3/Game.ps3"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -848,7 +954,10 @@
             ".PS3DIR"
           ],
           "entry": {
-            "system": "ps3",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
             "label": "RPCS3 Game Serial (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -878,7 +987,17 @@
                 "registry": "games.yml"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -942,7 +1061,10 @@
             ".PS3DIR"
           ],
           "entry": {
-            "system": "ps3",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
             "label": "RPCS3 ISO (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -967,7 +1089,17 @@
             "disc_root": "/mnt/sd/retrodeck/roms/ps3/Game.iso"
           },
           "opens": null,
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -1031,7 +1163,10 @@
             ".PS3DIR"
           ],
           "entry": {
-            "system": "ps3",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
             "label": "RPCS3 ISO (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -1074,7 +1209,8 @@
             {
               "code": "frontend-name-unscanned",
               "data": {
-                "system": "ps3",
+                "source": "esde",
+                "key": "ps3",
                 "kind": "directory",
                 "extension": ".",
                 "names": [
@@ -1089,7 +1225,17 @@
                 "reason": "directory-without-token"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -1164,7 +1310,10 @@
             ".SAVESTAT"
           ],
           "entry": {
-            "system": "ps3",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
             "label": "RPCS3 Directory (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -1207,7 +1356,8 @@
             {
               "code": "frontend-name-unscanned",
               "data": {
-                "system": "ps3",
+                "source": "esde",
+                "key": "ps3",
                 "kind": "directory",
                 "extension": ".",
                 "names": [
@@ -1223,7 +1373,17 @@
                 "reason": "directory-without-token"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -1287,7 +1447,10 @@
             ".PS3DIR"
           ],
           "entry": {
-            "system": "ps3",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
             "label": "RPCS3 Shortcut (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -1321,7 +1484,8 @@
             {
               "code": "frontend-name-unscanned",
               "data": {
-                "system": "ps3",
+                "source": "esde",
+                "key": "ps3",
                 "kind": "directory",
                 "extension": ".",
                 "names": [
@@ -1336,7 +1500,17 @@
                 "reason": "directory-without-token"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -1400,7 +1574,10 @@
             ".PS3DIR"
           ],
           "entry": {
-            "system": "ps3",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
             "label": "RPCS3 ISO (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -1425,7 +1602,17 @@
             "disc_root": "/mnt/sd/retrodeck/roms/ps3/Game.iso"
           },
           "opens": null,
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -1489,7 +1676,10 @@
             ".PS3DIR"
           ],
           "entry": {
-            "system": "ps3",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
             "label": "RPCS3 ISO (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -1519,7 +1709,17 @@
                 "path": "/mnt/sd/retrodeck/roms/ps3/Game.iso"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -1583,7 +1783,10 @@
             ".PS3DIR"
           ],
           "entry": {
-            "system": "ps3",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
             "label": "RPCS3 ISO (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -1613,7 +1816,17 @@
                 "path": "/mnt/sd/retrodeck/roms/ps3/Game.iso"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -1678,7 +1891,10 @@
             ".PS3DIR"
           ],
           "entry": {
-            "system": "ps3",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
             "label": "RPCS3 Directory (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -1708,7 +1924,17 @@
                 "registry": "games.yml"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -1773,7 +1999,10 @@
             ".PS3DIR"
           ],
           "entry": {
-            "system": "ps3",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
             "label": "RPCS3 Directory (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -1803,7 +2032,17 @@
                 "category": "1P"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -1863,7 +2102,10 @@
             ".PS3DIR"
           ],
           "entry": {
-            "system": "ps3",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
             "label": "RPCS3 Directory (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -1888,7 +2130,17 @@
             "disc_root": null
           },
           "opens": null,
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -1956,7 +2208,10 @@
             ".PS3DIR"
           ],
           "entry": {
-            "system": "ps3",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
             "label": "RPCS3 Shortcut (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -1990,7 +2245,17 @@
                 "path": "/mnt/sd/retrodeck/roms/ps3/Game.ps3"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -2044,7 +2309,10 @@
             ".PS3DIR"
           ],
           "entry": {
-            "system": "ps3",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
             "label": "RPCS3 Directory (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -2074,7 +2342,17 @@
                 "path": "/mnt/sd/retrodeck/roms/ps3/Game.ps3"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -2137,7 +2415,10 @@
             ".PS3DIR"
           ],
           "entry": {
-            "system": "ps3",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
             "label": "RPCS3 Directory (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -2167,7 +2448,17 @@
                 "path": "/mnt/sd/retrodeck/roms/ps3/Game.ps3/PARAM.SFO"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -2232,7 +2523,10 @@
             ".PS3DIR"
           ],
           "entry": {
-            "system": "ps3",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
             "label": "RPCS3 Directory (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -2262,7 +2556,17 @@
                 "path": "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/dev_hdd0/game/Game.ps3/USRDIR/EBOOT.BIN"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -2330,7 +2634,10 @@
             ".PS3DIR"
           ],
           "entry": {
-            "system": "ps3",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
             "label": "RPCS3 Directory (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -2359,7 +2666,17 @@
                 "entry": "RPCS3 Directory (Standalone)"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -2420,7 +2737,10 @@
             ".SAVESTAT"
           ],
           "entry": {
-            "system": "ps3",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
             "label": "RPCS3 Directory (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -2450,7 +2770,17 @@
                 "path": "/mnt/sd/retrodeck/roms/ps3/Game.SAVESTAT"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -2518,7 +2848,10 @@
             ".PS3DIR"
           ],
           "entry": {
-            "system": "ps3",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
             "label": "RPCS3 Directory (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -2543,7 +2876,17 @@
             "disc_root": "/mnt/sd/retrodeck/roms/ps3/Outer"
           },
           "opens": null,
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -2607,7 +2950,10 @@
             ".PS3DIR"
           ],
           "entry": {
-            "system": "ps3",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
             "label": "RPCS3 Directory (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -2643,7 +2989,17 @@
                 ]
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -2707,7 +3063,10 @@
             ".PS3DIR"
           ],
           "entry": {
-            "system": "ps3",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
             "label": "RPCS3 Directory (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -2743,7 +3102,17 @@
                 ]
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -2816,7 +3185,10 @@
             ".PS3DIR"
           ],
           "entry": {
-            "system": "ps3",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
             "label": "RPCS3 Directory (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -2852,7 +3224,17 @@
                 ]
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -2917,7 +3299,10 @@
             ".PS3DIR"
           ],
           "entry": {
-            "system": "ps3",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
             "label": "RPCS3 ISO (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -2942,7 +3327,17 @@
             "disc_root": "/mnt/sd/retrodeck/roms/ps3/Game.iso"
           },
           "opens": null,
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -3007,7 +3402,10 @@
             ".PS3DIR"
           ],
           "entry": {
-            "system": "ps3",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
             "label": "RPCS3 ISO (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -3037,7 +3435,17 @@
                 "path": "/mnt/sd/retrodeck/roms/ps3/Game.iso"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -3103,7 +3511,10 @@
             ".PS3DIR"
           ],
           "entry": {
-            "system": "ps3",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
             "label": "RPCS3 ISO (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -3133,7 +3544,17 @@
                 "path": "/mnt/sd/retrodeck/roms/ps3/Game.dkey"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -3199,7 +3620,10 @@
             ".PS3DIR"
           ],
           "entry": {
-            "system": "ps3",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
             "label": "RPCS3 ISO (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -3229,7 +3653,17 @@
                 "path": "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/data/redump/Game.key"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -3294,7 +3728,10 @@
             ".PS3DIR"
           ],
           "entry": {
-            "system": "ps3",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
             "label": "RPCS3 ISO (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -3319,7 +3756,17 @@
             "disc_root": "/mnt/sd/retrodeck/roms/ps3/Game.iso"
           },
           "opens": null,
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -3384,7 +3831,10 @@
             ".PS3DIR"
           ],
           "entry": {
-            "system": "ps3",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
             "label": "RPCS3 ISO (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -3409,7 +3859,17 @@
             "disc_root": "/mnt/sd/retrodeck/roms/ps3/Game.iso"
           },
           "opens": null,
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -3467,7 +3927,10 @@
             ".ps3"
           ],
           "entry": {
-            "system": "ps3",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
             "label": "RPCS3 Directory (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -3497,10 +3960,21 @@
             {
               "code": "emulator-catalogue-sealed",
               "data": {
-                "system": "ps3"
+                "source": "esde",
+                "key": "ps3"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -3561,7 +4035,10 @@
             ".gz"
           ],
           "entry": {
-            "system": "ps3",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
             "label": "RPCS3 Directory (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -3591,7 +4068,17 @@
                 "path": "/mnt/sd/retrodeck/roms/ps3/Game.gz"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -3661,7 +4148,10 @@
             ".PS3DIR"
           ],
           "entry": {
-            "system": "ps3",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
             "label": "RPCS3 Directory (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -3691,7 +4181,17 @@
                 "path": "/mnt/sd/bdvd/"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -3760,7 +4260,10 @@
             ".PS3DIR"
           ],
           "entry": {
-            "system": "ps3",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
             "label": "RPCS3 Directory (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -3790,7 +4293,17 @@
                 "path": "/home/deck/.var/app/net.retrodeck.retrodeck/config/rpcs3/dev_bdvd/"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -3859,7 +4372,10 @@
             ".PS3DIR"
           ],
           "entry": {
-            "system": "ps3",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
             "label": "RPCS3 ISO (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -3889,7 +4405,17 @@
                 "path": "/mnt/sd/bdvd/"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -3955,7 +4481,10 @@
             ".PS3DIR"
           ],
           "entry": {
-            "system": "ps3",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
             "label": "RPCS3 Directory (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -3984,7 +4513,17 @@
                 "entry": "RPCS3 Directory (Standalone)"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -4050,7 +4589,10 @@
             ".PS3DIR"
           ],
           "entry": {
-            "system": "ps3",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
             "label": "RPCS3 Directory (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -4079,7 +4621,17 @@
                 "entry": "RPCS3 Directory (Standalone)"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -4145,7 +4697,10 @@
             ".PS3DIR"
           ],
           "entry": {
-            "system": "ps3",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
             "label": "RPCS3 Directory (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -4174,7 +4729,17 @@
                 "entry": "RPCS3 Directory (Standalone)"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -4234,7 +4799,10 @@
             ".PS3DIR"
           ],
           "entry": {
-            "system": "ps3",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
             "label": "RPCS3 Serial (Fullscreen)",
             "kind": "standalone",
             "core_so": null,
@@ -4264,7 +4832,17 @@
                 "extension": ".ps3"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -4321,7 +4899,10 @@
             ".ps3"
           ],
           "entry": {
-            "system": "ps3",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
             "label": "RPCS3 ISO (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -4348,7 +4929,8 @@
             {
               "code": "emulator-catalogue-sealed",
               "data": {
-                "system": "ps3"
+                "source": "esde",
+                "key": "ps3"
               }
             },
             {
@@ -4357,7 +4939,17 @@
                 "entry": "RPCS3 ISO (Standalone)"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -4413,7 +5005,10 @@
             ".ps3"
           ],
           "entry": {
-            "system": "ps3",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
             "label": "RPCS3 ISO (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -4440,7 +5035,8 @@
             {
               "code": "emulator-catalogue-sealed",
               "data": {
-                "system": "ps3"
+                "source": "esde",
+                "key": "ps3"
               }
             },
             {
@@ -4449,7 +5045,17 @@
                 "entry": "RPCS3 ISO (Standalone)"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -4514,7 +5120,10 @@
             ".PS3DIR"
           ],
           "entry": {
-            "system": "ps3",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
             "label": "RPCS3 ISO (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -4543,7 +5152,17 @@
                 "entry": "RPCS3 ISO (Standalone)"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps3"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     }

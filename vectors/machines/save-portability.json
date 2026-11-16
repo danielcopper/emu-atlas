@@ -258,7 +258,10 @@
         "save_portability": {
           "verdict": "same-files",
           "source": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "SwanStation",
             "kind": "libretro",
             "core_so": "swanstation_libretro.so",
@@ -278,7 +281,10 @@
             ]
           },
           "target": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "Beetle PSX",
             "kind": "libretro",
             "core_so": "mednafen_psx_libretro.so",
@@ -331,7 +337,17 @@
               "conversion": null
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -589,7 +605,10 @@
         "save_portability": {
           "verdict": "not-readable",
           "source": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "Beetle PSX",
             "kind": "libretro",
             "core_so": "mednafen_psx_libretro.so",
@@ -609,7 +628,10 @@
             ]
           },
           "target": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "SwanStation",
             "kind": "libretro",
             "core_so": "swanstation_libretro.so",
@@ -683,7 +705,17 @@
               "conversion": null
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -942,7 +974,10 @@
         "save_portability": {
           "verdict": "same-data",
           "source": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "Beetle PSX",
             "kind": "libretro",
             "core_so": "mednafen_psx_libretro.so",
@@ -962,7 +997,10 @@
             ]
           },
           "target": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "SwanStation",
             "kind": "libretro",
             "core_so": "swanstation_libretro.so",
@@ -1049,7 +1087,17 @@
               "conversion": null
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -1307,7 +1355,10 @@
         "save_portability": {
           "verdict": "same-data",
           "source": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "SwanStation",
             "kind": "libretro",
             "core_so": "swanstation_libretro.so",
@@ -1327,7 +1378,10 @@
             ]
           },
           "target": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "DuckStation (Legacy) (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -1383,7 +1437,17 @@
               "conversion": null
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -1640,7 +1704,10 @@
         "save_portability": {
           "verdict": "unestablished",
           "source": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "SwanStation",
             "kind": "libretro",
             "core_so": "swanstation_libretro.so",
@@ -1660,7 +1727,10 @@
             ]
           },
           "target": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "DuckStation (Legacy) (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -1725,7 +1795,17 @@
                 "reason": "build-unread"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -1985,7 +2065,10 @@
         "save_portability": {
           "verdict": "unestablished",
           "source": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "SwanStation",
             "kind": "libretro",
             "core_so": "swanstation_libretro.so",
@@ -2005,7 +2088,10 @@
             ]
           },
           "target": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "DuckStation (Legacy) (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -2070,7 +2156,17 @@
                 "reason": "build-unread"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -2328,7 +2424,10 @@
         "save_portability": {
           "verdict": "unestablished",
           "source": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "SwanStation",
             "kind": "libretro",
             "core_so": "swanstation_libretro.so",
@@ -2348,7 +2447,10 @@
             ]
           },
           "target": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "Beetle PSX",
             "kind": "libretro",
             "core_so": "mednafen_psx_libretro.so",
@@ -2414,7 +2516,17 @@
                 "running": "1.0.0 a1b2c3d"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -2672,7 +2784,10 @@
         "save_portability": {
           "verdict": "convertible",
           "source": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "SwanStation",
             "kind": "libretro",
             "core_so": "swanstation_libretro.so",
@@ -2692,7 +2807,10 @@
             ]
           },
           "target": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "DuckStation (Legacy) (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -2745,7 +2863,17 @@
               "conversion": null
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -3003,7 +3131,10 @@
         "save_portability": {
           "verdict": "same-files",
           "source": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "SwanStation",
             "kind": "libretro",
             "core_so": "swanstation_libretro.so",
@@ -3023,7 +3154,10 @@
             ]
           },
           "target": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "Beetle PSX",
             "kind": "libretro",
             "core_so": "mednafen_psx_libretro.so",
@@ -3076,7 +3210,17 @@
               "conversion": null
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -3170,7 +3314,10 @@
         "save_portability": {
           "verdict": "unestablished",
           "source": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "SwanStation",
             "kind": "libretro",
             "core_so": "swanstation_libretro.so",
@@ -3190,7 +3337,10 @@
             ]
           },
           "target": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "Beetle PSX",
             "kind": "libretro",
             "core_so": "mednafen_psx_libretro.so",
@@ -3244,7 +3394,17 @@
                 "reason": "build-unread"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -3495,7 +3655,10 @@
         "save_portability": {
           "verdict": "unestablished",
           "source": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "SwanStation",
             "kind": "libretro",
             "core_so": "swanstation_libretro.so",
@@ -3515,7 +3678,10 @@
             ]
           },
           "target": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "Beetle PSX",
             "kind": "libretro",
             "core_so": "mednafen_psx_libretro.so",
@@ -3572,7 +3738,8 @@
             {
               "code": "emulator-catalogue-exclusive",
               "data": {
-                "system": "psx"
+                "source": "esde",
+                "key": "psx"
               }
             },
             {
@@ -3587,7 +3754,17 @@
                 "running": "1.0.0 9f8e7d6"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -3838,7 +4015,10 @@
         "save_portability": {
           "verdict": "unestablished",
           "source": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "Beetle PSX",
             "kind": "libretro",
             "core_so": "mednafen_psx_libretro.so",
@@ -3858,7 +4038,10 @@
             ]
           },
           "target": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "DuckStation (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -3964,7 +4147,8 @@
             {
               "code": "emulator-catalogue-exclusive",
               "data": {
-                "system": "psx"
+                "source": "esde",
+                "key": "psx"
               }
             },
             {
@@ -3978,7 +4162,17 @@
                 "reason": "build-unread"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -3991,8 +4185,8 @@
           "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/retroarch.cfg": "savefile_directory = \"~/saves\"\nlibretro_directory = \"/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores\"\nlibretro_info_path = \"/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores\"\n",
           "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores/mgba_libretro.info": "display_name = \"Nintendo - Game Boy Advance (mGBA)\"\ncorename = \"mGBA\"\nsystemname = \"Game Boy Advance\"\nsystemid = \"game_boy_advance\"\nfirmware_count = \"0\"\n",
           "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores/gambatte_libretro.info": "display_name = \"Nintendo - Game Boy Color (Gambatte)\"\ncorename = \"Gambatte\"\nsystemname = \"Nintendo - Game Boy Color\"\nfirmware_count = \"0\"\n",
-          "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores/swanstation_libretro.info": "display_name = \"Sony - PlayStation (SwanStation)\"\ncorename = \"SwanStation\"\nsystemname = \"Sony - PlayStation\"\n",
-          "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores/mednafen_psx_libretro.info": "display_name = \"Sony - PlayStation (Beetle PSX)\"\ncorename = \"Beetle PSX\"\nsystemname = \"Sony - PlayStation\"\n",
+          "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores/swanstation_libretro.info": "display_name = \"Sony - PlayStation (SwanStation)\"\ncorename = \"SwanStation\"\nsystemname = \"Sony - PlayStation\"\ndatabase = \"Sony - PlayStation\"\n",
+          "/home/user/.var/app/org.libretro.RetroArch/config/retroarch/cores/mednafen_psx_libretro.info": "display_name = \"Sony - PlayStation (Beetle PSX)\"\ncorename = \"Beetle PSX\"\nsystemname = \"Sony - PlayStation\"\ndatabase = \"Sony - PlayStation\"\n",
           "/home/user/roms/psx/Example Game (USA).chd": "rom"
         },
         "cores": {
@@ -4201,7 +4395,10 @@
           }
         },
         "save_portability_query": {
-          "system": "psx",
+          "system": [
+            "esde",
+            "psx"
+          ],
           "source": "SwanStation",
           "target": "Beetle PSX",
           "content_path": "/home/user/roms/psx/Example Game (USA).chd"
@@ -4222,7 +4419,10 @@
         "save_portability": {
           "verdict": "unestablished",
           "source": {
-            "system": "psx",
+            "system": {
+              "source": "libretro",
+              "key": "Sony - PlayStation"
+            },
             "label": "SwanStation",
             "kind": "libretro",
             "core_so": "swanstation_libretro.so",
@@ -4242,7 +4442,10 @@
             ]
           },
           "target": {
-            "system": "psx",
+            "system": {
+              "source": "libretro",
+              "key": "Sony - PlayStation"
+            },
             "label": "Beetle PSX",
             "kind": "libretro",
             "core_so": "mednafen_psx_libretro.so",
@@ -4299,13 +4502,15 @@
             {
               "code": "emulator-catalogue-unavailable",
               "data": {
-                "system": "psx"
+                "source": "libretro",
+                "key": "Sony - PlayStation"
               }
             },
             {
               "code": "emulator-list-derived",
               "data": {
-                "system": "psx"
+                "source": "libretro",
+                "key": "Sony - PlayStation"
               }
             },
             {
@@ -4326,7 +4531,310 @@
                 "kind": "bare_retroarch_flatpak"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "libretro",
+              "key": "Sony - PlayStation"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": {
+              "table_version": 1,
+              "pairs": [
+                {
+                  "source": "esde",
+                  "key": "psx",
+                  "version": null,
+                  "status": "known",
+                  "sources": [
+                    {
+                      "source": "esde",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "psx",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "esde-platform",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "psx",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "retrodeck",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "psx",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "emudeck",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "psx",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "romm",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "psx",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "romm-folder",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "ps",
+                          "relation": "exactMatch"
+                        },
+                        {
+                          "key": "psx",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "libretro",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "Sony - PlayStation",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "batocera",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "psx",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "knulli",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "psx",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "rocknix",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "psx",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "igdb",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "7",
+                          "relation": "exactMatch"
+                        },
+                        {
+                          "key": "ps",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "screenscraper",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "57",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "thegamesdb",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "10",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "intersection_status": "agreed",
+              "intersection": [
+                {
+                  "source": "esde",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "psx",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "esde-platform",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "psx",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "retrodeck",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "psx",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "emudeck",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "psx",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "romm",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "psx",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "romm-folder",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "ps",
+                      "relation": "exactMatch"
+                    },
+                    {
+                      "key": "psx",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "libretro",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "Sony - PlayStation",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "batocera",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "psx",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "knulli",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "psx",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "rocknix",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "psx",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "igdb",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "7",
+                      "relation": "exactMatch"
+                    },
+                    {
+                      "key": "ps",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "screenscraper",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "57",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "thegamesdb",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "10",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                }
+              ],
+              "conflict": [],
+              "caveats": []
+            }
+          }
         }
       }
     },
@@ -4584,7 +5092,10 @@
         "save_portability": {
           "verdict": "unestablished",
           "source": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "SwanStation",
             "kind": "libretro",
             "core_so": "swanstation_libretro.so",
@@ -4609,12 +5120,23 @@
             {
               "code": "entry-label-unknown",
               "data": {
-                "system": "psx",
+                "source": "esde",
+                "key": "psx",
                 "side": "target",
                 "label": "Beetle PSX HW"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -4872,7 +5394,10 @@
         "save_portability": {
           "verdict": "unestablished",
           "source": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "SwanStation",
             "kind": "libretro",
             "core_so": "swanstation_libretro.so",
@@ -4892,7 +5417,10 @@
             ]
           },
           "target": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "Mednafen (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -4920,7 +5448,17 @@
                 "code": "standalone-unsupported"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -4998,7 +5536,10 @@
         "save_portability": {
           "verdict": "same-files",
           "source": {
-            "system": "ps2",
+            "system": {
+              "source": "esde",
+              "key": "ps2"
+            },
             "label": "LRPS2",
             "kind": "libretro",
             "core_so": "pcsx2_libretro.so",
@@ -5018,7 +5559,10 @@
             ]
           },
           "target": {
-            "system": "ps2",
+            "system": {
+              "source": "esde",
+              "key": "ps2"
+            },
             "label": "PCEE2",
             "kind": "libretro",
             "core_so": "pcee2_libretro.so",
@@ -5103,7 +5647,17 @@
               "conversion": null
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps2"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -5181,7 +5735,10 @@
         "save_portability": {
           "verdict": "same-data",
           "source": {
-            "system": "ps2",
+            "system": {
+              "source": "esde",
+              "key": "ps2"
+            },
             "label": "LRPS2",
             "kind": "libretro",
             "core_so": "pcsx2_libretro.so",
@@ -5201,7 +5758,10 @@
             ]
           },
           "target": {
-            "system": "ps2",
+            "system": {
+              "source": "esde",
+              "key": "ps2"
+            },
             "label": "PCSX2 (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -5290,7 +5850,17 @@
               "conversion": null
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps2"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -5369,7 +5939,10 @@
         "save_portability": {
           "verdict": "convertible",
           "source": {
-            "system": "ps2",
+            "system": {
+              "source": "esde",
+              "key": "ps2"
+            },
             "label": "PCSX2 (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -5389,7 +5962,10 @@
             ]
           },
           "target": {
-            "system": "ps2",
+            "system": {
+              "source": "esde",
+              "key": "ps2"
+            },
             "label": "LRPS2",
             "kind": "libretro",
             "core_so": "pcsx2_libretro.so",
@@ -5440,7 +6016,17 @@
               "conversion": null
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps2"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -5519,7 +6105,10 @@
         "save_portability": {
           "verdict": "same-data",
           "source": {
-            "system": "ps2",
+            "system": {
+              "source": "esde",
+              "key": "ps2"
+            },
             "label": "LRPS2",
             "kind": "libretro",
             "core_so": "pcsx2_libretro.so",
@@ -5539,7 +6128,10 @@
             ]
           },
           "target": {
-            "system": "ps2",
+            "system": {
+              "source": "esde",
+              "key": "ps2"
+            },
             "label": "PCEE2",
             "kind": "libretro",
             "core_so": "pcee2_libretro.so",
@@ -5596,7 +6188,17 @@
               "conversion": null
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps2"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -5674,7 +6276,10 @@
         "save_portability": {
           "verdict": "unestablished",
           "source": {
-            "system": "saturn",
+            "system": {
+              "source": "esde",
+              "key": "saturn"
+            },
             "label": "Beetle Saturn",
             "kind": "libretro",
             "core_so": "mednafen_saturn_libretro.so",
@@ -5694,7 +6299,10 @@
             ]
           },
           "target": {
-            "system": "saturn",
+            "system": {
+              "source": "esde",
+              "key": "saturn"
+            },
             "label": "Kronos",
             "kind": "libretro",
             "core_so": "kronos_libretro.so",
@@ -5773,7 +6381,17 @@
                 "reason": "target-file-unnamed"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "saturn"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -5861,7 +6479,10 @@
         "save_portability": {
           "verdict": "same-files",
           "source": {
-            "system": "saturn",
+            "system": {
+              "source": "esde",
+              "key": "saturn"
+            },
             "label": "Beetle Saturn",
             "kind": "libretro",
             "core_so": "mednafen_saturn_libretro.so",
@@ -5881,7 +6502,10 @@
             ]
           },
           "target": {
-            "system": "saturn",
+            "system": {
+              "source": "esde",
+              "key": "saturn"
+            },
             "label": "Kronos",
             "kind": "libretro",
             "core_so": "kronos_libretro.so",
@@ -5958,7 +6582,17 @@
               "conversion": null
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "saturn"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -6037,7 +6671,10 @@
         "save_portability": {
           "verdict": "unestablished",
           "source": {
-            "system": "saturn",
+            "system": {
+              "source": "esde",
+              "key": "saturn"
+            },
             "label": "Beetle Saturn",
             "kind": "libretro",
             "core_so": "mednafen_saturn_libretro.so",
@@ -6057,7 +6694,10 @@
             ]
           },
           "target": {
-            "system": "saturn",
+            "system": {
+              "source": "esde",
+              "key": "saturn"
+            },
             "label": "Kronos",
             "kind": "libretro",
             "core_so": "kronos_libretro.so",
@@ -6133,13 +6773,23 @@
                 "reason": "target-file-unnamed"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "saturn"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
     {
       "name": "a-system-no-format-record-covers-states-why-it-is-unestablished",
-      "rationale": "No packaged save-format record covers either Game Boy Advance core yet, so both sides say so and the pair is unestablished rather than guessed from the file names.",
+      "rationale": "The save-format records packaged for mGBA and VBA-M hold the Game Boy and the Game Boy Color, not the Game Boy Advance, so both sides say the system asked is none their records hold (#784 D55) and the pair is unestablished rather than guessed from the file names.",
       "input": {
         "home": "/home/deck",
         "files": {
@@ -6186,7 +6836,10 @@
         "save_portability": {
           "verdict": "unestablished",
           "source": {
-            "system": "gba",
+            "system": {
+              "source": "esde",
+              "key": "gba"
+            },
             "label": "mGBA",
             "kind": "libretro",
             "core_so": "mgba_libretro.so",
@@ -6206,7 +6859,10 @@
             ]
           },
           "target": {
-            "system": "gba",
+            "system": {
+              "source": "esde",
+              "key": "gba"
+            },
             "label": "VBA-M",
             "kind": "libretro",
             "core_so": "vbam_libretro.so",
@@ -6228,20 +6884,484 @@
           "parts": [],
           "caveats": [
             {
-              "code": "save-format-unrecorded",
+              "code": "save-record-unrecorded",
               "data": {
                 "side": "source",
-                "core": "mgba"
+                "core": "mgba",
+                "source": "esde",
+                "key": "gba"
               }
             },
             {
-              "code": "save-format-unrecorded",
+              "code": "save-record-unrecorded",
               "data": {
                 "side": "target",
-                "core": "vbam"
+                "core": "vbam",
+                "source": "esde",
+                "key": "gba"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "gba"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
+        }
+      }
+    },
+    {
+      "name": "a-system-asked-by-several-pairs-that-no-format-record-covers-names-them-all",
+      "rationale": "Asked by ES-DE's gba and libretro's Game Boy Advance, which name one system here, neither side's save-format records hold it (mGBA's and VBA-M's hold the Game Boy and the Game Boy Color), so each side names the system as asked, both pairs, as the parallel sources and keys (#784 D55).",
+      "input": {
+        "home": "/home/deck",
+        "files": {
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/cores\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>gba</name><path>%ROMPATH%/gba</path>\n    <command label=\"mGBA\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mgba_libretro.so %ROM%</command>\n    <command label=\"VBA-M\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/vbam_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/metadata": "[Application]\nname=net.retrodeck.retrodeck\nruntime=org.kde.Platform/x86_64/6.11\nsdk=org.kde.Sdk/x86_64/6.11\ncommand=retrodeck\n\n[Context]\nfilesystems=host;\n",
+          "/mnt/sd/retrodeck/roms/gba/Example Game (USA).gba": "rom"
+        },
+        "dirs": [
+          "/mnt/sd/retrodeck/saves",
+          "/home/deck/.var/app/net.retrodeck.retrodeck/config/ROMs",
+          "/mnt/sd/retrodeck/bios"
+        ],
+        "cores": {
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/mgba_libretro.so": {
+            "library_name": "mGBA",
+            "library_version": "0.11-dev c758314"
+          },
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/cores/vbam_libretro.so": {
+            "library_name": "VBA-M",
+            "library_version": "2.2.3 d0787ae"
+          }
+        },
+        "save_portability_query": {
+          "system": [
+            [
+              "esde",
+              "gba"
+            ],
+            [
+              "libretro",
+              "Nintendo - Game Boy Advance"
+            ]
+          ],
+          "source": "mGBA",
+          "target": "VBA-M",
+          "content_path": "/mnt/sd/retrodeck/roms/gba/Example Game (USA).gba"
+        }
+      },
+      "expected": {
+        "installations": [
+          {
+            "kind": "retrodeck",
+            "label": "RetroDECK",
+            "kinds": [
+              "retrodeck"
+            ],
+            "root": "/mnt/sd/retrodeck",
+            "health": []
+          }
+        ],
+        "save_portability": {
+          "verdict": "unestablished",
+          "source": {
+            "system": {
+              "source": "esde",
+              "key": "gba"
+            },
+            "label": "mGBA",
+            "kind": "libretro",
+            "core_so": "mgba_libretro.so",
+            "emulator": "mgba_libretro.so",
+            "declared_index": 0,
+            "selection": null,
+            "availability": "unestablished",
+            "launcher": null,
+            "core_path": null,
+            "caveats": [
+              {
+                "code": "find-rules-unreadable",
+                "data": {
+                  "layer": "bundled"
+                }
+              }
+            ]
+          },
+          "target": {
+            "system": {
+              "source": "esde",
+              "key": "gba"
+            },
+            "label": "VBA-M",
+            "kind": "libretro",
+            "core_so": "vbam_libretro.so",
+            "emulator": "vbam_libretro.so",
+            "declared_index": 1,
+            "selection": null,
+            "availability": "unestablished",
+            "launcher": null,
+            "core_path": null,
+            "caveats": [
+              {
+                "code": "find-rules-unreadable",
+                "data": {
+                  "layer": "bundled"
+                }
+              }
+            ]
+          },
+          "parts": [],
+          "caveats": [
+            {
+              "code": "save-record-unrecorded",
+              "data": {
+                "side": "source",
+                "core": "mgba",
+                "sources": [
+                  "esde",
+                  "libretro"
+                ],
+                "keys": [
+                  "gba",
+                  "Nintendo - Game Boy Advance"
+                ]
+              }
+            },
+            {
+              "code": "save-record-unrecorded",
+              "data": {
+                "side": "target",
+                "core": "vbam",
+                "sources": [
+                  "esde",
+                  "libretro"
+                ],
+                "keys": [
+                  "gba",
+                  "Nintendo - Game Boy Advance"
+                ]
+              }
+            }
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "gba"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": {
+              "table_version": 1,
+              "pairs": [
+                {
+                  "source": "libretro",
+                  "key": "Nintendo - Game Boy Advance",
+                  "version": null,
+                  "status": "known",
+                  "sources": [
+                    {
+                      "source": "esde",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "gba",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "esde-platform",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "gba",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "retrodeck",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "gba",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "emudeck",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "gba",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "romm",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "gba",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "romm-folder",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "gba",
+                          "relation": "exactMatch"
+                        },
+                        {
+                          "key": "gba2players",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "libretro",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "Nintendo - Game Boy Advance",
+                          "relation": "exactMatch"
+                        },
+                        {
+                          "key": "Nintendo - Game Boy Advance (e-Cards)",
+                          "relation": "narrowMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "batocera",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "gba",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "knulli",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "gba",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "rocknix",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "gba",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "igdb",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "24",
+                          "relation": "exactMatch"
+                        },
+                        {
+                          "key": "gba",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "screenscraper",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "12",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    },
+                    {
+                      "source": "thegamesdb",
+                      "status": "keys",
+                      "keys": [
+                        {
+                          "key": "5",
+                          "relation": "exactMatch"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ],
+              "intersection_status": "agreed",
+              "intersection": [
+                {
+                  "source": "esde",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "gba",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "esde-platform",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "gba",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "retrodeck",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "gba",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "emudeck",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "gba",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "romm",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "gba",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "romm-folder",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "gba",
+                      "relation": "exactMatch"
+                    },
+                    {
+                      "key": "gba2players",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "libretro",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "Nintendo - Game Boy Advance",
+                      "relation": "exactMatch"
+                    },
+                    {
+                      "key": "Nintendo - Game Boy Advance (e-Cards)",
+                      "relation": "narrowMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "batocera",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "gba",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "knulli",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "gba",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "rocknix",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "gba",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "igdb",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "24",
+                      "relation": "exactMatch"
+                    },
+                    {
+                      "key": "gba",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "screenscraper",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "12",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                },
+                {
+                  "source": "thegamesdb",
+                  "status": "keys",
+                  "keys": [
+                    {
+                      "key": "5",
+                      "relation": "exactMatch"
+                    }
+                  ]
+                }
+              ],
+              "conflict": [],
+              "caveats": []
+            }
+          }
         }
       }
     },
@@ -6294,7 +7414,10 @@
         "save_portability": {
           "verdict": "unestablished",
           "source": {
-            "system": "gb",
+            "system": {
+              "source": "esde",
+              "key": "gb"
+            },
             "label": "Mesen-S",
             "kind": "libretro",
             "core_so": "mesen-s_libretro.so",
@@ -6314,7 +7437,10 @@
             ]
           },
           "target": {
-            "system": "gb",
+            "system": {
+              "source": "esde",
+              "key": "gb"
+            },
             "label": "SameBoy",
             "kind": "libretro",
             "core_so": "sameboy_libretro.so",
@@ -6377,7 +7503,17 @@
                 "other_cartridges": "same-files"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "gb"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -6430,7 +7566,10 @@
         "save_portability": {
           "verdict": "unestablished",
           "source": {
-            "system": "gb",
+            "system": {
+              "source": "esde",
+              "key": "gb"
+            },
             "label": "Gambatte",
             "kind": "libretro",
             "core_so": "gambatte_libretro.so",
@@ -6450,7 +7589,10 @@
             ]
           },
           "target": {
-            "system": "gb",
+            "system": {
+              "source": "esde",
+              "key": "gb"
+            },
             "label": "SameBoy",
             "kind": "libretro",
             "core_so": "sameboy_libretro.so",
@@ -6555,7 +7697,17 @@
                 "other_cartridges": "no-game-data"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "gb"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -6608,7 +7760,10 @@
         "save_portability": {
           "verdict": "unestablished",
           "source": {
-            "system": "gb",
+            "system": {
+              "source": "esde",
+              "key": "gb"
+            },
             "label": "SameBoy",
             "kind": "libretro",
             "core_so": "sameboy_libretro.so",
@@ -6628,7 +7783,10 @@
             ]
           },
           "target": {
-            "system": "gb",
+            "system": {
+              "source": "esde",
+              "key": "gb"
+            },
             "label": "Gambatte",
             "kind": "libretro",
             "core_so": "gambatte_libretro.so",
@@ -6738,7 +7896,17 @@
                 "other_cartridges": "no-game-data"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "gb"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -6791,7 +7959,10 @@
         "save_portability": {
           "verdict": "unestablished",
           "source": {
-            "system": "gb",
+            "system": {
+              "source": "esde",
+              "key": "gb"
+            },
             "label": "Gambatte",
             "kind": "libretro",
             "core_so": "gambatte_libretro.so",
@@ -6811,7 +7982,10 @@
             ]
           },
           "target": {
-            "system": "gb",
+            "system": {
+              "source": "esde",
+              "key": "gb"
+            },
             "label": "mGBA",
             "kind": "libretro",
             "core_so": "mgba_libretro.so",
@@ -6916,7 +8090,17 @@
                 "other_cartridges": "no-game-data"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "gb"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -6969,7 +8153,10 @@
         "save_portability": {
           "verdict": "unestablished",
           "source": {
-            "system": "gb",
+            "system": {
+              "source": "esde",
+              "key": "gb"
+            },
             "label": "Gearboy",
             "kind": "libretro",
             "core_so": "gearboy_libretro.so",
@@ -6989,7 +8176,10 @@
             ]
           },
           "target": {
-            "system": "gb",
+            "system": {
+              "source": "esde",
+              "key": "gb"
+            },
             "label": "VBA-M",
             "kind": "libretro",
             "core_so": "vbam_libretro.so",
@@ -7083,7 +8273,17 @@
                 "other_cartridges": "same-files"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "gb"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -7136,7 +8336,10 @@
         "save_portability": {
           "verdict": "unestablished",
           "source": {
-            "system": "gb",
+            "system": {
+              "source": "esde",
+              "key": "gb"
+            },
             "label": "Gambatte",
             "kind": "libretro",
             "core_so": "gambatte_libretro.so",
@@ -7156,7 +8359,10 @@
             ]
           },
           "target": {
-            "system": "gb",
+            "system": {
+              "source": "esde",
+              "key": "gb"
+            },
             "label": "VBA-M",
             "kind": "libretro",
             "core_so": "vbam_libretro.so",
@@ -7261,7 +8467,17 @@
                 "other_cartridges": "no-game-data"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "gb"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -7314,7 +8530,10 @@
         "save_portability": {
           "verdict": "unestablished",
           "source": {
-            "system": "gb",
+            "system": {
+              "source": "esde",
+              "key": "gb"
+            },
             "label": "VBA-M",
             "kind": "libretro",
             "core_so": "vbam_libretro.so",
@@ -7334,7 +8553,10 @@
             ]
           },
           "target": {
-            "system": "gb",
+            "system": {
+              "source": "esde",
+              "key": "gb"
+            },
             "label": "mGBA",
             "kind": "libretro",
             "core_so": "mgba_libretro.so",
@@ -7443,7 +8665,17 @@
                 "other_cartridges": "no-game-data"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "gb"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -7496,7 +8728,10 @@
         "save_portability": {
           "verdict": "unestablished",
           "source": {
-            "system": "gb",
+            "system": {
+              "source": "esde",
+              "key": "gb"
+            },
             "label": "TGB Dual",
             "kind": "libretro",
             "core_so": "tgbdual_libretro.so",
@@ -7516,7 +8751,10 @@
             ]
           },
           "target": {
-            "system": "gb",
+            "system": {
+              "source": "esde",
+              "key": "gb"
+            },
             "label": "DoubleCherryGB",
             "kind": "libretro",
             "core_so": "DoubleCherryGB_libretro.so",
@@ -7620,7 +8858,17 @@
                 "other_cartridges": "no-game-data"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "gb"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -7673,7 +8921,10 @@
         "save_portability": {
           "verdict": "unestablished",
           "source": {
-            "system": "gb",
+            "system": {
+              "source": "esde",
+              "key": "gb"
+            },
             "label": "SameBoy",
             "kind": "libretro",
             "core_so": "sameboy_libretro.so",
@@ -7693,7 +8944,10 @@
             ]
           },
           "target": {
-            "system": "gb",
+            "system": {
+              "source": "esde",
+              "key": "gb"
+            },
             "label": "Mesen-S",
             "kind": "libretro",
             "core_so": "mesen-s_libretro.so",
@@ -7795,7 +9049,17 @@
                 "other_cartridges": "no-game-data"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "gb"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -7848,7 +9112,10 @@
         "save_portability": {
           "verdict": "unestablished",
           "source": {
-            "system": "gbc",
+            "system": {
+              "source": "esde",
+              "key": "gbc"
+            },
             "label": "Gambatte",
             "kind": "libretro",
             "core_so": "gambatte_libretro.so",
@@ -7868,7 +9135,10 @@
             ]
           },
           "target": {
-            "system": "gbc",
+            "system": {
+              "source": "esde",
+              "key": "gbc"
+            },
             "label": "SameBoy",
             "kind": "libretro",
             "core_so": "sameboy_libretro.so",
@@ -7973,7 +9243,17 @@
                 "other_cartridges": "no-game-data"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "gbc"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -8026,7 +9306,10 @@
         "save_portability": {
           "verdict": "unestablished",
           "source": {
-            "system": "gb",
+            "system": {
+              "source": "esde",
+              "key": "gb"
+            },
             "label": "Gambatte",
             "kind": "libretro",
             "core_so": "gambatte_libretro.so",
@@ -8046,7 +9329,10 @@
             ]
           },
           "target": {
-            "system": "gb",
+            "system": {
+              "source": "esde",
+              "key": "gb"
+            },
             "label": "bsnes",
             "kind": "libretro",
             "core_so": "bsnes_libretro.so",
@@ -8114,7 +9400,17 @@
                 "mode": "always"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "gb"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -8168,7 +9464,10 @@
         "save_portability": {
           "verdict": "same-data",
           "source": {
-            "system": "nds",
+            "system": {
+              "source": "esde",
+              "key": "nds"
+            },
             "label": "DeSmuME 2015",
             "kind": "libretro",
             "core_so": "desmume2015_libretro.so",
@@ -8188,7 +9487,10 @@
             ]
           },
           "target": {
-            "system": "nds",
+            "system": {
+              "source": "esde",
+              "key": "nds"
+            },
             "label": "DeSmuME",
             "kind": "libretro",
             "core_so": "desmume_libretro.so",
@@ -8239,7 +9541,17 @@
               "conversion": null
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "nds"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -8292,7 +9604,10 @@
         "save_portability": {
           "verdict": "unestablished",
           "source": {
-            "system": "nds",
+            "system": {
+              "source": "esde",
+              "key": "nds"
+            },
             "label": "melonDS",
             "kind": "libretro",
             "core_so": "melonds_libretro.so",
@@ -8312,7 +9627,10 @@
             ]
           },
           "target": {
-            "system": "nds",
+            "system": {
+              "source": "esde",
+              "key": "nds"
+            },
             "label": "melonDS DS",
             "kind": "libretro",
             "core_so": "melondsds_libretro.so",
@@ -8373,7 +9691,17 @@
                 "target_length_revision": "f6692df"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "nds"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -8423,7 +9751,10 @@
         "save_portability": {
           "verdict": "unestablished",
           "source": {
-            "system": "nds",
+            "system": {
+              "source": "esde",
+              "key": "nds"
+            },
             "label": "DeSmuME",
             "kind": "libretro",
             "core_so": "desmume_libretro.so",
@@ -8443,7 +9774,10 @@
             ]
           },
           "target": {
-            "system": "nds",
+            "system": {
+              "source": "esde",
+              "key": "nds"
+            },
             "label": "melonDS (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -8503,7 +9837,17 @@
                 "target_length_revision": "b86390e4"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "nds"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -8556,7 +9900,10 @@
         "save_portability": {
           "verdict": "unestablished",
           "source": {
-            "system": "nds",
+            "system": {
+              "source": "esde",
+              "key": "nds"
+            },
             "label": "melonDS",
             "kind": "libretro",
             "core_so": "melonds_libretro.so",
@@ -8576,7 +9923,10 @@
             ]
           },
           "target": {
-            "system": "nds",
+            "system": {
+              "source": "esde",
+              "key": "nds"
+            },
             "label": "DeSmuME",
             "kind": "libretro",
             "core_so": "desmume_libretro.so",
@@ -8636,7 +9986,17 @@
                 "target_length": "written-extent"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "nds"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -8689,7 +10049,10 @@
         "save_portability": {
           "verdict": "unestablished",
           "source": {
-            "system": "nds",
+            "system": {
+              "source": "esde",
+              "key": "nds"
+            },
             "label": "melonDS",
             "kind": "libretro",
             "core_so": "melonds_libretro.so",
@@ -8709,7 +10072,10 @@
             ]
           },
           "target": {
-            "system": "nds",
+            "system": {
+              "source": "esde",
+              "key": "nds"
+            },
             "label": "NooDS",
             "kind": "libretro",
             "core_so": "noods_libretro.so",
@@ -8758,7 +10124,17 @@
                 "mode": "always"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "nds"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -8809,7 +10185,10 @@
         "save_portability": {
           "verdict": "same-data",
           "source": {
-            "system": "gc",
+            "system": {
+              "source": "esde",
+              "key": "gc"
+            },
             "label": "Dolphin (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -8829,7 +10208,10 @@
             ]
           },
           "target": {
-            "system": "gc",
+            "system": {
+              "source": "esde",
+              "key": "gc"
+            },
             "label": "Dolphin",
             "kind": "libretro",
             "core_so": "dolphin_libretro.so",
@@ -8940,7 +10322,17 @@
               "conversion": null
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "gc"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -8988,7 +10380,10 @@
         "save_portability": {
           "verdict": "not-readable",
           "source": {
-            "system": "gc",
+            "system": {
+              "source": "esde",
+              "key": "gc"
+            },
             "label": "Dolphin (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -9008,7 +10403,10 @@
             ]
           },
           "target": {
-            "system": "gc",
+            "system": {
+              "source": "esde",
+              "key": "gc"
+            },
             "label": "PrimeHack (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -9176,7 +10574,17 @@
               "conversion": null
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "gc"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -9224,7 +10632,10 @@
         "save_portability": {
           "verdict": "convertible",
           "source": {
-            "system": "gc",
+            "system": {
+              "source": "esde",
+              "key": "gc"
+            },
             "label": "PrimeHack (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -9244,7 +10655,10 @@
             ]
           },
           "target": {
-            "system": "gc",
+            "system": {
+              "source": "esde",
+              "key": "gc"
+            },
             "label": "Dolphin (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -9355,7 +10769,17 @@
               "conversion": null
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "gc"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -9403,7 +10827,10 @@
         "save_portability": {
           "verdict": "same-data",
           "source": {
-            "system": "gc",
+            "system": {
+              "source": "esde",
+              "key": "gc"
+            },
             "label": "Dolphin (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -9423,7 +10850,10 @@
             ]
           },
           "target": {
-            "system": "gc",
+            "system": {
+              "source": "esde",
+              "key": "gc"
+            },
             "label": "PrimeHack (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -9654,7 +11084,17 @@
               "conversion": null
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "gc"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -9705,7 +11145,10 @@
         "save_portability": {
           "verdict": "unestablished",
           "source": {
-            "system": "gc",
+            "system": {
+              "source": "esde",
+              "key": "gc"
+            },
             "label": "Dolphin (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -9725,7 +11168,10 @@
             ]
           },
           "target": {
-            "system": "gc",
+            "system": {
+              "source": "esde",
+              "key": "gc"
+            },
             "label": "Dolphin",
             "kind": "libretro",
             "core_so": "dolphin_libretro.so",
@@ -9858,7 +11304,17 @@
                 "reason": "region-not-in-content"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "gc"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -9906,7 +11362,10 @@
         "save_portability": {
           "verdict": "not-readable",
           "source": {
-            "system": "gc",
+            "system": {
+              "source": "esde",
+              "key": "gc"
+            },
             "label": "Dolphin (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -9926,7 +11385,10 @@
             ]
           },
           "target": {
-            "system": "gc",
+            "system": {
+              "source": "esde",
+              "key": "gc"
+            },
             "label": "PrimeHack (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -10115,7 +11577,17 @@
               "conversion": null
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "gc"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -10163,7 +11635,10 @@
         "save_portability": {
           "verdict": "same-data",
           "source": {
-            "system": "gc",
+            "system": {
+              "source": "esde",
+              "key": "gc"
+            },
             "label": "Dolphin (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -10183,7 +11658,10 @@
             ]
           },
           "target": {
-            "system": "gc",
+            "system": {
+              "source": "esde",
+              "key": "gc"
+            },
             "label": "PrimeHack (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -10414,7 +11892,17 @@
               "conversion": null
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "gc"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -10461,7 +11949,10 @@
         "save_portability": {
           "verdict": "unestablished",
           "source": {
-            "system": "gc",
+            "system": {
+              "source": "esde",
+              "key": "gc"
+            },
             "label": "Dolphin (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -10481,7 +11972,10 @@
             ]
           },
           "target": {
-            "system": "gc",
+            "system": {
+              "source": "esde",
+              "key": "gc"
+            },
             "label": "PrimeHack (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -10510,7 +12004,17 @@
                 "mode": "agp+none"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "gc"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -10557,7 +12061,10 @@
         "save_portability": {
           "verdict": "unestablished",
           "source": {
-            "system": "gc",
+            "system": {
+              "source": "esde",
+              "key": "gc"
+            },
             "label": "Dolphin (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -10577,7 +12084,10 @@
             ]
           },
           "target": {
-            "system": "gc",
+            "system": {
+              "source": "esde",
+              "key": "gc"
+            },
             "label": "PrimeHack (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -10606,7 +12116,17 @@
                 "mode": "folder+none"
               }
             }
-          ]
+          ],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "gc"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -10653,7 +12173,10 @@
         "save_portability": {
           "verdict": "same-data",
           "source": {
-            "system": "wii",
+            "system": {
+              "source": "esde",
+              "key": "wii"
+            },
             "label": "Dolphin (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -10673,7 +12196,10 @@
             ]
           },
           "target": {
-            "system": "wii",
+            "system": {
+              "source": "esde",
+              "key": "wii"
+            },
             "label": "PrimeHack (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -10720,7 +12246,17 @@
               "conversion": null
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "wii"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -10771,7 +12307,10 @@
         "save_portability": {
           "verdict": "same-data",
           "source": {
-            "system": "wii",
+            "system": {
+              "source": "esde",
+              "key": "wii"
+            },
             "label": "Dolphin",
             "kind": "libretro",
             "core_so": "dolphin_libretro.so",
@@ -10791,7 +12330,10 @@
             ]
           },
           "target": {
-            "system": "wii",
+            "system": {
+              "source": "esde",
+              "key": "wii"
+            },
             "label": "Dolphin (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -10838,7 +12380,17 @@
               "conversion": null
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "wii"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -10886,7 +12438,10 @@
         "save_portability": {
           "verdict": "same-data",
           "source": {
-            "system": "gc",
+            "system": {
+              "source": "esde",
+              "key": "gc"
+            },
             "label": "Dolphin (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -10906,7 +12461,10 @@
             ]
           },
           "target": {
-            "system": "gc",
+            "system": {
+              "source": "esde",
+              "key": "gc"
+            },
             "label": "PrimeHack (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -11137,7 +12695,17 @@
               "conversion": null
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "gc"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -11185,7 +12753,10 @@
         "save_portability": {
           "verdict": "not-readable",
           "source": {
-            "system": "gc",
+            "system": {
+              "source": "esde",
+              "key": "gc"
+            },
             "label": "Dolphin (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -11205,7 +12776,10 @@
             ]
           },
           "target": {
-            "system": "gc",
+            "system": {
+              "source": "esde",
+              "key": "gc"
+            },
             "label": "PrimeHack (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -11394,7 +12968,17 @@
               "conversion": null
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "gc"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -11442,7 +13026,10 @@
         "save_portability": {
           "verdict": "same-data",
           "source": {
-            "system": "gc",
+            "system": {
+              "source": "esde",
+              "key": "gc"
+            },
             "label": "Dolphin (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -11462,7 +13049,10 @@
             ]
           },
           "target": {
-            "system": "gc",
+            "system": {
+              "source": "esde",
+              "key": "gc"
+            },
             "label": "PrimeHack (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -11693,7 +13283,17 @@
               "conversion": null
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "gc"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -11741,7 +13341,10 @@
         "save_portability": {
           "verdict": "same-data",
           "source": {
-            "system": "gc",
+            "system": {
+              "source": "esde",
+              "key": "gc"
+            },
             "label": "Dolphin (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -11761,7 +13364,10 @@
             ]
           },
           "target": {
-            "system": "gc",
+            "system": {
+              "source": "esde",
+              "key": "gc"
+            },
             "label": "PrimeHack (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -11998,7 +13604,17 @@
               "conversion": null
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "gc"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -12046,7 +13662,10 @@
         "save_portability": {
           "verdict": "not-readable",
           "source": {
-            "system": "gc",
+            "system": {
+              "source": "esde",
+              "key": "gc"
+            },
             "label": "Dolphin (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -12066,7 +13685,10 @@
             ]
           },
           "target": {
-            "system": "gc",
+            "system": {
+              "source": "esde",
+              "key": "gc"
+            },
             "label": "PrimeHack (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -12261,7 +13883,17 @@
               "conversion": null
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "gc"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -12519,7 +14151,10 @@
         "save_portability": {
           "verdict": "same-data",
           "source": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "DuckStation (Legacy) (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -12539,7 +14174,10 @@
             ]
           },
           "target": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "SwanStation",
             "kind": "libretro",
             "core_so": "swanstation_libretro.so",
@@ -12596,7 +14234,17 @@
               "conversion": null
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -12854,7 +14502,10 @@
         "save_portability": {
           "verdict": "not-readable",
           "source": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "DuckStation (Legacy) (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -12874,7 +14525,10 @@
             ]
           },
           "target": {
-            "system": "psx",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
             "label": "SwanStation",
             "kind": "libretro",
             "core_so": "swanstation_libretro.so",
@@ -12954,7 +14608,17 @@
               "conversion": null
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "psx"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -13032,7 +14696,10 @@
         "save_portability": {
           "verdict": "same-data",
           "source": {
-            "system": "ps2",
+            "system": {
+              "source": "esde",
+              "key": "ps2"
+            },
             "label": "PCSX2 (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -13052,7 +14719,10 @@
             ]
           },
           "target": {
-            "system": "ps2",
+            "system": {
+              "source": "esde",
+              "key": "ps2"
+            },
             "label": "LRPS2",
             "kind": "libretro",
             "core_so": "pcsx2_libretro.so",
@@ -13143,7 +14813,17 @@
               "conversion": null
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps2"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -13222,7 +14902,10 @@
         "save_portability": {
           "verdict": "same-data",
           "source": {
-            "system": "ps2",
+            "system": {
+              "source": "esde",
+              "key": "ps2"
+            },
             "label": "PCEE2",
             "kind": "libretro",
             "core_so": "pcee2_libretro.so",
@@ -13242,7 +14925,10 @@
             ]
           },
           "target": {
-            "system": "ps2",
+            "system": {
+              "source": "esde",
+              "key": "ps2"
+            },
             "label": "LRPS2",
             "kind": "libretro",
             "core_so": "pcsx2_libretro.so",
@@ -13331,7 +15017,17 @@
               "conversion": null
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps2"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -13410,7 +15106,10 @@
         "save_portability": {
           "verdict": "same-data",
           "source": {
-            "system": "ps2",
+            "system": {
+              "source": "esde",
+              "key": "ps2"
+            },
             "label": "PCEE2",
             "kind": "libretro",
             "core_so": "pcee2_libretro.so",
@@ -13430,7 +15129,10 @@
             ]
           },
           "target": {
-            "system": "ps2",
+            "system": {
+              "source": "esde",
+              "key": "ps2"
+            },
             "label": "LRPS2",
             "kind": "libretro",
             "core_so": "pcsx2_libretro.so",
@@ -13519,7 +15221,17 @@
               "conversion": null
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "ps2"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     },
@@ -13567,7 +15279,10 @@
         "save_portability": {
           "verdict": "same-data",
           "source": {
-            "system": "gc",
+            "system": {
+              "source": "esde",
+              "key": "gc"
+            },
             "label": "Dolphin (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -13587,7 +15302,10 @@
             ]
           },
           "target": {
-            "system": "gc",
+            "system": {
+              "source": "esde",
+              "key": "gc"
+            },
             "label": "PrimeHack (Standalone)",
             "kind": "standalone",
             "core_so": null,
@@ -13713,7 +15431,17 @@
               "conversion": null
             }
           ],
-          "caveats": []
+          "caveats": [],
+          "resolution": {
+            "status": "resolved",
+            "system": {
+              "source": "esde",
+              "key": "gc"
+            },
+            "relation": "exactMatch",
+            "candidates": [],
+            "translation": null
+          }
         }
       }
     }

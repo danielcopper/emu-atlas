@@ -148,9 +148,9 @@ class RuleReading:
     ``ModeChoice.reads_cwd``; PUAE's member check resolves against the same
     directory and does not take it yet (``_puae_class_of``, #597).
 
-    ``system`` is the content's system in ES-DE's vocabulary where the asker
-    named one — the catalogue routes always do — and ``None`` where it did
-    not: the Dolphin core keeps a GameCube game's saves and a Wii game's in
+    ``system`` is the content's system by its ES-DE name, the name a core's
+    recorded file set is keyed by, and ``None`` where the asker named none or
+    the one named has no single ES-DE name: the Dolphin core keeps a GameCube game's saves and a Wii game's in
     different parts of one tree, and only the system says which.
     """
 
