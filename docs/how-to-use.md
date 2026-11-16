@@ -680,22 +680,30 @@ Where the pairs name one system the installation holds, the question answers for
 `candidates` lists each with its status here — and `conflict` with `system-pairs-conflict` when the pairs name different
 systems. Branch on the status, not on the caveat codes: `resolved` means the installation holds the system, on every
 route. One question asks about a name's standing itself: `platform_ids` keeps a name the installation does not hold, an
-own name or a system the table reached, as the system it spells, with `status` `absent` or `disabled`, a `resolved`
-resolution and `system-unknown` beside it, because telling "disabled here" from "an unknown name" is what it is for; its
-candidates carry `disabled` and `absent` as well, where every other question's are `declared`. Every other question
-answers a name the installation does not hold, read live or reached through the table, as naming no system here: the
-status is `unknown` with `system-unknown` beside it, the emulator and ROM-folder questions included, and RetroDECK's
-`gamelist_selections` refuses it (below). An own pair it does not hold, asked beside others, is an unknown pair and
-decides nothing. The installation does not hold a system on RetroDECK and EmuDeck where the catalogue, read in full,
-does not declare it (while EmuDeck's bundled layer is sealed the undeclared system may sit there, and the sealed
-statement is the whole claim; where a layer does not parse, the catalogue in force is empty but nothing that layer meant
-to declare was read, so `catalogue-invalid` is the whole claim, and an empty firmware answer states
-`firmware-declaration-unknown`, a look that failed), and on a bare RetroArch where no installed core names it — by a
-libretro database name its `.info` declares, or by the pair atlas packages for a core that declares none. A system named
-by a cited pair is held where a core it is cited for is installed, on every arrangement. An unknown name is never
-answered as a system the catalogue lists nothing for. A pair the table cannot place rides along with its own caveat
-(`platform-unmapped`, `platform-excluded`, `platform-source-unknown`) and does not decide anything; a stated version the
-table does not hold is `platform-source-version-differs` in the translation.
+own name or a system the table reached, as the system it spells, with `status` `absent` or `disabled` — `absent` for one
+the catalogue declares in a form ES-DE skips — a `resolved` resolution and `system-unknown` beside it, because telling
+"disabled here" from "an unknown name" is what it is for; its candidates carry `disabled` and `absent` as well, where
+every other question's are `declared`. Every other question answers a name the installation does not hold, read live or
+reached through the table, as naming no system here: the status is `unknown` with `system-unknown` beside it, the
+emulator and ROM-folder questions included, and RetroDECK's `gamelist_selections` refuses it (below). An own pair it
+does not hold, asked beside others, is an unknown pair and decides nothing. The installation does not hold a system on
+RetroDECK and EmuDeck where the catalogue, read in full, does not declare it, or declares it without an `<extension>`
+list or a `<command>`, which ES-DE skips wholesale and which the questions that list systems do not count as declared
+either — a `<command>` with no text is still one, so a system whose commands are all blank is held, and its catalogue
+and launch answers say why nothing starts with `launch-resolution-unsupported` (while EmuDeck's bundled layer is sealed
+the undeclared system, or a declaration of the skipped one that ES-DE loads, may sit there, and the sealed statement is
+the whole claim; where a layer does not parse, the catalogue in force is empty but nothing that layer meant to declare
+was read, so `catalogue-invalid` is the whole claim, and an empty firmware answer states `firmware-declaration-unknown`,
+a look that failed), and on a bare RetroArch where no installed core names it — by a libretro database name its `.info`
+declares, or by the pair atlas packages for a core that declares none. A system named by a cited pair is held where a
+core it is cited for is installed, on every arrangement. A declaration ES-DE skips shadows nothing: where the custom
+`es_systems.xml` declares a system without an `<extension>` list or a `<command>` and the bundled file declares it in
+full, the bundled declaration is the system and every answer is the bundled one's — ES-DE reads the custom file first
+and keeps a later declaration out only for a system it loaded; under `<loadExclusive/>` the bundled file is not read, so
+the skipped custom declaration stays the system and it is not held. An unknown name is never answered as a system the
+catalogue lists nothing for. A pair the table cannot place rides along with its own caveat (`platform-unmapped`,
+`platform-excluded`, `platform-source-unknown`) and does not decide anything; a stated version the table does not hold
+is `platform-source-version-differs` in the translation.
 
 Two questions take a system without answering about it. `savefile_location` uses it to key the core's recorded file set:
 its placement carries no `resolution`, so the same caveats lead the placement's own, and so does
@@ -800,7 +808,10 @@ a declared system also matches through its live `<platform>` tag when that tag i
 translation — the table does not know the name of a system the user added by hand, but it knows the tag that system
 carries. Each match's `status` says what your next step is, and the three never collapse:
 
-- **`declared`** — this installation's catalogue lists it: place content now.
+- **`declared`** — this installation's catalogue lists it in a form the frontend loads: place content now. A system the
+  catalogue declares without an `<extension>` list or a `<command>` is one ES-DE skips: on a catalogue read in full it
+  is `absent`, and `systems()` and `rom_locations()` do not list it either; while EmuDeck's bundled layer is sealed it
+  is answered as one the readable layers do not declare, so it is listed where the installed cores derive it.
 - **`disabled`** — the catalogue's text carries it only inside an XML comment (RetroDECK 0.10.9b shipped 31 systems that
   way): present and deliberately off — the user would have to enable it.
 - **`absent`** — the vocabulary knows the system and this installation does not have it: don't place content here. On a
@@ -2885,10 +2896,12 @@ machine and one of the two you may act on as "nothing here":
 
 `sealed` and `exclusive` are the two of the five that also accompany real entries, and they hedge in opposite
 directions. On an EmuDeck machine with ES-DE, a system EmuDeck's own `custom_systems` overlay declares answers fully
-(ES-DE's merge replaces a same-name bundled system entirely), and `sealed` says the frontend may declare more systems
-than the answer can list. `exclusive` says the opposite: a document-level `<loadExclusive/>` in the custom
-`es_systems.xml` makes ES-DE skip the bundled file wholesale, so the enumeration you got is the complete catalogue in
-force — on EmuDeck it replaces `sealed`, because nothing sealed away applies.
+(ES-DE's merge replaces a same-name bundled system entirely; an overlay declaration ES-DE skips replaces nothing: where
+the bundled layer is read its declaration is the system, and while it is sealed the system is answered as one the
+readable layers do not declare), and `sealed` says the frontend may declare more systems than the answer can list.
+`exclusive` says the opposite: a document-level `<loadExclusive/>` in the custom `es_systems.xml` makes ES-DE skip the
+bundled file wholesale, so the enumeration you got is the complete catalogue in force — on EmuDeck it replaces `sealed`,
+because nothing sealed away applies.
 
 `sealed` is also capability-dependent since the AppImage reader landed: atlas opens the AppImage's embedded
 `es_systems.xml` itself (a pure-stdlib squashfs walk, `atlas.squashfs`) wherever the runtime has the image's codec —
@@ -3183,17 +3196,17 @@ Every value other than `startable` comes with **exactly one** reason caveat on t
 the catalogue's own first and the launch answer's last. Read any value you do not know as `unestablished`: a later
 release adds words (`needs-setup` is the next one), and that reading stays correct.
 
-| reason code                     | verdict         | `data`                                                                                                  | what to do                                                                                                                                                                                                                                                                                                                  |
-| ------------------------------- | --------------- | ------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `emulator-not-found`            | `not-installed` | `emulator_token`, `searched` (the rule entries as written, in order)                                    | say the emulator is not installed; `searched` is where the frontend looked                                                                                                                                                                                                                                                  |
-| `program-not-found`             | `not-installed` | `program` (the command's first word as written), `searched` (the directories it was tried in, in order) | a command without an emulator token names a program the frontend finds neither as a file nor on its `PATH`; `PLACEHOLDER`, the catalogues' word for a system with no Linux emulator, answers this way, and `program` is how a client recognises it                                                                          |
-| `launcher-script-missing`       | `not-installed` | `path` (the script as the command writes it)                                                            | an EmuDeck `/bin/bash <script>` row whose script is not there — no file, a dead link or a directory; bash is found, the launch fails at the script                                                                                                                                                                          |
-| `core-not-installed`            | `not-installed` | `core_so`, `searched` (the corepath entries as written, in order)                                       | say the core is missing — the same code the placement routes use                                                                                                                                                                                                                                                            |
-| `emulator-rules-missing`        | `unestablished` | `emulator_token`                                                                                        | the frontend itself refuses ("missing find rules"); where it would look is written nowhere                                                                                                                                                                                                                                  |
-| `core-rules-missing`            | `unestablished` | `core_token` (the `%CORE_X%` token, `RETROARCH`)                                                        | the same for the core: no layer defines the core, or the one that does gives it no corepath entries                                                                                                                                                                                                                         |
-| `find-rules-unreadable`         | `unestablished` | `layer`: `bundled`                                                                                      | the bundled rules — the shipped file, or the `resources/` copy that stands in for it — could not be read or parsed, so what the frontend searches is unknown                                                                                                                                                                |
-| `launch-path-unestablished`     | `unestablished` | `path`                                                                                                  | the lookup reached a path atlas cannot see the way the frontend sees it, so the entries after it cannot decide either                                                                                                                                                                                                       |
-| `launch-resolution-unsupported` | `unestablished` | `installation` (the kind), or `{}` for one command's shape                                              | not evaluated in this release: bare RetroArch and derived entries (`installation`); and (`{}`) a command using `%EMUPATH%`, one with no `%EMULATOR_X%` token that carries a `%PRECOMMAND_X%`, a libretro command naming its core by path, a `%CORE_X%` with no end, and a row handing RetroArch a core file of another host |
+| reason code                     | verdict         | `data`                                                                                                  | what to do                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ------------------------------- | --------------- | ------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `emulator-not-found`            | `not-installed` | `emulator_token`, `searched` (the rule entries as written, in order)                                    | say the emulator is not installed; `searched` is where the frontend looked                                                                                                                                                                                                                                                                                                                                            |
+| `program-not-found`             | `not-installed` | `program` (the command's first word as written), `searched` (the directories it was tried in, in order) | a command without an emulator token names a program the frontend finds neither as a file nor on its `PATH`; `PLACEHOLDER`, the catalogues' word for a system with no Linux emulator, answers this way, and `program` is how a client recognises it                                                                                                                                                                    |
+| `launcher-script-missing`       | `not-installed` | `path` (the script as the command writes it)                                                            | an EmuDeck `/bin/bash <script>` row whose script is not there — no file, a dead link or a directory; bash is found, the launch fails at the script                                                                                                                                                                                                                                                                    |
+| `core-not-installed`            | `not-installed` | `core_so`, `searched` (the corepath entries as written, in order)                                       | say the core is missing — the same code the placement routes use                                                                                                                                                                                                                                                                                                                                                      |
+| `emulator-rules-missing`        | `unestablished` | `emulator_token`                                                                                        | the frontend itself refuses ("missing find rules"); where it would look is written nowhere                                                                                                                                                                                                                                                                                                                            |
+| `core-rules-missing`            | `unestablished` | `core_token` (the `%CORE_X%` token, `RETROARCH`)                                                        | the same for the core: no layer defines the core, or the one that does gives it no corepath entries                                                                                                                                                                                                                                                                                                                   |
+| `find-rules-unreadable`         | `unestablished` | `layer`: `bundled`                                                                                      | the bundled rules — the shipped file, or the `resources/` copy that stands in for it — could not be read or parsed, so what the frontend searches is unknown                                                                                                                                                                                                                                                          |
+| `launch-path-unestablished`     | `unestablished` | `path`                                                                                                  | the lookup reached a path atlas cannot see the way the frontend sees it, so the entries after it cannot decide either                                                                                                                                                                                                                                                                                                 |
+| `launch-resolution-unsupported` | `unestablished` | `installation` (the kind), or `{}` for one command's shape                                              | not evaluated in this release: bare RetroArch and derived entries (`installation`); and (`{}`) a command using `%EMUPATH%`, one with no `%EMULATOR_X%` token that carries a `%PRECOMMAND_X%`, a libretro command naming its core by path, a `%CORE_X%` with no end, and a row handing RetroArch a core file of another host; on the answer itself (`{}`), a system whose commands are all blank, which lists no entry |
 
 Two keys name what the frontend looked for, each in the spelling the command carries: `emulator_token` is the `X` of
 `%EMULATOR_X%` (the name `es_find_rules.xml` keys its `<emulator>` by, `RYUBING`), and `core_token` the `X` of
@@ -4038,7 +4051,10 @@ ride this answer: EmuDeck's sealed statement included, with `frontend-marker-mis
 holds. Where none does, the list is derived from the installed cores' own `systemname` and
 `emulator-catalogue-unavailable` says so. An id the readable layers of a sealed catalogue do not declare answers empty
 with `firmware-declaration-unknown` — a look that failed, never `system-unknown` — because the declaration may sit in
-the layer nobody could read.
+the layer nobody could read. A held system no emulator is listed for — one whose catalogue commands are all blank, or
+one an EmuDeck without ES-DE derives no core for — answers `firmware-declaration-unknown`, a look that found nothing to
+read, since with no emulator read no absence was established; `system-unknown` is said only by the resolution, for a
+system the installation does not hold.
 
 `firmware_inventory` enumerates the installed cores and, where a frontend catalogue declares which emulators launch
 which system, the standalone emulators atlas carries a firmware card for: Cemu, PCSX2, melonDS, xemu and DuckStation
@@ -4878,13 +4894,13 @@ so you can see which one was rejected.
 
 An answer with no requirements says which kind of empty it is, and the code is the branch — never the message:
 
-| caveat                         | what it means                                          | what to do                                      |
-| ------------------------------ | ------------------------------------------------------ | ----------------------------------------------- |
-| `system-unknown`               | nothing here covers that identifier                    | check your vocabulary (RomM slug vs ES-DE name) |
-| `no-firmware-declaration`      | read, and nothing declares it — an established absence | nothing needed                                  |
-| `no-firmware-requirement`      | declared, but nothing became a requirement             | read `core.refused` and the core caveats        |
-| `firmware-declaration-unknown` | atlas could not establish what is declared             | treat as unknown; never as "nothing needed"     |
-| `system-directory-cleared`     | the key is set to nothing, so the root is per-run      | name content, or fix the config                 |
+| caveat                         | what it means                                                 | what to do                                      |
+| ------------------------------ | ------------------------------------------------------------- | ----------------------------------------------- |
+| `system-unknown`               | the system asked is not held here — `resolution` is `unknown` | check your vocabulary (RomM slug vs ES-DE name) |
+| `no-firmware-declaration`      | read, and nothing declares it — an established absence        | nothing needed                                  |
+| `no-firmware-requirement`      | declared, but nothing became a requirement                    | read `core.refused` and the core caveats        |
+| `firmware-declaration-unknown` | atlas could not establish what is declared                    | treat as unknown; never as "nothing needed"     |
+| `system-directory-cleared`     | the key is set to nothing, so the root is per-run             | name content, or fix the config                 |
 
 These are **answer-level** codes, in `answer.caveats`. Two facts about an individual emulator live on the entry instead,
 in `core.caveats`: `core-not-installed`, and `standalone-unsupported` for one that is here but whose rules are not

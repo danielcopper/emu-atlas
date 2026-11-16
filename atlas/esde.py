@@ -475,12 +475,69 @@ class SystemDeclaration:
     way ES-DE reads it (see :func:`platform_tokens`): tokens naming ES-DE's
     platform ids (the platform table's ``esde-platform`` column) where they
     are valid ones, and ``ignore`` or an unknown token as the file writes it.
+    ``commands`` is how many ``<command>`` elements ES-DE keeps for the system
+    (:func:`_stored_commands`), an empty one among them: ``entries`` states
+    only those with text, so a system with no entry may still be one ES-DE
+    loads (:func:`skipped_for`).
     """
 
     entries: tuple[EmulatorSpec, ...] = ()
     rom_path: str | None = None
     extensions: tuple[str, ...] = ()
     platforms: tuple[str, ...] = ()
+    commands: int = 0
+
+    def __post_init__(self) -> None:
+        if len(self.entries) > self.commands:
+            raise ValueError(
+                f"SystemDeclaration: {len(self.entries)} entries from {self.commands} kept <command> elements — "
+                "an entry is a kept command with text, so there are never more of them"
+            )
+
+
+def skipped_for(declaration: SystemDeclaration) -> Literal["extension", "command"] | None:
+    """The tag whose absence makes ES-DE skip *declaration*'s system wholesale, or ``None``.
+
+    ``loadConfig`` skips a system whose ``<extension>`` list splits into no
+    token or that keeps no ``<command>`` (``SystemData.cpp:1109-1119`` @
+    v3.4.1, the check at ``:1114``), so the frontend runs without it. A
+    ``<command>`` with no text is kept, so it is not a missing one. The same
+    check also skips a missing fullname or path, and this answers neither.
+    """
+    if not declaration.extensions:
+        return "extension"
+    if not declaration.commands:
+        return "command"
+    return None
+
+
+def loaded_declaration(systems: Mapping[str, SystemDeclaration], name: str) -> SystemDeclaration | None:
+    """The declaration of *name* ES-DE loads from a read catalogue's *systems* — ``None`` where there is none.
+
+    A declaration ES-DE skips (:func:`skipped_for`) is none (#784 D58), so
+    every reader that answers from a declaration — its entries, its path and
+    extensions, the firmware enumeration, the systems a catalogue lists —
+    reads it through this and never answers from a declaration the frontend
+    runs without. On a catalogue read in full, a question that takes a system
+    has answered a skipped one unknown before any of this is read; the
+    firmware inventory, which asks about no system, reaches it directly and
+    finds no entries there. On a sealed read the sealed layer may hold a
+    declaration ES-DE loads in its place (#784 D59), so the system is answered
+    as one the readable layers do not declare.
+    """
+    declaration = systems.get(name)
+    return None if declaration is None or skipped_for(declaration) is not None else declaration
+
+
+def loaded_declarations(systems: Mapping[str, SystemDeclaration]) -> dict[str, SystemDeclaration]:
+    """Every declaration of a read catalogue ES-DE loads (:func:`loaded_declaration`), in the catalogue's order.
+
+    What the questions that list systems read (#784 D61): a system ES-DE
+    skips is one the catalogue does not declare there too.
+    """
+    return {
+        name: declaration for name in systems if (declaration := loaded_declaration(systems, name)) is not None
+    }
 
 
 # The two reads ES-DE refuses its whole catalogue load on — the values
@@ -577,6 +634,7 @@ def parse_es_systems(text: str, *, provenance: str) -> CatalogueLayer:
             rom_path=declared_path or None,
             extensions=_read_list(system_el.findtext("extension") or ""),
             platforms=platform_tokens(system_el.findtext("platform") or ""),
+            commands=sum(1 for _ in _stored_commands(system_el)),
         )
     return CatalogueLayer(systems=result, load_exclusive=load_exclusive)
 
@@ -622,6 +680,15 @@ def merge_layers(
     with its commands, because that is the ``<system>`` element ES-DE ends up
     with.
 
+    A custom declaration ES-DE skips (:func:`skipped_for`) replaces nothing
+    (#784 D59). ``loadConfig`` reads the custom file first
+    (``getConfigPath``, ``SystemData.cpp:1338-1342,1362`` @ v3.4.1), and a
+    later declaration of the same name is kept out only by a system already
+    loaded (``:962-975``); the skip at ``:1114-1118`` loads nothing, so the
+    bundled declaration of that name is the one ES-DE reads next. Where the
+    bundled layer declares no such system, the skipped custom one stays,
+    and the system is still one ES-DE skips.
+
     The exclusive case never reaches this function: a custom layer carrying a
     document-level ``<loadExclusive/>`` makes ES-DE skip the bundled file
     wholesale (``SystemData.cpp:858-895``, v3.4.1), so the callers honor
@@ -629,7 +696,11 @@ def merge_layers(
     to merge.
     """
     merged = dict(bundled)
-    merged.update(custom)
+    merged.update(
+        (name, declaration)
+        for name, declaration in custom.items()
+        if name not in bundled or skipped_for(declaration) is None
+    )
     return merged
 
 

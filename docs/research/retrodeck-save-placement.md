@@ -736,7 +736,8 @@ commands and libretro ones, plus `xmlstarlet` command edits (`:255-398`). `~/ES-
 (`:20`) — deployed from the **chimeraOS** variant on every platform (`:125/:174/:519`); complements the bundled rules
 (`INSTALL.md`:1208). Custom es_systems merge semantics: a same-name system **replaces** the bundled one entirely
 (`INSTALL.md`:1466), which is what makes an overlay-declared system's answer complete even while the bundled layer is
-sealed.
+sealed — for a declaration ES-DE loads: one it skips (no `<extension>` list or no `<command>`) replaces nothing (#784
+D59).
 
 **[V]** **Settings and gamelists.** `~/ES-DE/settings/es_settings.xml` (`emuDeckESDE.sh:19`; upstream
 `INSTALL.md`:1010-1012): `ROMDirectory` is written by EmuDeck with `${romsPath}` verbatim (`ESDE_setDefaultSettings`,

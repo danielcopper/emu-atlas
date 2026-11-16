@@ -482,6 +482,23 @@ class TestLaunchable:
         assert answer.verdict == atlas.VERDICT_UNKNOWN
         assert atlas.CAVEAT_SYSTEM_UNKNOWN in [c.code for c in answer.caveats]
 
+    def test_a_system_whose_commands_are_all_blank_names_the_blank_command(self):
+        # ES-DE keeps a blank <command> and loads the system (SystemData.cpp:
+        # 1067-1070): it is held, no entry is judged, and the answer says the
+        # command is blank rather than calling the system unknown (#784 D60).
+        blank = self.DREAMCAST.replace(
+            "retroarch -L /app/cores/flycast_libretro.so %ROM%</command>", "  </command>"
+        )
+        assert blank != self.DREAMCAST
+        answer = self._rd({RD_BUNDLED_ESDE: blank}).launchable("dreamcast", "/roms/dreamcast/Game.chd")
+        assert answer.verdict == atlas.VERDICT_UNKNOWN
+        assert answer.resolution is not None
+        assert answer.resolution.status == atlas.RESOLUTION_RESOLVED
+        assert atlas.CAVEAT_SYSTEM_UNKNOWN not in [c.code for c in answer.caveats]
+        [unsupported] = [c for c in answer.caveats if c.code == atlas.CAVEAT_LAUNCH_RESOLUTION_UNSUPPORTED]
+        assert unsupported.data == {}
+        assert "keeps is blank" in unsupported.message
+
     N3DS = (
         '<?xml version="1.0"?>\n<systemList>\n  <system>\n    <name>n3ds</name>\n'
         "    <path>%ROMPATH%/n3ds</path>\n    <extension>.3ds .zip .7z</extension>\n"
@@ -765,6 +782,34 @@ class TestLaunchable:
         codes = [c.code for c in answer.caveats]
         assert atlas.CAVEAT_EMULATOR_CATALOGUE_SEALED in codes
         assert atlas.CAVEAT_SYSTEM_UNKNOWN not in codes
+
+    SKIPPED_DREAMCAST = (
+        '<?xml version="1.0"?>\n<loadExclusive/>\n<systemList><system><name>dreamcast</name>'
+        "<path>%ROMPATH%/dreamcast</path></system></systemList>"
+    )
+
+    def test_a_system_es_de_skips_is_named_with_the_tag_it_lacks_on_emudeck(self):
+        # The skipped declaration is no declared one (#784 D61), yet the held
+        # check names the tag it lacks rather than calling it undeclared,
+        # because it consults the skipped systems before the declared ones
+        # (#784 D58).
+        machine = FixtureMachine(
+            {
+                EMUDECK_SETTINGS: 'romsPath="$HOME/Emulation/roms"\n',
+                STANDALONE_CFG: 'savefile_directory = "~/saves"\n',
+                f"{HOME}/ES-DE/custom_systems/es_systems.xml": self.SKIPPED_DREAMCAST,
+            }
+        )
+        answer = atlas.EmuDeck(HOME, machine).emulators_for("dreamcast")
+        [unknown] = [c for c in answer.caveats if c.code == atlas.CAVEAT_SYSTEM_UNKNOWN]
+        assert "without an <extension> list that names an extension" in unknown.message
+
+    def test_a_system_es_de_skips_is_named_with_the_tag_it_lacks_on_retrodeck(self):
+        skipped = self.DREAMCAST.replace("    <extension>.chd .cue .gdi</extension>\n", "")
+        assert skipped != self.DREAMCAST
+        answer = self._rd({RD_BUNDLED_ESDE: skipped}).emulators_for("dreamcast")
+        [unknown] = [c for c in answer.caveats if c.code == atlas.CAVEAT_SYSTEM_UNKNOWN]
+        assert "without an <extension> list that names an extension" in unknown.message
 
 
 class TestTheArgumentsACommandHandsItsEmulator:
@@ -9119,7 +9164,7 @@ class TestOneReadPerSourcePerQuery:
         # directory for a gamelist entry to hang off, so the anchor never
         # resolves and this fixture would never reach the settings read it is
         # here to count.
-        "    <path>%ROMPATH%/n64</path>\n"
+        "    <path>%ROMPATH%/n64</path>\n    <extension>.z64 .Z64</extension>\n"
         '    <command label="Mupen64Plus-Next">retroarch -L '
         "/app/cores/mupen64plus_next_libretro.so %ROM%</command>\n"
         '    <command label="ParaLLEl N64">retroarch -L '
@@ -9741,6 +9786,18 @@ class TestTheGamelistQuestionTakesPairs:
         with pytest.raises(ValueError, match="names no single system.*declares no system 'dreamcast'"):
             rd.gamelist_selections("dreamcast")
 
+    def test_a_system_es_de_skips_refuses(self):
+        # Declared without an <extension> list, so ES-DE skips it wholesale
+        # and the installation does not hold it (#784 D58): refused, as an
+        # undeclared name is, rather than answered from its gamelist.
+        files = dict(TestOneReadPerSourcePerQuery.FILES)
+        bundled = TestOneReadPerSourcePerQuery.DEPLOY_ESDE
+        files[bundled] = files[bundled].replace("    <extension>.z64 .Z64</extension>\n", "")
+        assert "<extension>" not in files[bundled]
+        rd = _retrodeck(files, cores=TestOneReadPerSourcePerQuery.CORES)
+        with pytest.raises(ValueError, match=r"names no single system.*'n64' \(esde\) without an <extension> list that names an extension"):
+            rd.gamelist_selections("n64")
+
     def test_a_resolved_systems_other_statements_are_not_carried(self):
         # A version on a pair read live is not applied; the answer cannot say
         # so and answers for the system as resolved.
@@ -10156,6 +10213,7 @@ class TestEveryAnswerStatesTheInstallationsHealth:
     )
     ES_SYSTEMS = (
         '<?xml version="1.0"?>\n<systemList>\n  <system><name>n64</name>\n'
+        "    <extension>.z64 .Z64</extension>\n"
         '    <command label="Mupen64Plus-Next">retroarch -L '
         "/app/cores/mupen64plus_next_libretro.so %ROM%</command>\n  </system>\n</systemList>\n"
     )
