@@ -252,7 +252,8 @@ class TestARecordFiledUnderSeveralNames:
         ]
         codes = [c.code for c in answer.caveats]
         assert CAVEAT_SAVE_FORMAT_UNRECORDED not in codes
-        assert CAVEAT_SAVE_RECORD_PARTIAL not in codes and CAVEAT_SAVE_RECORD_AMBIGUOUS not in codes
+        assert CAVEAT_SAVE_RECORD_PARTIAL not in codes
+        assert CAVEAT_SAVE_RECORD_AMBIGUOUS not in codes
 
     def test_an_emulator_with_no_record_at_all_stays_unrecorded_by_format(self):
         answer = _named_answer(_table({}), ("psx",))

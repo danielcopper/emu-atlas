@@ -2868,7 +2868,7 @@ class TestTheVocabularyIsOneVocabulary:
             atlas.CAVEAT_SYSTEM_AMBIGUOUS,
             atlas.CAVEAT_SYSTEM_PAIRS_CONFLICT,
         }
-        assert (validate_vectors.UNKNOWN_SYSTEM,) == atlas.SYSTEM_SENTINELS
+        assert atlas.SYSTEM_SENTINELS == (validate_vectors.UNKNOWN_SYSTEM,)
 
     def test_the_validator_knows_no_code_atlas_cannot_emit(self):
         assert sorted(validate_vectors.KNOWN_CAVEAT_CODES - self._caveat_codes()) == []

@@ -2093,7 +2093,7 @@ def _declaration_of(
     )
 
 
-def _declarations_in(text: str, stem: str) -> _Info:
+def _declarations_in(text: str) -> _Info:
     """Read one ``.info``: its ``systemname``, its ``database``, and its firmware."""
     fields = parse_core_info(text)
     systemname = fields.get("systemname", "")
@@ -2178,7 +2178,7 @@ def read_core_declarations(
         if packaged is not None:
             cores.append(_packaged_core_declarations(packaged, naming))
             continue
-        info = _UNREADABLE_INFO if result.text is None else _declarations_in(result.text, stem)
+        info = _UNREADABLE_INFO if result.text is None else _declarations_in(result.text)
         named = core_systems(stem, info.systemname, info.database, naming)
         system, system_source = _filing("", info.systemname, named, naming)
         cores.append(

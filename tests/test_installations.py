@@ -9574,11 +9574,13 @@ class TestRetroDeckAnswersACitedSystemFromItsCores:
         handle = self._handle()
         command = handle.launch_command(self.SYSTEM, self.CONTENT, label="bk")
         launchable = handle.launchable(self.SYSTEM, self.CONTENT, label="bk")
-        assert command.entry is not None and command.entry.core_so == "bk_libretro.so"
+        assert command.entry is not None
+        assert command.entry.core_so == "bk_libretro.so"
         assert command.command is None
         assert launchable.verdict == "unknown"
         # Both answers rest on the core enumeration and name what it read.
-        assert launchable.sources and launchable.sources == command.sources
+        assert launchable.sources
+        assert launchable.sources == command.sources
         for answer in (command, launchable):
             assert [c.code for c in answer.caveats] == ["emulator-list-derived"]
 
@@ -9735,8 +9737,9 @@ class TestTheGamelistQuestionTakesPairs:
         # The answer has no caveat list to carry system-unknown in (#784 D53),
         # so an undeclared name is refused rather than answered as a system
         # with no gamelist.
+        rd = self._handle()
         with pytest.raises(ValueError, match="names no single system.*declares no system 'dreamcast'"):
-            self._handle().gamelist_selections("dreamcast")
+            rd.gamelist_selections("dreamcast")
 
     def test_a_resolved_systems_other_statements_are_not_carried(self):
         # A version on a pair read live is not applied; the answer cannot say

@@ -23593,7 +23593,7 @@ def _keyed(
     *system_asked* says whether a system was named at all, and *asked* is the
     pairs that named it where they resolved to one.
     """
-    return _dc_replace(query, record_keys=keys, system_asked=system_asked, asked=asked)
+    return cast(_SaveQuery, _dc_replace(query, record_keys=keys, system_asked=system_asked, asked=asked))
 
 
 def _asked_systems(pairs: Sequence[AskedPair]) -> tuple[SystemPair, ...]:
@@ -23989,14 +23989,16 @@ class _CatalogueQueries:
         (:func:`_record_agreement`). Empty where nothing names an ES-DE
         system.
         """
+        keys: tuple[str, ...]
         if system is None:
-            return ()
-        if system[0] in (ESDE_SOURCE, RETRODECK_SOURCE):
-            return (system[1],)
-        named = tuple(dict.fromkeys(key for source, key, _ in asked if source in (ESDE_SOURCE, RETRODECK_SOURCE)))
-        if named:
-            return named
-        return tuple(key for _, key in systems_reached(translate([system]), (ESDE_SOURCE,))[1])
+            keys = ()
+        elif system[0] in (ESDE_SOURCE, RETRODECK_SOURCE):
+            keys = (system[1],)
+        else:
+            keys = tuple(
+                dict.fromkeys(key for source, key, _ in asked if source in (ESDE_SOURCE, RETRODECK_SOURCE))
+            ) or tuple(key for _, key in systems_reached(translate([system]), (ESDE_SOURCE,))[1])
+        return keys
 
     def _save_record(
         self, system: SystemArgument | None
@@ -24134,7 +24136,7 @@ class _CatalogueQueries:
                 resolution=resolution,
             )
         answer = self._firmware_for_system(resolution.system, verify=verify, cwd=cwd, content_path=content_path)
-        return _dc_replace(answer, caveats=_noted(notes, answer.caveats), resolution=resolution)
+        return cast(FirmwareAnswer, _dc_replace(answer, caveats=_noted(notes, answer.caveats), resolution=resolution))
 
     @one_question
     def systems(self) -> SystemsAnswer:
@@ -30224,7 +30226,7 @@ class _RetroArchInstall(_FirmwareQueries, _CatalogueQueries):
         # an installation whose cfg *is* the marker states its cfg's status
         # before anything the read could not resolve.
         context, health = self._derived_context()
-        return _dc_replace(context, caveats=(*health.issues, *context.caveats))
+        return cast(FirmwareContext, _dc_replace(context, caveats=(*health.issues, *context.caveats)))
 
     # ── The derived catalogue (issue #133) ─────────────────────────────
     # A bare RetroArch ships no frontend catalogue, and the machine still
