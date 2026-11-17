@@ -127,7 +127,15 @@ measures them — so a clean Sonar page does not mean a green gate.
   `PR_TITLE=<title> PR_BODY=<body> python3 scripts/check_vector_breaking_change.py origin/main` with the PR's text, as
   CI runs it.
 - **Not covered by the local gate**: Python 3.12 and 3.13 (CI's `vectors` matrix; the local interpreter is the one
-  `mise.toml` pins), CI's `package` and `bundle` jobs, and Sonar's quality gate (see Commands).
+  `mise.toml` pins), CI's `package` and `bundle` jobs, and Sonar's quality gate (see Commands). On a machine with no
+  RetroDECK installed system-wide under `/var/lib/flatpak/app/net.retrodeck.retrodeck/`, the tests that read the
+  deployment skip — most of `tests/test_*_tripwire.py` among them — so a green `mise run test` there says nothing about
+  them, and `mise run matrix` fails, since it reads the deployment's `es_systems.xml`. The Flatpak is installed, never
+  run; `.github/workflows/canary.yml` deploys it the same way every week, against the latest release. Even with the
+  deployment, a few core probes skip for reasons of the core or the interpreter rather than of the deployment, and
+  `pytest -rs` lists each with its reason. The EmuDeck tripwires and the checks of standalone Flathub builds go
+  unchecked without those installations, and the canary deploys neither. Several tripwires judge only the builds and
+  cores present and name none they passed over, so a pass does not say everything pinned was checked.
 - **Review checks**: `basedpyright <files>`, `deno fmt --check <files>`
 - **Worktree task**: `mise run worktree-new` (a global mise task from the owner's dotfiles, not in this repository)
 - **Agent rules**:
@@ -135,6 +143,13 @@ measures them — so a clean Sonar page does not mean a green gate.
   - Each agent uses its own subdirectory of the session scratchpad.
   - Never launch an emulator, RetroArch, a launcher or `flatpak run`; read the deployed RetroDECK only through atlas's
     own probes, the repo's scripts and tests, or by reading its files; never open a database.
+  - Never install, update or remove a Flatpak or any emulator deployment; that is the maintainer's step.
+  - Where `mise run test` skips tests for want of a deployment — RetroDECK, EmuDeck or a standalone Flathub emulator;
+    `pytest -rs` lists them — or `mise run matrix` fails because no RetroDECK is installed, report the gate as not run
+    in full and name what skipped, never as green.
+  - When the change moves a pin, a `builds` block or anything else the deployment-reading tests read, say first in the
+    report that it needs a run on a machine that has that deployment before it merges, whether or not a test skipped: a
+    tripwire can pass over a missing build without a skip.
   - Stop only your own processes, by PID; never `pkill` or `killall`.
   - No device values or ROM titles in committed text; describe data shapes.
 
