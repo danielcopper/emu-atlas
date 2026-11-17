@@ -16,6 +16,7 @@ def test_matrix_renders_per_game_capability_and_notes(tmp_path, monkeypatch):
         """<systemList>
   <system>
     <name>test</name>
+    <extension>.test</extension>
     <command label="Yes">/cores/yes_libretro.so %ROM%</command>
     <command label="No">/cores/no_libretro.so %ROM%</command>
     <command label="Unknown">/cores/unknown_libretro.so %ROM%</command>
@@ -101,6 +102,25 @@ def test_matrix_refuses_a_catalogue_es_de_would_refuse(tmp_path, catalogue, reas
         matrix.collect_rows(es_systems)
 
 
+def test_a_declaration_es_de_skips_credits_nothing(tmp_path):
+    # ES-DE skips a system with no extension token (SystemData.cpp:1114 @
+    # v3.4.1), so it launches none of its commands: the matrix credits no
+    # emulator with it, as the answers it surveys hold no such system
+    # (#784 D58).
+    es_systems = tmp_path / "es_systems.xml"
+    es_systems.write_text(
+        """<systemList>
+  <system><name>gc</name><extension>.iso</extension><command label="A">/cores/a_libretro.so %ROM%</command></system>
+  <system><name>wii</name><command label="A">/cores/a_libretro.so %ROM%</command></system>
+</systemList>
+""",
+        encoding="utf-8",
+    )
+    libretro, standalone = matrix.collect_rows(es_systems)
+    assert libretro == {"a": {"gc"}}
+    assert standalone == {}
+
+
 def _standalone_table(text: str) -> dict[str, list[str]]:
     """The committed matrix's standalone rows, as ``{key: [cells]}``."""
     rows: dict[str, list[str]] = {}
@@ -140,14 +160,17 @@ def test_the_standalone_half_counts_every_question(tmp_path, monkeypatch):
         """<systemList>
   <system>
     <name>gc</name>
+    <extension>.iso</extension>
     <command label="Demo">%EMULATOR_DEMO% %ROM%</command>
   </system>
   <system>
     <name>triforce</name>
+    <extension>.iso</extension>
     <command label="Demo">%EMULATOR_DEMO% %ROM%</command>
   </system>
   <system>
     <name>quake</name>
+    <extension>.pak</extension>
     <command label="Nobody">%EMULATOR_NOBODY% %ROM%</command>
   </system>
 </systemList>

@@ -5705,13 +5705,20 @@ class TestNoDeclarationIsNeverSatisfied:
         # simply not here.
         assert [c.code for c in answer.caveats] == [CAVEAT_CORE_NOT_INSTALLED]
 
-    def test_an_identifier_nothing_covers_says_unknown_not_nothing_needed(self):
+    def test_no_emulator_derived_is_a_look_that_found_nothing(self):
+        # The route answers the system the question resolved; whether the
+        # installation holds it is the question's to say (#784 D53). Handed
+        # one no installed core covers, with no catalogue, it lists no
+        # emulator: no emulator was read, so no absence was established —
+        # firmware-declaration-unknown, never no-firmware-declaration and
+        # never system-unknown (#784 D60).
         machine = _machine()
         answer = firmware_for_system(machine, _context(machine), system=("esde", "n64"))
         assert answer.cores == ()
         codes = [c.code for c in answer.caveats]
-        assert CAVEAT_SYSTEM_UNKNOWN in codes
+        assert CAVEAT_FIRMWARE_DECLARATION_UNKNOWN in codes
         assert CAVEAT_NO_FIRMWARE_DECLARATION not in codes
+        assert CAVEAT_SYSTEM_UNKNOWN not in codes
 
     def test_a_known_system_whose_emulators_cannot_be_read_is_a_different_code(self):
         # The catalogue knows the system, so the identifier is right; what is
@@ -6477,10 +6484,12 @@ class TestASystemNoCatalogueSourceNamesIsACitedPair:
         answer = firmware_for_system(machine, _context(machine), system=("romm", "ti-83"))
         assert [c.core_so for c in answer.cores] == ["numero_libretro.so"]
 
-    def test_an_own_key_nothing_declares_is_still_unknown_on_the_catalogue_route(self):
-        # The discriminating direction: the retired slug "dc" is no ES-DE
-        # name, so a catalogued arrangement whose catalogue declares no such
-        # system answers system-unknown.
+    def test_an_empty_catalogue_enumeration_is_a_look_that_found_nothing(self):
+        # Handed a catalogue that was read and lists no emulator for the
+        # system, the route reads no emulator: firmware-declaration-unknown
+        # (#784 D60). That the asked name is one the catalogue does not
+        # declare is the question's to say, before the route is asked (#784
+        # D53).
         machine = self._ti83_machine()
         answer = firmware_for_system(
             machine,
@@ -6489,12 +6498,15 @@ class TestASystemNoCatalogueSourceNamesIsACitedPair:
             catalogue=Catalogue(entries=(), read=True),
         )
         assert answer.cores == ()
-        assert CAVEAT_SYSTEM_UNKNOWN in [c.code for c in answer.caveats]
+        codes = [c.code for c in answer.caveats]
+        assert CAVEAT_FIRMWARE_DECLARATION_UNKNOWN in codes
+        assert CAVEAT_SYSTEM_UNKNOWN not in codes
 
-    def test_a_cited_pair_no_installed_core_files_under_is_unknown(self):
+    def test_a_cited_pair_no_installed_core_files_under_is_a_look_that_found_nothing(self):
         # A cited pair is held only where a core it is cited for is installed
-        # (#784 D50): with none, the pair names nothing here, and the empty
-        # answer says the system is unknown, not that it needs nothing.
+        # (#784 D50), which the question decides before asking the route
+        # (#784 D53). Handed one no installed core files under, the route
+        # derives no emulator and reads none: firmware-declaration-unknown.
         machine = _machine(
             {
                 f"{INFO_DIR}/snes9x_libretro.info": NO_FIRMWARE_INFO,
@@ -6505,7 +6517,7 @@ class TestASystemNoCatalogueSourceNamesIsACitedPair:
             machine, _context(machine), system=("romm", "ti-83"), catalogue=Catalogue(entries=(), read=True)
         )
         assert answer.cores == ()
-        assert [c.code for c in answer.caveats] == [CAVEAT_EMULATOR_LIST_DERIVED, CAVEAT_SYSTEM_UNKNOWN]
+        assert [c.code for c in answer.caveats] == [CAVEAT_EMULATOR_LIST_DERIVED, CAVEAT_FIRMWARE_DECLARATION_UNKNOWN]
 
 
 class TestTheMapsTargetsAreNamesTheirSourcesSpell:

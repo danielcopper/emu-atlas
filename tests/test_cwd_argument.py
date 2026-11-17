@@ -29,6 +29,7 @@ ES_SYSTEMS = (
 )
 CATALOGUE = (
     '<?xml version="1.0"?>\n<systemList>\n  <system><name>nds</name><path>%ROMPATH%/nds</path>\n'
+    "    <extension>.nds .zip</extension>\n"
     '    <command label="melonDS (Standalone)">%EMULATOR_MELONDS% %ROM%</command>\n'
     "  </system>\n</systemList>\n"
 )

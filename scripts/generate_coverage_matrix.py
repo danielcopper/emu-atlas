@@ -43,7 +43,7 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-from atlas.esde import parse_es_systems
+from atlas.esde import loaded_declarations, parse_es_systems
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DATA_DIR = REPO_ROOT / "atlas" / "data"
@@ -107,7 +107,9 @@ def collect_rows(es_systems_path: Path) -> tuple[dict[str, set[str]], dict[str, 
     not keep every element — a duplicate label is dropped and a label-less one
     ends the walk — so a raw walk would credit an emulator with a system the
     frontend would never launch it for, and the matrix would disagree with the
-    answers it is a survey of. Reading through the package also retires this
+    answers it is a survey of. For the same reason a declaration ES-DE skips
+    credits nothing (:func:`atlas.esde.loaded_declarations`, #784 D58).
+    Reading through the package also retires this
     module's own XML parse; ``atlas`` is stdlib-only, so the note above holds.
     """
     libretro: dict[str, set[str]] = defaultdict(set)
@@ -119,7 +121,7 @@ def collect_rows(es_systems_path: Path) -> tuple[dict[str, set[str]], dict[str, 
     # stdlib parse this replaced raised here too.
     if layer.invalid is not None:
         raise ValueError(f"{es_systems_path}: {layer.invalid}")
-    for name, declaration in layer.systems.items():
+    for name, declaration in loaded_declarations(layer.systems).items():
         for spec in declaration.entries:
             core = core_short_name(spec.command)
             if core:

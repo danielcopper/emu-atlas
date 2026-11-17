@@ -463,17 +463,21 @@ installation holds, the question answers for it; where it names several or none,
 answers its empty or unknown form and a caveat says why, naming the candidates where there are several — atlas picks
 none. The first tier that names any system decides, held here or not; a later tier is never tried. A system the
 installation does not hold, read live or reached through the table, is no system here (#784 D53) — a system atlas names
-by a cited pair is held only where a core it is cited for is installed — and the unknown form states as much about the
-catalogue as the resolved form would; the one exception is `platform_ids`, the question about a name's standing itself,
-which keeps such a name as the system it spells with its status `absent` or `disabled`. An answer about a system states
-the resolution beside it, and the resolution states how it ended — resolved, unknown, ambiguous or conflict — so a
-client branches on that rather than on caveat codes. `savefile_location` takes a system only to key a core's recorded
-file set, so what resolving it said leads its placement's caveats instead, and RetroDECK's `gamelist_selections`, whose
-answer has no caveats, refuses a system that does not resolve to one. Every answer field that names a system is a
-`{source, key}` pair. The source decides the route, so there is no fallback between them: a client whose vocabulary
-comes from another source sends pairs, and one that read the installation's catalogue, or reuses a system an answer
-named, sends the name. `atlas/data/system_ids.json` still lists the system names one catalogue declares (RetroDECK
-0.10.9b), pinned by a test that parses that build's file; #797 replaces it with the table.
+by a cited pair is held only where a core it is cited for is installed, and one an ES-DE catalogue declares without an
+`<extension>` list or a `<command>` is not held, because ES-DE skips it wholesale (#784 D58); such a declaration in the
+custom file shadows nothing, so a bundled declaration of the same name that ES-DE loads is the system (#784 D59) — and
+the unknown form states as much about the catalogue as the resolved form would; the one exception is `platform_ids`, the
+question about a name's standing itself, which keeps such a name as the system it spells with its status `absent` or
+`disabled` — `absent` for a skipped one, which `systems()` and `rom_locations()` do not list either, and no question
+that lists systems counts as declared (#784 D61). An answer about a system states the resolution beside it, and the
+resolution states how it ended — resolved, unknown, ambiguous or conflict — so a client branches on that rather than on
+caveat codes. `savefile_location` takes a system only to key a core's recorded file set, so what resolving it said leads
+its placement's caveats instead, and RetroDECK's `gamelist_selections`, whose answer has no caveats, refuses a system
+that does not resolve to one. Every answer field that names a system is a `{source, key}` pair. The source decides the
+route, so there is no fallback between them: a client whose vocabulary comes from another source sends pairs, and one
+that read the installation's catalogue, or reuses a system an answer named, sends the name. `atlas/data/system_ids.json`
+still lists the system names one catalogue declares (RetroDECK 0.10.9b), pinned by a test that parses that build's file;
+#797 replaces it with the table.
 
 _Settled (issue #784, cut #785):_ **one cited table maps the keys of every included source onto one another, and atlas
 adds no vocabulary of its own.** Its unit is a _row_: one system at the finest distinction any source makes — the common

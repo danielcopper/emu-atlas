@@ -2908,7 +2908,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
-          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n  <system><name>ps3</name><path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 Directory (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path><extension>.n64 .N64 .z64 .Z64 .zip .ZIP</extension>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n  <system><name>ps3</name><path>%ROMPATH%/ps3</path><extension>.desktop .iso .ISO .ps3 .PS3 .ps3dir .PS3DIR</extension>\n    <command label=\"RPCS3 Directory (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n  </system>\n</systemList>\n",
           "/mnt/sd/retrodeck/roms/systeminfo.txt": ""
         },
         "dirs": [
@@ -3003,7 +3003,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
-          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path><extension>.n64 .N64 .z64 .Z64 .zip .ZIP</extension>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
           "/mnt/sd/retrodeck/roms/systeminfo.txt": ""
         },
         "dirs": [
@@ -3098,7 +3098,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
-          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command>%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/gambatte_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path><extension>.n64 .N64 .z64 .Z64 .zip .ZIP</extension>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command>%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/gambatte_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
           "/mnt/sd/retrodeck/roms/systeminfo.txt": ""
         },
         "dirs": [
@@ -3170,8 +3170,8 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
-          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n  <system><name>ps3</name><path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 Directory (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n  </system>\n</systemList>\n",
-          "/mnt/sd/retrodeck/ES-DE/custom_systems/es_systems.xml": "<systemList><system><name>n64</name><command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command></system></systemList>"
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path><extension>.n64 .N64 .z64 .Z64 .zip .ZIP</extension>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n  <system><name>ps3</name><path>%ROMPATH%/ps3</path><extension>.desktop .iso .ISO .ps3 .PS3 .ps3dir .PS3DIR</extension>\n    <command label=\"RPCS3 Directory (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n  </system>\n</systemList>\n",
+          "/mnt/sd/retrodeck/ES-DE/custom_systems/es_systems.xml": "<systemList><system><name>n64</name><extension>.n64 .N64 .z64 .Z64 .zip .ZIP</extension><command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command></system></systemList>"
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
@@ -3242,7 +3242,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
-          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path><extension>.n64 .N64 .z64 .Z64 .zip .ZIP</extension>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
           "/mnt/sd/retrodeck/ES-DE/gamelists/n64/gamelist.xml": "<?xml version=\"1.0\"?>\n<alternativeEmulator>\n\t<label>ParaLLEl N64</label>\n</alternativeEmulator>\n<gameList />\n",
           "/mnt/sd/retrodeck/roms/systeminfo.txt": ""
         },
@@ -3338,7 +3338,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
-          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path><extension>.n64 .N64 .z64 .Z64 .zip .ZIP</extension>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
           "/mnt/sd/retrodeck/ES-DE/gamelists/n64/gamelist.xml": "<?xml version=\"1.0\"?>\n<gameList>\n  <alternativeEmulator>\n    <label>ParaLLEl N64</label>\n  </alternativeEmulator>\n</gameList>\n",
           "/mnt/sd/retrodeck/roms/systeminfo.txt": ""
         },
@@ -3434,7 +3434,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
-          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path><extension>.n64 .N64 .z64 .Z64 .zip .ZIP</extension>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
           "/mnt/sd/retrodeck/ES-DE/gamelists/n64/gamelist.xml": "<?xml version=\"1.0\"?>\n<alternativeEmulator>\n\t<label>Mupen64Plus-Next</label>\n</alternativeEmulator>\n<gameList />\n",
           "/mnt/sd/retrodeck/roms/systeminfo.txt": ""
         },
@@ -3767,7 +3767,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
-          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n  <system><name>ps3</name><path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 Directory (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path><extension>.n64 .N64 .z64 .Z64 .zip .ZIP</extension>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n  <system><name>ps3</name><path>%ROMPATH%/ps3</path><extension>.desktop .iso .ISO .ps3 .PS3 .ps3dir .PS3DIR</extension>\n    <command label=\"RPCS3 Directory (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n  </system>\n</systemList>\n",
           "/mnt/sd/retrodeck/ES-DE/gamelists/n64/gamelist.xml": "<?xml version=\"1.0\"?>\n<alternativeEmulator>\n\t<label>ParaLLEl N64</label>\n</alternativeEmulator>\n<gameList />\n",
           "/mnt/sd/retrodeck/roms/n64/Paper Mario (USA).zip": "",
           "/mnt/sd/retrodeck/saves/Paper Mario (USA).srm": "sram",
@@ -3850,7 +3850,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
-          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>flash</name>\n    <path>%ROMPATH%/flash</path>\n    <command label=\"Ruffle (Standalone)\">%EMULATOR_RUFFLE% %ROM%</command>\n    <platform>flash</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>flash</name>\n    <path>%ROMPATH%/flash</path><extension>.swf</extension>\n    <command label=\"Ruffle (Standalone)\">%EMULATOR_RUFFLE% %ROM%</command>\n    <platform>flash</platform>\n  </system>\n</systemList>\n",
           "/mnt/sd/retrodeck/roms/flash/game.swf": ""
         },
         "dirs": [
@@ -8585,7 +8585,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
-          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path><extension>.n64 .N64 .z64 .Z64 .zip .ZIP</extension>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
           "/mnt/sd/retrodeck/ES-DE/gamelists/n64/gamelist.xml": "<?xml version=\"1.0\"?>\n<gameList>\n\t<folder>\n\t\t<path>./Collection</path>\n\t</folder>\n\t<game>\n\t\t<path>./Collection/Game.m3u</path>\n\t</game>\n\t<game>\n\t\t<path>./Game.m3u</path>\n\t\t<altemulator>ParaLLEl N64</altemulator>\n\t</game>\n</gameList>\n",
           "/mnt/sd/retrodeck/roms/n64/Game.m3u": "",
           "/mnt/sd/retrodeck/roms/n64/Collection/Game.m3u": "",
@@ -8731,7 +8731,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
-          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path><extension>.n64 .N64 .z64 .Z64 .zip .ZIP</extension>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
           "/mnt/sd/retrodeck/ES-DE/gamelists/n64/gamelist.xml": "<?xml version=\"1.0\"?>\n<gameList>\n\t<folder>\n\t\t<path>./Collection</path>\n\t</folder>\n\t<game>\n\t\t<path>./Collection/Game.m3u</path>\n\t</game>\n\t<game>\n\t\t<path>./Game.m3u</path>\n\t\t<altemulator>ParaLLEl N64</altemulator>\n\t</game>\n</gameList>\n",
           "/mnt/sd/retrodeck/roms/n64/Game.m3u": "",
           "/mnt/sd/retrodeck/roms/n64/Collection/Game.m3u": "",
@@ -8884,7 +8884,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"roms_path\": \"/mnt/sd/games\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\nlibretro_directory = \"/app/cores\"\n",
-          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path><extension>.n64 .N64 .z64 .Z64 .zip .ZIP</extension>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n</systemList>\n",
           "/mnt/sd/retrodeck/ES-DE/gamelists/n64/gamelist.xml": "<?xml version=\"1.0\"?>\n<gameList>\n\t<folder>\n\t\t<path>./Collection</path>\n\t</folder>\n\t<game>\n\t\t<path>./Collection/Game.m3u</path>\n\t</game>\n\t<game>\n\t\t<path>./Game.m3u</path>\n\t\t<altemulator>ParaLLEl N64</altemulator>\n\t</game>\n</gameList>\n",
           "/mnt/sd/retrodeck/saves/Game.srm": "sram",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/ES-DE/settings/es_settings.xml": "<?xml version=\"1.0\"?>\n<string name=\"ROMDirectory\" value=\"/mnt/sd/es-de-roms\" />\n",
@@ -9321,7 +9321,7 @@
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": {
             "status": "unreadable"
           },
-          "/mnt/sd/retrodeck/ES-DE/custom_systems/es_systems.xml": "<systemList><system><name>n64</name><command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command></system></systemList>"
+          "/mnt/sd/retrodeck/ES-DE/custom_systems/es_systems.xml": "<systemList><system><name>n64</name><extension>.n64 .N64 .z64 .Z64 .zip .ZIP</extension><command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command></system></systemList>"
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
@@ -10261,7 +10261,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.11.0b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nsort_savefiles_by_content_enable = \"true\"\nsort_savefiles_enable = \"false\"\n",
-          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n <system>\n  <name>n64</name>\n  <path>%ROMPATH%/n64</path>\n  <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n <system>\n  <name>n64</name>\n  <path>%ROMPATH%/n64</path><extension>.n64 .N64 .z64 .Z64 .zip .ZIP</extension>\n  <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mupen64plus_next_libretro.info": "display_name = \"Mupen64Plus-Next\"\nsystemname = \"Nintendo 64\"\n",
           "/mnt/sd/retrodeck/roms/n64/Paper Mario (USA).z64": "",
           "/mnt/sd/retrodeck/bios/.keep": "",
@@ -10611,7 +10611,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nsort_savefiles_by_content_enable = \"true\"\nsort_savefiles_enable = \"false\"\n",
-          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n <system>\n  <name>n64</name>\n  <path>%ROMPATH%/n64</path>\n  <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n <system>\n  <name>n64</name>\n  <path>%ROMPATH%/n64</path><extension>.n64 .N64 .z64 .Z64 .zip .ZIP</extension>\n  <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mupen64plus_next_libretro.info": "display_name = \"Mupen64Plus-Next\"\nsystemname = \"Nintendo 64\"\n",
           "/mnt/sd/retrodeck/roms/n64/Paper Mario (USA).z64": "",
           "/mnt/sd/retrodeck/bios/.keep": "",
@@ -10739,7 +10739,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nsort_savefiles_by_content_enable = \"true\"\nsort_savefiles_enable = \"false\"\n",
-          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n <system>\n  <name>n64</name>\n  <path>%ROMPATH%/n64</path>\n  <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n <system>\n  <name>n64</name>\n  <path>%ROMPATH%/n64</path><extension>.n64 .N64 .z64 .Z64 .zip .ZIP</extension>\n  <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n </system>\n</systemList>\n",
           "/mnt/sd/retrodeck/roms/n64/Paper Mario (USA).z64": "",
           "/mnt/sd/retrodeck/bios/.keep": "",
           "/mnt/sd/retrodeck/saves/n64/Paper Mario (USA).srm": "sram",
@@ -10839,7 +10839,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nsort_savefiles_by_content_enable = \"true\"\nsort_savefiles_enable = \"false\"\n",
-          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n <system>\n  <name>n64</name>\n  <path>%ROMPATH%/n64</path>\n  <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n <system>\n  <name>n64</name>\n  <path>%ROMPATH%/n64</path><extension>.n64 .N64 .z64 .Z64 .zip .ZIP</extension>\n  <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n </system>\n</systemList>\n",
           "/mnt/sd/retrodeck/roms/n64/Paper Mario (USA).z64": "",
           "/mnt/sd/retrodeck/bios/.keep": "",
           "/mnt/sd/retrodeck/saves/n64/Paper Mario (USA).srm": "sram",
@@ -11244,7 +11244,7 @@
         "home": "/home/deck",
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": 7}}",
-          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n <system>\n  <name>n64</name>\n  <path>%ROMPATH%/n64</path>\n  <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n <system>\n  <name>n64</name>\n  <path>%ROMPATH%/n64</path><extension>.n64 .N64 .z64 .Z64 .zip .ZIP</extension>\n  <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n </system>\n</systemList>\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "system_directory = \"/mnt/sd/retrodeck/bios\"\n",
           "/mnt/sd/retrodeck/bios/.keep": ""
         },
@@ -11473,7 +11473,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/mnt/sd/retrodeck/roms/systeminfo.txt": "",
-          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>flash</name>\n    <path>%ROMPATH%/flash</path>\n    <command label=\"Ruffle (Standalone)\">%EMULATOR_RUFFLE% %ROM%</command>\n    <platform>flash</platform>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system>\n    <name>flash</name>\n    <path>%ROMPATH%/flash</path><extension>.swf</extension>\n    <command label=\"Ruffle (Standalone)\">%EMULATOR_RUFFLE% %ROM%</command>\n    <platform>flash</platform>\n  </system>\n</systemList>\n",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "system_directory = \"/mnt/sd/retrodeck/bios\"\n",
           "/mnt/sd/retrodeck/bios/.keep": "",
           "/mnt/sd/retrodeck/roms/flash/Game.swf": ""
@@ -11833,7 +11833,7 @@
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
           "/mnt/sd/retrodeck/roms/systeminfo.txt": "",
-          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n <system>\n  <name>n64</name>\n  <path>%ROMPATH%/n64</path>\n  <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n  <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n <system>\n  <name>n64</name>\n  <path>%ROMPATH%/n64</path><extension>.n64 .N64 .z64 .Z64 .zip .ZIP</extension>\n  <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n  <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n </system>\n</systemList>\n",
           "/mnt/sd/retrodeck/ES-DE/gamelists/n64/gamelist.xml": "<?xml version=\"1.0\"?>\n<gameList>\n\t<game>\n\t\t<path>./Paper Mario.z64</path>\n\t\t<altemulator>ParaLLEl N64</altemulator>\n\t</game>\n</gameList>\n",
           "/mnt/sd/retrodeck/roms/n64/Paper Mario.z64": ""
         },
@@ -12383,7 +12383,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\n",
-          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n <system>\n  <name>psp</name>\n  <path>%ROMPATH%/psp</path>\n  <command label=\"PPSSPP (Standalone)\">%EMULATOR_PPSSPP% %ROM%</command>\n  <command label=\"PPSSPP\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/ppsspp_libretro.so %ROM%</command>\n </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n <system>\n  <name>psp</name>\n  <path>%ROMPATH%/psp</path><extension>.iso .ISO</extension>\n  <command label=\"PPSSPP (Standalone)\">%EMULATOR_PPSSPP% %ROM%</command>\n  <command label=\"PPSSPP\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/ppsspp_libretro.so %ROM%</command>\n </system>\n</systemList>\n",
           "/mnt/sd/retrodeck/saves/.keep": ""
         },
         "dirs": [
@@ -12871,7 +12871,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"roms_path\": \"/mnt/sd/retrodeck/roms\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\n",
-          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n <system>\n  <name>n64</name>\n  <path>%ROMPATH%/n64</path>\n  <extension>.n64 .N64 .z64 .Z64 .zip .ZIP</extension>\n  <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n </system>\n <system>\n  <name>pathless</name>\n  <command label=\"Something\">%EMULATOR_SOMETHING% %ROM%</command>\n </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n <system>\n  <name>n64</name>\n  <path>%ROMPATH%/n64</path>\n  <extension>.n64 .N64 .z64 .Z64 .zip .ZIP</extension>\n  <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n </system>\n <system>\n  <name>pathless</name><extension>.zip</extension>\n  <command label=\"Something\">%EMULATOR_SOMETHING% %ROM%</command>\n </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mupen64plus_next_libretro.info": "display_name = \"Mupen64Plus-Next\"\nsystemname = \"Nintendo - Nintendo 64\"\n",
           "/mnt/sd/retrodeck/bios/.keep": "",
           "/mnt/sd/retrodeck/saves/.keep": "",
@@ -12902,7 +12902,9 @@
         "rom_location": {
           "dir": null,
           "physical_dir": null,
-          "extensions": [],
+          "extensions": [
+            ".zip"
+          ],
           "caveats": [
             {
               "code": "rom-path-undeclared",
@@ -14374,7 +14376,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"version\": \"0.10.9b\", \"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\", \"roms_path\": \"/mnt/sd/retrodeck/roms\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "savefile_directory = \"/mnt/sd/retrodeck/saves\"\nsystem_directory = \"/mnt/sd/retrodeck/bios\"\nlibretro_directory = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nlibretro_info_path = \"/app/retrodeck/components/retroarch/rd_extras/cores\"\nsort_savefiles_by_content_enable = \"false\"\nsort_savefiles_enable = \"false\"\n",
-          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n <system>\n  <name>n64</name>\n  <path>%ROMPATH%/n64</path>\n  <extension>.n64 .N64 .z64 .Z64 .zip .ZIP</extension>\n  <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n </system>\n <system>\n  <name>pathless</name>\n  <command label=\"Something\">%EMULATOR_SOMETHING% %ROM%</command>\n </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n <system>\n  <name>n64</name>\n  <path>%ROMPATH%/n64</path>\n  <extension>.n64 .N64 .z64 .Z64 .zip .ZIP</extension>\n  <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n </system>\n <system>\n  <name>pathless</name><extension>.zip</extension>\n  <command label=\"Something\">%EMULATOR_SOMETHING% %ROM%</command>\n </system>\n</systemList>\n",
           "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores/mupen64plus_next_libretro.info": "display_name = \"Mupen64Plus-Next\"\nsystemname = \"Nintendo - Nintendo 64\"\n",
           "/mnt/sd/retrodeck/bios/.keep": "",
           "/mnt/sd/retrodeck/saves/.keep": "",
@@ -14439,7 +14441,9 @@
               "placement": {
                 "dir": null,
                 "physical_dir": null,
-                "extensions": [],
+                "extensions": [
+                  ".zip"
+                ],
                 "caveats": [
                   {
                     "code": "rom-path-undeclared",
@@ -16007,7 +16011,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
-          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n  <system><name>ps3</name><path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 Directory (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path><extension>.n64 .N64 .z64 .Z64 .zip .ZIP</extension>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n  <system><name>ps3</name><path>%ROMPATH%/ps3</path><extension>.desktop .iso .ISO .ps3 .PS3 .ps3dir .PS3DIR</extension>\n    <command label=\"RPCS3 Directory (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n  </system>\n</systemList>\n",
           "/mnt/sd/retrodeck/ES-DE/custom_systems/es_systems.xml": "<?xml version=\"1.0\"?>\n<loadExclusive/>\n<systemList>\n  <system>\n    <name>gbc</name>\n    <path>/mnt/sd/retrodeck/roms/gbc</path>\n    <extension>.gbc .GBC .zip .ZIP</extension>\n    <command label=\"Gambatte\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/gambatte_libretro.so %ROM%</command>\n  </system>\n</systemList>\n"
         },
         "dirs": [
@@ -16092,7 +16096,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
-          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n  <system><name>ps3</name><path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 Directory (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n  </system>\n</systemList>\n",
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path><extension>.n64 .N64 .z64 .Z64 .zip .ZIP</extension>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n  <system><name>ps3</name><path>%ROMPATH%/ps3</path><extension>.desktop .iso .ISO .ps3 .PS3 .ps3dir .PS3DIR</extension>\n    <command label=\"RPCS3 Directory (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n  </system>\n</systemList>\n",
           "/mnt/sd/retrodeck/ES-DE/custom_systems/es_systems.xml": "<systemList>\n<loadExclusive/>\n  <system>\n    <name>gbc</name>\n    <path>/mnt/sd/retrodeck/roms/gbc</path>\n    <extension>.gbc .GBC .zip .ZIP</extension>\n    <command label=\"Gambatte\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/gambatte_libretro.so %ROM%</command>\n  </system>\n</systemList>\n"
         },
         "dirs": [
@@ -16182,7 +16186,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
-          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<loadExclusive/>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n  <system><name>ps3</name><path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 Directory (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n  </system>\n</systemList>\n"
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "<?xml version=\"1.0\"?>\n<loadExclusive/>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path><extension>.n64 .N64 .z64 .Z64 .zip .ZIP</extension>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n  <system><name>ps3</name><path>%ROMPATH%/ps3</path><extension>.desktop .iso .ISO .ps3 .PS3 .ps3dir .PS3DIR</extension>\n    <command label=\"RPCS3 Directory (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n  </system>\n</systemList>\n"
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",
@@ -16596,7 +16600,7 @@
         "files": {
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retrodeck/retrodeck.json": "{\"paths\": {\"rd_home_path\": \"/mnt/sd/retrodeck\", \"saves_path\": \"/mnt/sd/retrodeck/saves\"}}",
           "/home/deck/.var/app/net.retrodeck.retrodeck/config/retroarch/retroarch.cfg": "",
-          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "﻿<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n  <system><name>ps3</name><path>%ROMPATH%/ps3</path>\n    <command label=\"RPCS3 Directory (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n  </system>\n</systemList>\n"
+          "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/es-de/share/es-de/resources/systems/linux/es_systems.xml": "﻿<?xml version=\"1.0\"?>\n<systemList>\n  <system><name>n64</name><path>%ROMPATH%/n64</path><extension>.n64 .N64 .z64 .Z64 .zip .ZIP</extension>\n    <command label=\"Mupen64Plus-Next\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>\n    <command label=\"ParaLLEl N64\">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>\n  </system>\n  <system><name>ps3</name><path>%ROMPATH%/ps3</path><extension>.desktop .iso .ISO .ps3 .PS3 .ps3dir .PS3DIR</extension>\n    <command label=\"RPCS3 Directory (Standalone)\">%EMULATOR_RPCS3% --no-gui %ROM%</command>\n  </system>\n</systemList>\n"
         },
         "dirs": [
           "/mnt/sd/retrodeck/saves",

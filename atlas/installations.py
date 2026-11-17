@@ -73,6 +73,9 @@ from .esde import (
     GamelistSelections,
     SystemDeclaration,
     commented_out_systems,
+    loaded_declaration,
+    loaded_declarations,
+    skipped_for,
     emulator_token,
     esde_extension,
     expand_home_path,
@@ -21824,12 +21827,12 @@ class RomLocationsAnswer:
 def _declared_entries(
     by_system: Mapping[str, SystemDeclaration], system: SystemPair
 ) -> tuple[EmulatorSpec, ...]:
-    """The launch entries a read catalogue declares for *system* — none if it declares no such system.
+    """The launch entries a read catalogue declares for *system* — none if ES-DE loads no declaration of it.
 
     Each entry names its system by the pair the installation names it by, so
     a RetroDECK-only system's entries say so (#784 D47).
     """
-    declaration = by_system.get(system[1])
+    declaration = loaded_declaration(by_system, system[1])
     if declaration is None:
         return ()
     return tuple(
@@ -22200,6 +22203,33 @@ def _chosen_entry(
         f"no catalogue entry of system {spelled(system)} is labelled {label!r}",
         {"source": system[0], "key": system[1], "label": label},
     )
+
+
+def _blank_commands(system: SystemPair, declaration: SystemDeclaration | None) -> tuple[Caveat, ...]:
+    """Why a system ES-DE loads lists no entry, where every command it keeps is blank — else nothing (#784 D60).
+
+    *declaration* is the one ES-DE loads
+    (:func:`atlas.esde.loaded_declaration`), so a declaration with no entry
+    here is one whose kept commands are all blank.
+
+    ES-DE keeps a ``<command>`` whatever its text (``SystemData.cpp:1067-1070``
+    @ v3.4.1), so such a system loads and is held; atlas states no entry for a
+    command that names nothing, and what the frontend does with one is not
+    evaluated — ``launch-resolution-unsupported`` in its one-command form says
+    so, rather than an empty answer saying nothing.
+    """
+    stated: tuple[Caveat, ...] = ()
+    if declaration is not None and not declaration.entries:
+        stated = (
+            Caveat(
+                CAVEAT_LAUNCH_RESOLUTION_UNSUPPORTED,
+                f"every <command> system {spelled(system)} keeps is blank — ES-DE loads the system with a launch "
+                "command that names nothing, so no entry is stated, and what the frontend does with a blank "
+                "command is not evaluated here",
+                {},
+            ),
+        )
+    return stated
 
 
 class _EntryCoreReader:
@@ -23037,7 +23067,6 @@ def _launchability_verdict(
     target: _LaunchTarget,
     declaration: SystemDeclaration | None,
     entries: tuple[EmulatorEntry, ...],
-    complete: bool,
     core_info_for: "Callable[[EmulatorEntry], CoreInfo | None]",
     label: str | None,
     boot_reader: _BootReader | None = None,
@@ -23072,58 +23101,26 @@ def _launchability_verdict(
     On a system ES-DE loads, a label none of *entries* carries refuses the
     verdict with :func:`_chosen_entry`'s ``launch-command-label-unknown``: the
     caller named an entry this system does not have. A system no layer
-    declares, or one ES-DE skips, is answered below before any label is looked
-    up; where a sealed read leaves an undeclared system to the entries derived
-    from the installed cores, the handle looks the label up among those itself
-    (:meth:`EmuDeck._derived_label_refusal`).
+    declares, or one with no entry to judge, is answered below before any
+    label is looked up; where a sealed read leaves an undeclared system to the
+    entries derived from the installed cores, the handle looks the label up
+    among those itself (:meth:`EmuDeck._derived_label_refusal`).
 
-    The unknowns split three ways and only one earns ``system-unknown``: a
-    catalogue read **completely** that declares no such system. An incomplete
-    read (EmuDeck's sealed bundled layer) may hide the declaration, so the
-    sealed statement riding the answer is the whole claim. And a declaration
-    ES-DE itself would refuse — no ``<extension>`` or no ``<command>`` — is a
-    system the frontend runs without (loadConfig skips it,
-    SystemData.cpp:1109-1119 @ v3.4.1): no entry runs and there is no command
-    to judge (D7).
+    The system is one the installation holds as far as its read goes: a
+    catalogue read in full that does not declare it, or declares it without an
+    ``<extension>`` list or a ``<command>``, which ES-DE skips wholesale, names
+    no system, and the question answers ``unknown`` before this is asked
+    (#784 D53, D58). *declaration* is the one ES-DE loads
+    (:func:`atlas.esde.loaded_declaration`): a system with none reaches here
+    only where the read is not complete — EmuDeck's sealed bundled layer may
+    hold a declaration of it that ES-DE loads, and a layer that does not
+    parse was not read — so the verdict is ``unknown`` and the catalogue
+    statement riding the answer is the whole claim. A declaration whose kept
+    commands are all empty is one ES-DE loads with nothing to launch, so no
+    entry is judged and ``launch-resolution-unsupported`` says why (#784 D60).
     """
-    if declaration is None:
-        if not complete:
-            return VERDICT_UNKNOWN, None, (), None, None, None, (), ()
-        return (
-            VERDICT_UNKNOWN,
-            None,
-            (),
-            None,
-            None,
-            None,
-            (),
-            (
-                system_unknown(
-                    system,
-                    f"the catalogue was read and declares no system {spelled(system)} — whether anything "
-                    "launches this file is a question no layer here answers",
-                ),
-            ),
-        )
-    if not declaration.extensions or not declaration.entries:
-        missing = "extension" if not declaration.extensions else "command"
-        return (
-            VERDICT_UNKNOWN,
-            None,
-            (),
-            None,
-            None,
-            None,
-            (),
-            (
-                system_unknown(
-                    system,
-                    f"system {spelled(system)} is declared without a <{missing}> tag, and ES-DE skips such "
-                    "a system wholesale (loadConfig, SystemData.cpp:1109-1119 @ v3.4.1) — the "
-                    "frontend runs without it",
-                ),
-            ),
-        )
+    if declaration is None or not declaration.entries:
+        return VERDICT_UNKNOWN, None, (), None, None, None, (), _blank_commands(system, declaration)
     entry = _chosen_entry(entries, label, system)
     if isinstance(entry, Caveat):
         return VERDICT_UNKNOWN, None, (), None, None, None, (), (entry,)
@@ -23441,11 +23438,17 @@ class _PlatformView:
     """One handle's platform-relevant reading of its catalogue, taken once per query.
 
     ``declared`` maps every system this installation's systems answer lists to
-    its platform tags; ``vocabulary_backed`` names the subset whose tags could
-    not be read live and came from the snapshot column instead (a sealed
-    catalogue's derived systems, a catalogue-less arrangement's whole list).
+    its platform tags — on an ES-DE frontend from the declarations ES-DE loads
+    (:func:`atlas.esde.loaded_declarations`), so a declaration it skips adds
+    nothing (#784 D61): on a catalogue read in full such a system is absent,
+    and while EmuDeck's bundled layer is sealed it is one the readable layers
+    do not declare, joining as a derived system where the installed cores
+    name it. ``vocabulary_backed`` names the subset whose tags could not be
+    read live and came from the snapshot column instead (a sealed catalogue's
+    derived systems, a catalogue-less arrangement's whole list).
     ``disabled`` maps the systems the catalogue's text carries only inside XML
-    comments — read where the handle can read them (the RetroDECK layers; a
+    comments, a live declaration of the same name winning over its comment —
+    read where the handle can read them (the RetroDECK layers; a
     sealed bundled file cannot be scanned, so on those handles a commented
     system degrades to *absent*, which is stated in the answer's tags rather
     than silently wrong). ``caveats`` is the route's full caveat list in the
@@ -23457,7 +23460,11 @@ class _PlatformView:
     the catalogue in force empty, since the frontend loads nothing from it,
     but its text was not read as a declaration, so the view is not
     ``complete`` there and atlas claims nothing about a name it does not
-    declare.
+    declare. ``skipped`` maps every system the catalogue declares in a form
+    ES-DE skips wholesale to the tag whose absence makes it do so
+    (:func:`atlas.esde.skipped_for`), for the statement that names it: the
+    frontend runs without it, so a complete view does not hold it (#784 D58)
+    and states it ``absent`` (#784 D61).
     """
 
     declared: Mapping[SystemPair, tuple[str, ...]]
@@ -23466,6 +23473,7 @@ class _PlatformView:
     sources: tuple[str, ...]
     caveats: tuple[Caveat, ...]
     complete: bool = False
+    skipped: Mapping[SystemPair, str] = field(default_factory=dict)
 
     def status_of(self, system: SystemPair) -> PlatformSystemStatus:
         """How firmly *system* is here: declared, disabled, or absent."""
@@ -23761,17 +23769,34 @@ class _CatalogueQueries:
         resolution is ``unknown`` beside it.
 
         On an ES-DE frontend that is a system the catalogue, read in full,
-        does not declare; where a layer is sealed, the undeclared system may
-        sit in it, and the sealed statement riding the answer is the whole
-        claim. Where a layer does not parse, the invalid-layer finding is the
-        whole claim, as nothing that layer meant to declare was read. A bare
-        RetroArch has no catalogue and overrides this. Every question that
-        takes a system states it, through :meth:`_resolve` —
-        RetroDECK's gamelist question, which has no caveat list, by refusing.
-        Where it is ``None`` the pair is read as the system it spells.
+        does not declare, or one it declares without an ``<extension>`` list
+        or a ``<command>``, which ES-DE skips wholesale (#784 D58); where a
+        layer is sealed, the undeclared system may sit in it, and the sealed
+        statement riding the answer is the whole claim. Where a layer does not
+        parse, the invalid-layer finding is the whole claim, as nothing that
+        layer meant to declare was read. A bare RetroArch has no catalogue and
+        overrides this. Every question that takes a system states it, through
+        :meth:`_resolve` — RetroDECK's gamelist question, which has no caveat
+        list, by refusing. Where it is ``None`` the pair is read as the system
+        it spells.
         """
         view, _ = self._platform_view()
-        if not view.complete or system in view.declared:
+        if not view.complete:
+            return None
+        missing = view.skipped.get(system)
+        if missing is not None:
+            lacks = (
+                "without an <extension> list that names an extension"
+                if missing == "extension"
+                else "without a <command> tag"
+            )
+            return system_unknown(
+                system,
+                f"the catalogue declares system {spelled(system)} {lacks}, and ES-DE skips such a system "
+                "wholesale (loadConfig, SystemData.cpp:1109-1119 @ v3.4.1) — the frontend runs without it, so an "
+                "empty answer says the system is not here, not that it holds or needs nothing",
+            )
+        if system in view.declared:
             return None
         declares = (
             f"carries {spelled(system)} only inside an XML comment, which the frontend does not load"
@@ -23783,6 +23808,14 @@ class _CatalogueQueries:
             f"the catalogue was read and {declares} — an empty answer says the system is not here, not that "
             "it holds or needs nothing",
         )
+
+    def _skipped_systems(self, by_system: Mapping[str, SystemDeclaration]) -> dict[SystemPair, str]:
+        """Every system of *by_system* ES-DE skips wholesale, with the tag whose absence skips it (#784 D58)."""
+        return {
+            self._catalogue_system(name): missing
+            for name, declaration in by_system.items()
+            if (missing := skipped_for(declaration)) is not None
+        }
 
     def _absent_systems(self, view: _PlatformView) -> tuple[tuple[SystemPair, tuple[str, ...]], ...]:
         """``(system, snapshot tags)`` for every system of the own column the view neither declares nor disables.
@@ -24414,8 +24447,9 @@ class _CatalogueQueries:
         or one this runtime cannot read out of its AppImage
         (``frontend-build-sealed``), or a command atlas does not take apart — shell syntax beyond plain
         words, an ``env`` option, a ``.desktop`` file, an entry ES-DE itself
-        refuses, an ``%INJECT%`` file it cannot read or one that injects
-        itself. RetroDECK and EmuDeck take their commands apart; EmuDeck's
+        refuses, a system whose commands are all blank
+        (``launch-resolution-unsupported``), an ``%INJECT%`` file it cannot
+        read or one that injects itself. RetroDECK and EmuDeck take their commands apart; EmuDeck's
         command carries the launcher script it runs, with the script's steps,
         or is refused where no reading is pinned for that script and the files
         it rests on (``launcher-script-unpinned``); a bare RetroArch has no
@@ -25682,7 +25716,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         meant to declare was read, and the invalid-layer finding the caller
         states is the whole claim (#784 D53).
         """
-        declaration = by_system.get(system[1])
+        declaration = loaded_declaration(by_system, system[1])
         if declaration is None or declaration.rom_path is None:
             if complete:
                 return _RomDirectory(caveats=_rom_path_undeclared_caveat(system, declaration))
@@ -25764,7 +25798,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         status = self._catalogue_exclusive(root) if exclusive else ()
         return (
             SystemsAnswer(
-                tuple(sorted(self._catalogue_system(name) for name in by_system)),
+                tuple(sorted(self._catalogue_system(name) for name in loaded_declarations(by_system))),
                 (_CATALOGUE_SOURCE_EXCLUSIVE if exclusive else self._CATALOGUE_SOURCE,),
                 (*findings, *invalid, *status),
             ),
@@ -25793,12 +25827,18 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         invalid = (catalogue_invalid,) if catalogue_invalid is not None else ()
         status = self._catalogue_exclusive(root) if exclusive else ()
         view = _PlatformView(
-            {self._catalogue_system(name): declaration.platforms for name, declaration in by_system.items()},
+            {
+                self._catalogue_system(name): declaration.platforms
+                for name, declaration in loaded_declarations(by_system).items()
+            },
             frozenset(),
-            {self._catalogue_system(name): tags for name, tags in disabled.items()},
+            # A live declaration wins over a comment of the same name: one
+            # ES-DE loads is declared, and one it skips is absent (#784 D61).
+            {self._catalogue_system(name): tags for name, tags in disabled.items() if name not in by_system},
             (_CATALOGUE_SOURCE_EXCLUSIVE if exclusive else self._CATALOGUE_SOURCE,),
             (*findings, *invalid, *status),
             complete=catalogue_invalid is None,
+            skipped=self._skipped_systems(by_system),
         )
         return view, version
 
@@ -25883,7 +25923,13 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
                     launch_for=self._launch_for(),
                 ),
                 (_CATALOGUE_SOURCE_EXCLUSIVE if exclusive else self._CATALOGUE_SOURCE,),
-                (*findings, *invalid, *status, *anchor.caveats),
+                (
+                    *findings,
+                    *invalid,
+                    *status,
+                    *anchor.caveats,
+                    *_blank_commands(system, loaded_declaration(by_system, system[1])),
+                ),
             ),
             version,
         )
@@ -25910,10 +25956,12 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         """RetroDECK's launchability answer — the same snapshot its catalogue answer takes.
 
         The marker, both catalogue layers and the system's gamelist are each
-        read once here; ``complete`` is always true for this handle, because
-        its bundled layer is a readable file in the Flatpak deployment — an
-        undeclared system is therefore genuinely unknown to the frontend,
-        never possibly-sealed-away. A system atlas names by a cited pair has
+        read once here. The bundled layer is a readable file in the Flatpak
+        deployment, so nothing is sealed away on this handle: a system the
+        catalogue does not declare, or declares in a form ES-DE skips, is
+        answered before this, and only a layer that does not parse leaves one
+        to reach here, where the invalid-layer finding is the whole claim
+        (#784 D53). A system atlas names by a cited pair has
         its entries derived from the installed cores (#784 D57), and is
         answered from them as an arrangement without a catalogue answers.
         """
@@ -25948,7 +25996,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             content_path=content_path,
             launch_for=self._launch_for(lookups),
         )
-        declaration = by_system.get(system[1])
+        declaration = loaded_declaration(by_system, system[1])
         core_reader = _EntryCoreReader(
             self._machine,
             self._cfg_path(),
@@ -25976,7 +26024,6 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
             target=target,
             declaration=declaration,
             entries=entries,
-            complete=True,
             core_info_for=core_reader,
             label=label,
             boot_reader=boot_reader,
@@ -26043,10 +26090,12 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         caveats = (*findings, *invalid, *status, *anchor.caveats)
         chosen = _chosen_entry(entries, label, system)
         if chosen is None:
-            unknown = system_unknown(
-                system, f"the catalogue was read and declares no entry for system {spelled(system)}"
-            )
-            return LaunchCommandAnswer(sources=sources, caveats=(*caveats, unknown)), version
+            # No declaration ES-DE loads is left only under a catalogue layer
+            # that does not parse, where the invalid-layer finding is the
+            # whole claim (#784 D53); a loaded one with no entry keeps only
+            # blank commands (#784 D60).
+            blank = _blank_commands(system, loaded_declaration(by_system, system[1]))
+            return LaunchCommandAnswer(sources=sources, caveats=(*caveats, *blank)), version
         if isinstance(chosen, Caveat):
             return LaunchCommandAnswer(sources=sources, caveats=(*caveats, chosen)), version
         if chosen.availability != AVAILABILITY_STARTABLE or not lookups:
@@ -26276,7 +26325,7 @@ class RetroDeck(_FirmwareQueries, _CatalogueQueries):
         # joins the list only where the resolution actually read it — which is
         # every outcome except the two that never opened it or opened it and
         # failed. The resolution reports that itself rather than being asked.
-        declaration = by_system.get(system[1])
+        declaration = loaded_declaration(by_system, system[1])
         resolved = self._esde_system_dir(by_system, system, complete=catalogue_invalid is None)
         placement = RomPlacement(
             extensions=() if declaration is None else declaration.extensions,
@@ -27757,8 +27806,9 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         deployed from ``configs/emulationstation/custom_systems/`` and
         path-rewritten at ``:144-145``): unlike RetroDECK's commented-out
         stub, it declares real systems, and per ES-DE's merge semantics a
-        system it declares is *exactly* the one the frontend uses — the
-        sealed layer cannot contradict a same-name overlay system. EmuDeck
+        system it declares in a form ES-DE loads is *exactly* the one the
+        frontend uses — the sealed layer cannot contradict such a same-name
+        overlay system. One ES-DE skips shadows nothing (#784 D59). EmuDeck
         never writes the tag; carrying one is a user's own edit, honored
         because the frontend honors it.
 
@@ -28160,7 +28210,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         branch adds nothing on top of it; under a layer that does not parse,
         the invalid-layer finding is the whole claim the same way (#784 D53).
         """
-        declaration = by_system.get(system[1])
+        declaration = loaded_declaration(by_system, system[1])
         if declaration is None or declaration.rom_path is None:
             if complete:
                 return _RomDirectory(caveats=_rom_path_undeclared_caveat(system, declaration))
@@ -28265,7 +28315,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         snapshot = self._esde_snapshot()
         if snapshot.refusal is not None:
             return SystemsAnswer(caveats=snapshot.refusal), version
-        systems = {self._catalogue_system(name) for name in snapshot.by_system}
+        systems = {self._catalogue_system(name) for name in loaded_declarations(snapshot.by_system)}
         derived_mark: tuple[Caveat, ...] = ()
         sources: tuple[str, ...] = (self._catalogue_provenance(snapshot.exclusive),)
         if not snapshot.complete:
@@ -28308,7 +28358,8 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         if snapshot.refusal is not None:
             return _PlatformView({}, frozenset(), {}, (), snapshot.refusal), version
         declared = {
-            self._catalogue_system(name): declaration.platforms for name, declaration in snapshot.by_system.items()
+            self._catalogue_system(name): declaration.platforms
+            for name, declaration in loaded_declarations(snapshot.by_system).items()
         }
         vocabulary_backed: set[SystemPair] = set()
         sources: tuple[str, ...] = (self._catalogue_provenance(snapshot.exclusive),)
@@ -28337,6 +28388,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             sources,
             (*snapshot.findings, *snapshot.tail, *derived_mark),
             complete=snapshot.read_in_full,
+            skipped=self._skipped_systems(snapshot.by_system),
         )
         return view, version
 
@@ -28377,7 +28429,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             return self._cited_catalogue_answer(snapshot, system), version
         if snapshot.refusal is not None:
             return CatalogueAnswer(caveats=snapshot.refusal), version
-        if system[1] not in snapshot.by_system and not snapshot.complete:
+        if loaded_declaration(snapshot.by_system, system[1]) is None and not snapshot.complete:
             context = self._derived_context(snapshot)
             entries, derived = _derived_catalogue_entries(self, context, system)
             return (
@@ -28404,7 +28456,12 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
                     launch_for=self._launch_for(snapshot),
                 ),
                 (self._catalogue_provenance(snapshot.exclusive),),
-                (*snapshot.findings, *snapshot.tail, *anchor.caveats),
+                (
+                    *snapshot.findings,
+                    *snapshot.tail,
+                    *anchor.caveats,
+                    *_blank_commands(system, loaded_declaration(snapshot.by_system, system[1])),
+                ),
             ),
             version,
         )
@@ -28449,13 +28506,14 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
     ) -> tuple[LaunchabilityAnswer, str | None]:
         """EmuDeck's launchability answer — the same snapshot its catalogue answer takes.
 
-        ``complete`` is the snapshot's own flag: with the bundled layer sealed
-        inside the AppImage, a system the readable layers do not declare may
-        still exist, so the verdict stays unknown on the sealed statement
-        alone rather than claiming the frontend knows no such system. An
-        overlay-declared system answers fully — per ES-DE's merge semantics
-        the overlay replaces a same-name bundled system entirely, so its
-        entries and accept-list are exactly what the frontend uses. A label on a system
+        With the bundled layer sealed inside the AppImage, a system the
+        readable layers do not declare, or declare in a form ES-DE skips, may
+        still be declared there in a form ES-DE loads, so the verdict stays
+        unknown on the sealed statement alone rather than claiming the
+        frontend knows no such system. An overlay system ES-DE loads answers
+        fully — per ES-DE's merge semantics it replaces a same-name bundled
+        system entirely, so its entries and accept-list are exactly what the
+        frontend uses. A label on a system
         only the installed cores declare is looked up among the entries
         derived from them (:meth:`_derived_label_refusal`), where the launch
         command looks it up. A system atlas names by a cited pair has its
@@ -28484,7 +28542,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             content_path=content_path,
             launch_for=self._launch_for(snapshot, lookups),
         )
-        declaration = snapshot.by_system.get(system[1])
+        declaration = loaded_declaration(snapshot.by_system, system[1])
         core_reader = _EntryCoreReader(
             self._machine,
             self._companion_cfg_path(),
@@ -28515,7 +28573,6 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
             target=target,
             declaration=declaration,
             entries=entries,
-            complete=snapshot.complete,
             core_info_for=core_reader,
             label=label,
             boot_reader=boot_reader,
@@ -28558,7 +28615,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         here too, and one none of them carries is refused as there. Anywhere
         else the verdict helper has already looked the label up.
         """
-        if label is None or system[1] in snapshot.by_system or snapshot.complete:
+        if label is None or loaded_declaration(snapshot.by_system, system[1]) is not None or snapshot.complete:
             return ()
         entries, _ = _derived_catalogue_entries(self, self._derived_context(snapshot), system)
         chosen = _chosen_entry(entries, label, system)
@@ -28597,7 +28654,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         snapshot = self._esde_snapshot(system)
         if snapshot.refusal is not None:
             return LaunchCommandAnswer(caveats=snapshot.refusal), version
-        if system[1] not in snapshot.by_system and not snapshot.complete:
+        if loaded_declaration(snapshot.by_system, system[1]) is None and not snapshot.complete:
             return self._derived_launch_command(snapshot, system, label), version
         anchor = self._esde_system_dir(snapshot.by_system, system, complete=snapshot.read_in_full)
         lookups: list[tuple[LaunchLookup, _HostLaunchView]] = []
@@ -28614,7 +28671,10 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         chosen = _chosen_entry(entries, label, system)
         if isinstance(chosen, Caveat):
             return LaunchCommandAnswer(sources=sources, caveats=(*caveats, chosen)), version
-        if chosen is None or chosen.availability != AVAILABILITY_STARTABLE or not lookups:
+        if chosen is None:
+            blank = _blank_commands(system, loaded_declaration(snapshot.by_system, system[1]))
+            return LaunchCommandAnswer(sources=sources, caveats=(*caveats, *blank)), version
+        if chosen.availability != AVAILABILITY_STARTABLE or not lookups:
             return LaunchCommandAnswer(chosen, sources=sources, caveats=caveats), version
         lookup, view = lookups[0]
         launcher = self._launcher_script_answer(chosen, snapshot.settings, view)
@@ -28765,11 +28825,13 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
     def _rom_location_answer(self, system: SystemPair) -> tuple[RomPlacement, str | None]:
         """EmuDeck's ROM placement — the overlay's declaration, resolved ES-DE's way.
 
-        An overlay-declared system answers fully: per ES-DE's merge semantics
-        the overlay replaces a same-name bundled system entirely, so its
-        ``<path>`` and ``<extension>`` are exactly what the frontend uses. A
-        system the readable layers do not declare answers nothing *carrying
-        the sealed caveat* — the declaration may sit in the sealed layer,
+        An overlay system ES-DE loads answers fully: per ES-DE's merge
+        semantics the overlay replaces a same-name bundled system entirely, so
+        its ``<path>`` and ``<extension>`` are exactly what the frontend uses.
+        An overlay declaration ES-DE skips replaces nothing (#784 D59) and is
+        answered as none (:func:`atlas.esde.loaded_declaration`). A system the
+        readable layers do not declare answers nothing *carrying the sealed
+        caveat* — the declaration may sit in the sealed layer,
         which is a different claim from ``rom-path-undeclared``'s "the
         catalogue was read and declares none". The version travelling back is
         the backend checkout's HEAD, exactly as on :meth:`_systems_answer`.
@@ -28778,7 +28840,7 @@ class EmuDeck(_FirmwareQueries, _CatalogueQueries):
         snapshot = self._esde_snapshot(system)
         if snapshot.refusal is not None:
             return RomPlacement(caveats=snapshot.refusal), version
-        declaration = snapshot.by_system.get(system[1])
+        declaration = loaded_declaration(snapshot.by_system, system[1])
         resolved = self._esde_system_dir(snapshot.by_system, system, complete=snapshot.read_in_full)
         placement = RomPlacement(
             extensions=() if declaration is None else declaration.extensions,

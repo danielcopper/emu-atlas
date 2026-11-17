@@ -6035,12 +6035,12 @@ def _no_requirement(subject: str, data: dict[str, str]) -> Caveat:
 
 
 def _declaration_unknown(subject: str, data: dict[str, str]) -> Caveat:
-    """A read that did not happen — the one thing that may never become a claim."""
+    """A read that did not happen or found nothing to read — the one thing that may never become a claim."""
     return Caveat(
         CAVEAT_FIRMWARE_DECLARATION_UNKNOWN,
         f"whether anything here declares {subject} could not be established — the enumeration this "
-        "answer would derive it from did not happen, or nothing in it could be read; the empty list "
-        "below is a look that failed, never 'nothing needed'",
+        "answer would derive it from did not happen, listed no emulator to read, or nothing in it could "
+        "be read; the empty list below is a look that found nothing to read, never 'nothing needed'",
         data,
     )
 
@@ -10789,15 +10789,12 @@ def _empty_system_statement(
 ) -> Caveat | None:
     """The answer-level statement a system answer with no requirement carries — if any.
 
-    An identifier that resolved no emulator at all, on an enumeration that did
-    happen, is unknown here (:data:`CAVEAT_SYSTEM_UNKNOWN`) — a different
-    answer from "nobody declares firmware for it", and a different thing for a
-    client to do. A consumer that sends a RomM slug as a bare name ("dc" where
-    ES-DE says "dreamcast") instead of the pair ``("romm", "dc")`` lands
-    exactly here, and must not read it as "nothing needed". A system the
-    installation names by a cited pair answers the same way when no installed
-    core files under it: the pair is held only where a core it is cited for is
-    installed (#784 D50).
+    The system is one the installation holds: the question resolved it first,
+    and a system it does not hold answers ``system-unknown`` there (#784 D53),
+    never here. A held system with no emulator — one whose catalogue commands
+    are all blank, or one an EmuDeck without ES-DE derives no core for — states
+    :data:`CAVEAT_FIRMWARE_DECLARATION_UNKNOWN`, a look that found nothing to
+    read: with no emulator read, no absence was established (#784 D60).
 
     Otherwise the empty-kind vocabulary decides (:func:`_empty_answer_caveat`),
     with one suppression: a system whose emulators were read and declare
@@ -10807,21 +10804,18 @@ def _empty_system_statement(
     cannot say is the other two: that firmware was declared here and never
     became a requirement, or that nothing could be read at all.
     """
-    if not cores and enumerated:
-        return system_unknown(
-            system,
-            f"no emulator on this machine covers the system {spelled(system)} — nothing was resolved, so "
-            "this empty answer says the system is unknown here, not that nothing is needed; check the "
-            "system asked before reading it as complete",
-        )
+    subject = f"firmware for system {spelled(system)}"
+    data = {"source": system[0], "key": system[1]}
+    if not cores:
+        return _declaration_unknown(subject, data)
     if any(core.requirements for core in cores):
         return None
     empty = _empty_answer_caveat(
         cores,
         enumerated=enumerated,
         declared=_declared_without_requiring(cores),
-        subject=f"firmware for system {spelled(system)}",
-        data={"source": system[0], "key": system[1]},
+        subject=subject,
+        data=data,
     )
     if empty.code != CAVEAT_NO_FIRMWARE_DECLARATION:
         return empty
@@ -10862,9 +10856,9 @@ def firmware_for_system(
     :data:`CAVEAT_EMULATOR_LIST_DERIVED` naming the system; on a bare RetroArch,
     which has none, it leads with :data:`CAVEAT_EMULATOR_CATALOGUE_UNAVAILABLE`
     as every system there does. A cited system is held only where a core it
-    is cited for is installed (#784 D50), so one no installed core files under
-    answers :data:`CAVEAT_SYSTEM_UNKNOWN`, as an own system nothing covers
-    does. (``_unknown`` names no system: it
+    is cited for is installed (#784 D50); one no installed core files under is
+    answered :data:`CAVEAT_SYSTEM_UNKNOWN` by the question that resolves the
+    system, before this is asked. (``_unknown`` names no system: it
     marks cores whose system nothing names, a fact about those cores.)
 
     Each emulator answers with its **whole** declaration set, every requirement

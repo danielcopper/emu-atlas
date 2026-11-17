@@ -9,6 +9,7 @@ from atlas.installations import parse_gamelist
 from atlas.machine import FixtureMachine
 from atlas.esde import (
     EmulatorSpec,
+    SystemDeclaration,
     commented_out_systems,
     emulator_identity,
     esde_extension,
@@ -19,6 +20,7 @@ from atlas.esde import (
     parse_es_systems,
     parse_gamelist_alternative,
     resolve_rom_path,
+    skipped_for,
 )
 from tests.answers import placed, state_placed
 
@@ -37,17 +39,20 @@ BUNDLED_XML = """<?xml version="1.0"?>
   <system>
     <name>dreamcast</name>
     <path>%ROMPATH%/dreamcast</path>
+    <extension>.chd .cue .gdi</extension>
     <command label="Flycast">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/flycast_libretro.so %ROM%</command>
   </system>
   <system>
     <name>n64</name>
     <path>%ROMPATH%/n64</path>
+    <extension>.z64 .Z64</extension>
     <command label="Mupen64Plus-Next">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/mupen64plus_next_libretro.so %ROM%</command>
     <command label="ParaLLEl N64">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>
   </system>
   <system>
     <name>flash</name>
     <path>%ROMPATH%/flash</path>
+    <extension>.swf</extension>
     <command label="Ruffle (Standalone)">%EMULATOR_RUFFLE% %ROM%</command>
   </system>
 </systemList>
@@ -202,6 +207,67 @@ class TestTheExtensionTokenIsEsdes:
         )
         parsed = parse_es_systems(xml, provenance="test").systems
         assert parsed["gb"].extensions == (".gb", ".gbc", ".zip")
+
+
+class TestASystemEsdeSkips:
+    """``loadConfig`` skips a system with no extension token or no kept command (SystemData.cpp:1114 @ v3.4.1)."""
+
+    GAMBATTE = '<command label="Gambatte">retroarch -L /app/cores/gambatte_libretro.so %ROM%</command>'
+
+    @staticmethod
+    def _gb(body: str) -> SystemDeclaration:
+        text = f"<systemList><system><name>gb</name><path>%ROMPATH%/gb</path>{body}</system></systemList>"
+        return parse_es_systems(text, provenance="test").systems["gb"]
+
+    @pytest.mark.parametrize(
+        "extension",
+        ["", "<extension></extension>", "<extension> ,\t</extension>"],
+        ids=["no-tag", "empty", "delimiters-only"],
+    )
+    def test_no_extension_token_is_skipped_for_the_extension(self, extension):
+        # readList over the text splits into nothing (:1022), however the tag
+        # is spelled — and an empty list is the check at :1114.
+        assert skipped_for(self._gb(f"{extension}{self.GAMBATTE}")) == "extension"
+
+    def test_no_command_is_skipped_for_the_command(self):
+        assert skipped_for(self._gb("<extension>.gb</extension>")) == "command"
+
+    def test_a_commented_out_command_is_no_command(self):
+        # The walk steps through children by name (:1028-1029); a comment
+        # node answers to none.
+        assert skipped_for(self._gb(f"<extension>.gb</extension><!-- {self.GAMBATTE} -->")) == "command"
+
+    def test_a_blank_command_is_kept_so_the_system_loads(self):
+        # :1067-1070 stores the text with no emptiness test, so the command
+        # list is not empty: ES-DE loads the system, with nothing to launch.
+        declaration = self._gb('<extension>.gb</extension><command label="Blank">   </command>')
+        assert declaration.entries == ()
+        assert declaration.commands == 1
+        assert skipped_for(declaration) is None
+
+    def test_both_missing_names_the_extension(self):
+        assert skipped_for(self._gb("")) == "extension"
+
+    def test_a_system_with_both_is_not_skipped(self):
+        assert skipped_for(self._gb(f"<extension>.gb</extension>{self.GAMBATTE}")) is None
+
+    def test_commands_counts_what_es_de_keeps_not_every_element(self):
+        # A duplicate label is dropped and takes no slot (:1056-1069), the
+        # way _stored_commands walks it.
+        declaration = self._gb(f"<extension>.gb</extension>{self.GAMBATTE}{self.GAMBATTE}")
+        assert declaration.commands == 1
+
+    def test_a_declaration_never_states_more_entries_than_kept_commands(self):
+        entry = EmulatorSpec(
+            system="gb",
+            label="Gambatte",
+            kind="libretro",
+            core_so="gambatte_libretro.so",
+            command="retroarch -L /app/cores/gambatte_libretro.so %ROM%",
+            provenance="test",
+        )
+        with pytest.raises(ValueError, match="kept <command> elements"):
+            SystemDeclaration(entries=(entry,), commands=0)
 
 
 class TestLoadExclusive:
@@ -421,7 +487,7 @@ class TestMerge:
     def test_custom_replaces_bundled_system(self):
         bundled = parse_es_systems(BUNDLED_XML, provenance="bundled")
         custom = parse_es_systems(
-            '<systemList><system><name>n64</name>'
+            '<systemList><system><name>n64</name><extension>.z64</extension>'
             '<command label="ParaLLEl N64">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>'
             "</system></systemList>",
             provenance="custom",
@@ -430,6 +496,39 @@ class TestMerge:
         assert [e.label for e in merged["n64"].entries] == ["ParaLLEl N64"]
         assert merged["n64"].entries[0].provenance == "custom"
         assert "dreamcast" in merged  # untouched systems stay
+
+    def test_a_custom_declaration_es_de_skips_replaces_nothing(self):
+        # #784 D59: ES-DE reads the custom file first and keeps a later
+        # declaration out only for a system it loaded (SystemData.cpp:962-975
+        # @ v3.4.1); the skip at :1114-1118 loads nothing, so the bundled n64
+        # is the one in force.
+        bundled = parse_es_systems(BUNDLED_XML, provenance="bundled")
+        custom = parse_es_systems(
+            '<systemList><system><name>n64</name>'
+            '<command label="ParaLLEl N64">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/parallel_n64_libretro.so %ROM%</command>'
+            "</system></systemList>",
+            provenance="custom",
+        )
+        merged = merge_layers(bundled.systems, custom.systems)
+        assert merged["n64"] is bundled.systems["n64"]
+
+    def test_a_skipped_custom_declaration_over_a_skipped_bundled_one_keeps_the_bundled_one(self):
+        # Neither loads, so the system is not held either way; the bundled
+        # declaration is the one the merge keeps, as for any custom
+        # declaration ES-DE skips (#784 D59).
+        bundled = parse_es_systems(
+            '<systemList><system><name>n64</name><extension>.z64</extension></system></systemList>',
+            provenance="bundled",
+        )
+        custom = parse_es_systems("<systemList><system><name>n64</name></system></systemList>", provenance="custom")
+        merged = merge_layers(bundled.systems, custom.systems)
+        assert merged["n64"] is bundled.systems["n64"]
+        assert skipped_for(merged["n64"]) == "command"
+
+    def test_a_skipped_custom_declaration_with_no_bundled_one_stays_skipped(self):
+        custom = parse_es_systems("<systemList><system><name>mysystem</name></system></systemList>", provenance="custom")
+        merged = merge_layers(parse_es_systems(BUNDLED_XML, provenance="bundled").systems, custom.systems)
+        assert skipped_for(merged["mysystem"]) == "extension"
 
     def test_custom_adds_new_system(self):
         merged = merge_layers(
@@ -523,7 +622,7 @@ class TestRetroDeckCatalogue:
     def test_custom_overlay_overrides(self):
         rd = _catalogue_fixture(
             {
-                CUSTOM_ESDE: '<systemList><system><name>dreamcast</name>'
+                CUSTOM_ESDE: '<systemList><system><name>dreamcast</name><extension>.chd</extension>'
                 '<command label="Custom Flycast">%EMULATOR_RETROARCH% -L %CORE_RETROARCH%/flycast_libretro.so %ROM%</command>'
                 "</system></systemList>"
             }
