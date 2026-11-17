@@ -22218,17 +22218,18 @@ def _blank_commands(system: SystemPair, declaration: SystemDeclaration | None) -
     evaluated — ``launch-resolution-unsupported`` in its one-command form says
     so, rather than an empty answer saying nothing.
     """
-    if declaration is None or declaration.entries:
-        return ()
-    return (
-        Caveat(
-            CAVEAT_LAUNCH_RESOLUTION_UNSUPPORTED,
-            f"every <command> system {spelled(system)} keeps is blank — ES-DE loads the system with a launch "
-            "command that names nothing, so no entry is stated, and what the frontend does with a blank "
-            "command is not evaluated here",
-            {},
-        ),
-    )
+    stated: tuple[Caveat, ...] = ()
+    if declaration is not None and not declaration.entries:
+        stated = (
+            Caveat(
+                CAVEAT_LAUNCH_RESOLUTION_UNSUPPORTED,
+                f"every <command> system {spelled(system)} keeps is blank — ES-DE loads the system with a launch "
+                "command that names nothing, so no entry is stated, and what the frontend does with a blank "
+                "command is not evaluated here",
+                {},
+            ),
+        )
+    return stated
 
 
 class _EntryCoreReader:
