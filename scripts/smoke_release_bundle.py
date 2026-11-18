@@ -58,10 +58,31 @@ def _run(command: list[str], cwd: Path | None = None) -> subprocess.CompletedPro
     return subprocess.run(command, capture_output=True, text=True, cwd=cwd)
 
 
+# How much of a failed check's output is shown, from each end. A tool states
+# what went wrong at the end of its output: pytest prints a progress dot per
+# test first and the failures, their tracebacks and the summary last, so the
+# tail is the larger share. It keeps the closing count line and the failures
+# that come last. On CI pytest does not cut a comparison's explanation short,
+# so one failed comparison's traceback and its summary entry can each run to
+# several thousand characters and the tail may hold only a few failures;
+# where more was dropped, the stated cut says so. The head keeps what a crash
+# before the first test prints.
+SHOWN_HEAD = 2000
+SHOWN_TAIL = 20000
+
+
+def _excerpt(text: str) -> str:
+    """*text* whole where it is short, else its head and tail with the cut stated."""
+    if len(text) <= SHOWN_HEAD + SHOWN_TAIL:
+        return text
+    omitted = len(text) - SHOWN_HEAD - SHOWN_TAIL
+    return f"{text[:SHOWN_HEAD]}\n[... {omitted} characters omitted ...]\n{text[-SHOWN_TAIL:]}"
+
+
 def _fail(check: str, result: subprocess.CompletedProcess[str]) -> None:
     raise SystemExit(
         f"FAIL {check}\n  exit {result.returncode}\n"
-        f"  stdout: {result.stdout[:2000]}\n  stderr: {result.stderr[:2000]}"
+        f"  stdout: {_excerpt(result.stdout)}\n  stderr: {_excerpt(result.stderr)}"
     )
 
 
@@ -125,7 +146,13 @@ def _check_full_suite(python: Path, scratch: Path) -> None:
     result = _run([str(python), "-m", "pip", "install", "--quiet", "pytest"])
     if result.returncode != 0:
         _fail("installing pytest into the scratch copy", result)
-    result = _run([str(python), "-m", "pytest", str(REPO_ROOT / "tests"), "-q"], cwd=scratch)
+    # Short tracebacks keep each failure small. -rfE restates pytest's
+    # default, so a configuration cannot drop the summary line per failure
+    # and error.
+    result = _run(
+        [str(python), "-m", "pytest", str(REPO_ROOT / "tests"), "-q", "-rfE", "--tb=short"],
+        cwd=scratch,
+    )
     if result.returncode != 0:
         _fail("the full suite under the bundle interpreter", result)
     tail = [line for line in result.stdout.splitlines() if line.strip()][-1:]
