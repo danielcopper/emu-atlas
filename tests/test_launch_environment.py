@@ -7,8 +7,11 @@ files by ``tests/test_launch_environment_tripwire.py``.
 from __future__ import annotations
 
 import json
+import math
 import re
 import time
+import timeit
+from collections.abc import Callable
 
 import pytest
 
@@ -191,6 +194,43 @@ class TestTheStartLineIsReadAsTheShellReadsIt:
 
 KNOWN = {"LD_LIBRARY_PATH": "/lib/a", "XDG_CONFIG_HOME": "/home/u/.var/app/a/config", "EMPTY": ""}
 
+# A read is timed on a line and on one GROWTH_FACTOR times as long, and the
+# ratio of the two CPU times is held, not the time one machine takes. A read
+# whose cost grows with the line's length comes out near 8x; one whose cost
+# grows with its square comes out between 8x and 64x, nearer 64x the larger
+# that part is. The bound, 8**1.5 or about 22.6x, is crossed once the part
+# growing with the square is about a quarter of the read at the shorter
+# length; a smaller one passes at these lengths. A ratio cancels a uniform
+# slowdown of the machine; CPU time leaves out the time another process
+# holds the CPU, and the two lengths taking turns, best of several rounds,
+# keep load from moving the ratio much.
+GROWTH_BASE = 2000
+GROWTH_FACTOR = 8
+GROWTH_BOUND = GROWTH_FACTOR**1.5
+GROWTH_ROUNDS = 5
+# A timing shorter than this is too close to the clock's own noise, so a
+# fast read is repeated until the shorter line takes at least this long.
+MEASURABLE_SECONDS = 0.002
+# Every name the adversarial lines spell, ``$A0`` reading as the name A0, so
+# shell_value does not stop at the first unknown name: it reads every
+# reference of an unquoted line and substitutes every one of a closed quoted
+# run.
+ADVERSARIAL_KNOWN = {"A": "x", "A0": "x"}
+
+
+def _cpu_time_growth(read: Callable[[str], object], short: str, long: str) -> float:
+    """How many times the CPU time of *read* on *short* it takes on *long*, best of :data:`GROWTH_ROUNDS`."""
+    short_timer = timeit.Timer(lambda: read(short), timer=time.process_time)
+    long_timer = timeit.Timer(lambda: read(long), timer=time.process_time)
+    calls = 1
+    while short_timer.timeit(calls) < MEASURABLE_SECONDS:
+        calls *= 2
+    short_best = long_best = math.inf
+    for _ in range(GROWTH_ROUNDS):
+        short_best = min(short_best, short_timer.timeit(calls))
+        long_best = min(long_best, long_timer.timeit(calls))
+    return long_best / short_best
+
 
 class TestTheExpansionReadsOnlyWhatAtlasReads:
     @pytest.mark.parametrize(
@@ -246,21 +286,37 @@ class TestTheExpansionReadsOnlyWhatAtlasReads:
         assert shell_value(rest, KNOWN) is None
 
     @pytest.mark.parametrize(
-        "rest",
+        ("prefix", "unit", "suffix"),
         [
-            '"$A' + "0$A" * 10000,
-            '"$A' + "0$A" * 10000 + '"',
-            '"$A' + "0$A" * 10000 + '"$(x)',
-            "$A" + "0$A" * 10000 + " x",
-            '"' + "${A}" * 10000 + "$",
+            ('"$A', "0$A", ""),
+            ('"$A', "0$A", '"'),
+            ('"$A', "0$A", '"$(x)'),
+            ("$A", "0$A", " x"),
+            ('"', "${A}", "$"),
         ],
     )
-    def test_a_long_adversarial_line_is_answered_at_once(self, rest: str):
-        started = time.perf_counter()
-        shell_value(rest, {"A": "x"})
-        shell_references(rest)
-        is_search_list(rest)
-        assert time.perf_counter() - started < 0.5
+    @pytest.mark.parametrize(
+        "read",
+        [
+            pytest.param(lambda rest: shell_value(rest, ADVERSARIAL_KNOWN), id="shell_value"),
+            pytest.param(shell_references, id="shell_references"),
+            pytest.param(is_search_list, id="is_search_list"),
+        ],
+    )
+    def test_a_long_adversarial_line_does_not_grow_like_its_square(
+        self, prefix: str, unit: str, suffix: str, read: Callable[[str], object]
+    ):
+        # Polynomial backtracking makes the read grow faster than the line,
+        # which the growth tells; exponential backtracking hangs this test as
+        # it would the caller.
+        def line(repeats: int) -> str:
+            return prefix + unit * repeats + suffix
+
+        growth = _cpu_time_growth(read, line(GROWTH_BASE), line(GROWTH_BASE * GROWTH_FACTOR))
+        assert growth < GROWTH_BOUND, (
+            f"{GROWTH_FACTOR}x the line took {growth:.1f}x the time, "
+            f"a linear read stays near {GROWTH_FACTOR}x"
+        )
 
     @pytest.mark.parametrize(
         ("rest", "names"),
