@@ -33,13 +33,13 @@ the setup reads with `ssh -G` and never writes. `<name>` is yours to choose — 
    above the package's Python floor (`requires-python` in `pyproject.toml`), and `/usr/bin/bwrap` able to start the
    sandbox every probe runs in.
 5. **It installs on the target**, under `~/.local/lib/emu-atlas-dev/`: `dispatch.py`, the dispatcher. The copies of the
-   tree arrive later beside it, in `trees/`, with `current` naming the latest; a question runs from the tree its own
-   copy made, and no copy reaches the dispatcher. It rebuilds `~/.ssh/authorized_keys` with one line for the key, a
-   comment above it naming the build host and the time, and every other line byte for byte; a rebuilt file that came out
-   short, or without the new line last, is not put in place. A symlinked `authorized_keys` is written through: the file
-   it names is replaced, and the link stays. The install is the script `scripts/dev_target_install.py`, sent with its
-   values and the dispatcher filled in, and run by the target's `/usr/bin/python3`. Once both files are in place it
-   closes `~/.ssh` to others (mode 700), as sshd wants it.
+   tree arrive later beside it, in `trees/`, with `current` naming the latest; no copy reaches the dispatcher. It
+   rebuilds `~/.ssh/authorized_keys` with one line for the key, a comment above it naming the build host and the time,
+   and every other line byte for byte; a rebuilt file that came out short, or without the new line last, is not put in
+   place. A symlinked `authorized_keys` is written through: the file it names is replaced, and the link stays. The
+   install is the script `scripts/dev_target_install.py`, sent with its values and the dispatcher filled in, and run by
+   the target's `/usr/bin/python3`. Once both files are in place it closes `~/.ssh` to others (mode 700), as sshd wants
+   it.
 6. **It writes the target into this tool's own SSH config**, `~/.config/emu-atlas-dev/ssh_config`: the address, port,
    user and jump host or proxy command the destination resolved to, the build host's key and nothing else, and the
    known-hosts file. Your `~/.ssh/config` serves the setup's own login only; the entry is written to be read with this
@@ -251,17 +251,19 @@ the dispatcher's, or for a failure of the client's past a usage error:
 - **2 `USAGE`** — the call could not be put, as for atlas: no question, no probe script, a script `scripts/probes/` does
   not hold or the dispatcher would not take, or a target name the setup would not accept. Nothing was contacted.
 - **6 `NOT_ASKED`** — no answer was taken, and nothing was done on the target but a copy where one went through: no such
-  target, an entry without an address, no key for targets here, no `ssh` or one that could not be started, a copy that
-  could not be built here, an `ssh` that ended before the login (below), a dispatcher the target cannot start, the
-  target shell's output or an older dispatcher (the run, if it started, ended before its answer was taken), or a crash
-  of the client before it contacted anything or after the copy went through. Without `--target`: Python that could not
-  be started here, or a crash of the client, after which whatever ran here printed above and its status is lost.
+  target, an entry without an address or a user, no key for targets here, no `ssh` or one that could not be started, a
+  copy that could not be built here, an `ssh` that ended before the login (below), an interpreter the target cannot
+  start or a dispatcher that is gone there, the target shell's output or an older dispatcher (the run, if it started,
+  ended before its answer was taken), or a crash of the client before it contacted anything or after the copy went
+  through. Without `--target`: Python that could not be started here, or a crash of the client, after which whatever ran
+  here printed above and its status is lost.
 - **7 `BROKE_OFF`** — the request ended without a status of the dispatcher's or the run's: the connection broke, the
   dispatcher or the run's sandbox there failed to start, or `ssh` failed before the login with a message no pattern
   knows, so that whether the request reached the target is not known. After a copy, the target's current tree is that
   copy whole or the one before it. A run that itself ends with 255, `ssh`'s own failure status, ends the call with 7 as
-  well: once the run's marker came the two cannot be told apart. So does a crash of the client during the copy or the
-  question; the traceback names where.
+  well: once the run's marker came the two cannot be told apart. So does an answer that could not be written out here
+  whole — a full disk, or a reader of the output that stopped early — and a crash of the client during the copy or the
+  question; the message says why, and what the run ended with.
 
 An interrupt (Ctrl-C) ends the call with 130 and says where it found it.
 

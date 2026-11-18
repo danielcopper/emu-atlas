@@ -597,8 +597,8 @@ def main() -> int:
         sys.stderr.write("{}: {}; nothing was changed.\n".format(PREFIX, error))
         return CANNOT_RUN
     except Exception:
-        # Python's own 1 would pass through the client as a probe's "does not
-        # hold".
+        # An exception of the dispatcher's own ends with a status of its own,
+        # never Python's 1.
         traceback.print_exc()
         sys.stderr.write("{}: the dispatcher failed (the traceback is above).\n".format(PREFIX))
         return CANNOT_RUN

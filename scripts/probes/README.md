@@ -18,7 +18,7 @@ What a probe script may do:
   why a probe must not try.
 - **Use only the standard library and `atlas`.** On a target the copy is the installation: `atlas/` and this directory,
   run on the target's `/usr/bin/python3` with no site-packages. Ask atlas in the script's own process — `atlas.cli.run`
-  or the library — since `atlas` is importable in that process only, not in a child it starts.
+  or the library — since on a target `atlas` is importable in that process only, not in a child it starts.
 - **Report shapes, not values.** Its output describes one machine: say which question and which installation kind, and
   where answers part, rather than printing paths, titles or names off the device — a key that is no plain field name
   among them.
@@ -27,6 +27,5 @@ What a probe script may do:
   a probe's own status stays told apart from theirs. A probe that raises, at compile and import time as well, is ended
   with 2 and its traceback by the bootstrap; one that asks several questions catches a crash per question, so the
   verdicts it reached before still print.
-- **Keep a traceback out of the report.** A traceback can hold a path or a name off the device: read it, never paste it.
 
 What a probe returns is printed and never written into the tree, a test fixture, a commit, a pull request or an issue.

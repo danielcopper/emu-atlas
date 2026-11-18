@@ -161,9 +161,10 @@ measures them — so a clean Sonar page does not mean a green gate.
 
 A machine with RetroDECK installed and never started answers `not-set-up`, so nothing on it states what atlas says on a
 set-up installation with content, firmware and saves. A change that alters such an answer is checked on one from the
-build host — by the lead, or by an agent whose brief says so: `mise run ask --target <name> -- <question>`, or
-`mise run probe --target <name> <script>` (`docs/remote-target.md`). What comes back describes one machine, and the
-agent rule on device values holds for it. The live round that saves in a game stays at the device.
+build host — by the maintainer, or by an agent whose brief says so: `mise run ask --target <name> -- <question>`, or
+`mise run probe --target <name> <script>` (`docs/remote-target.md`). What comes back describes one machine: like any
+device value it stays out of the tree, commits, pull requests and issues, a traceback among it — describe its shape. The
+live round that saves in a game stays at the device.
 
 ## Pitfalls
 
