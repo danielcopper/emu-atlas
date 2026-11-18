@@ -24,8 +24,10 @@ Cards are not scanned: a card already states the core's own writers, and the
 anchor tests re-read those against the shipped bytes.
 
 Usage: ``python scripts/sweep_save_literals.py [cores-dir]``
-(default: the RetroDECK Flatpak deployment's cores directory). Stdlib only —
-zero dependencies is a design contract.
+(default: the RetroDECK Flatpak deployment's cores directory; a directory
+given must lie inside the repository, the home directory, the temporary
+directory or the system Flatpak installation). Stdlib only — zero
+dependencies is a design contract.
 """
 
 from __future__ import annotations
@@ -33,13 +35,15 @@ from __future__ import annotations
 import json
 import re
 import sys
+import tempfile
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 RECORDS_PATH = REPO_ROOT / "atlas" / "data" / "save_memory.json"
-DEFAULT_CORES_DIR = Path(
-    "/var/lib/flatpak/app/net.retrodeck.retrodeck/current/active/files/retrodeck/"
-    "components/retroarch/rd_extras/cores"
+SYSTEM_FLATPAK = Path("/var/lib/flatpak")
+DEFAULT_CORES_DIR = (
+    SYSTEM_FLATPAK
+    / "app/net.retrodeck.retrodeck/current/active/files/retrodeck/components/retroarch/rd_extras/cores"
 )
 
 # Printable ASCII plus tab/newline/CR, cut only on anything else (NUL included):
@@ -102,8 +106,43 @@ def hits_in(binary: bytes) -> list[str]:
     )
 
 
+def resolve_cores_dir(raw: str) -> Path:
+    """*raw* resolved, symlinks followed, and refused unless it lies under one of four roots.
+
+    The sweep reads every record core's binary out of the directory the
+    command line names, so that directory is bounded to where a cores
+    directory to sweep can sit: the repository, the user's home directory
+    (which holds a per-user Flatpak installation too), the system's temporary
+    directory as ``tempfile`` names it (``TMPDIR`` moves it), and the system
+    Flatpak installation the default lies in. A mistyped argument cannot
+    point the read anywhere else. A path ``resolve()`` raises on — an
+    embedded NUL, or a symlink loop on Python 3.12 — is the same argument
+    error. Raises ``ValueError`` for the caller to report.
+    """
+    try:
+        path = Path(raw).resolve()
+    except (ValueError, OSError, RuntimeError) as error:
+        raise ValueError(f"cores directory {raw!r} cannot be resolved: {error}") from error
+    roots = (
+        REPO_ROOT.resolve(),
+        Path.home().resolve(),
+        Path(tempfile.gettempdir()).resolve(),
+        SYSTEM_FLATPAK.resolve(),
+    )
+    if not any(path.is_relative_to(root) for root in roots):
+        raise ValueError(
+            f"cores directory {path} lies outside the repository, the home directory,"
+            " the temporary directory and the system Flatpak installation"
+        )
+    return path
+
+
 def main(argv: list[str]) -> int:
-    cores_dir = Path(argv[1]) if len(argv) > 1 else DEFAULT_CORES_DIR
+    try:
+        cores_dir = resolve_cores_dir(argv[1] if len(argv) > 1 else str(DEFAULT_CORES_DIR))
+    except ValueError as error:
+        print(error, file=sys.stderr)
+        return 2
     if not cores_dir.is_dir():
         print(f"cores directory not found: {cores_dir}", file=sys.stderr)
         return 2
