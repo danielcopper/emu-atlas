@@ -106,20 +106,23 @@ def check_python(python: str, floor_text: str) -> str:
     return text
 
 
-def dispatcher_function(name: str) -> Callable[..., object]:
-    """A function of the dispatcher this script installs, read from its source rather than written twice."""
+def dispatcher_functions(*names: str) -> list[Callable[..., object]]:
+    """Functions of the dispatcher this script installs, read from its source rather than written twice.
+
+    The source is run once for all of them.
+    """
     namespace: dict[str, object] = {"__name__": "emu_atlas_dev_dispatch"}
     exec(compile(DISPATCHER_SOURCE, DISPATCHER_NAME, "exec"), namespace)
-    return cast("Callable[..., object]", namespace[name])
+    return [cast("Callable[..., object]", namespace[name]) for name in names]
 
 
 def check_sandbox(bwrap: str, python: str) -> None:
     """Refuse unless *bwrap* starts the dispatcher's sandbox here, with *python* in it: the dispatcher's own trial."""
-    failure = cast("tuple[str, str] | None", dispatcher_function("sandbox_failure")(bwrap, python))
+    sandbox_failure, sandbox_repair = dispatcher_functions("sandbox_failure", "sandbox_repair")
+    failure = cast("tuple[str, str] | None", sandbox_failure(bwrap, python))
     if failure is not None:
         kind, why = failure
-        repair = dispatcher_function("sandbox_repair")(kind)
-        raise lacks("a {} that starts a sandbox — {}; {}".format(bwrap, why, repair))
+        raise lacks("a {} that starts a sandbox — {}; {}".format(bwrap, why, sandbox_repair(kind)))
 
 
 def from_address(argv: list[str]) -> str:

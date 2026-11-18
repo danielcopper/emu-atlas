@@ -1887,7 +1887,8 @@ class TestOtherFailures:
             text=f"player@{_ADDRESS}", user="player", hostname=_ADDRESS, port="22", proxy_jump=None, proxy_command=None
         )
 
-        said = setup_remote_target.classify(stderr, name="handheld", destination=destination, known_hosts=())
+        failure = setup_remote_target.ssh_failure(stderr, name="handheld", destination=destination)
+        said = setup_remote_target.failure_text(failure, name="handheld", destination=destination, known_hosts=())
 
         assert said is None
 
