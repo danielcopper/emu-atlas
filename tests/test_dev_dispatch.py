@@ -285,7 +285,7 @@ MARKER_LINE = (dev_dispatch.RUN_MARKER + "\n").encode()
 
 
 def answered(result: subprocess.CompletedProcess[bytes]) -> bytes:
-    """What a run wrote on stdout: what follows the marker the dispatcher writes right before the run starts."""
+    """What a run wrote on stdout: what follows the marker the run writes as its first act inside the sandbox."""
     assert result.stdout.startswith(MARKER_LINE), result.stdout
     return result.stdout[len(MARKER_LINE) :]
 

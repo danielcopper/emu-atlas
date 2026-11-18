@@ -262,8 +262,8 @@ the dispatcher's, or for a failure of the client's past a usage error:
   knows, so that whether the request reached the target is not known. After a copy, the target's current tree is that
   copy whole or the one before it. A run that itself ends with 255, `ssh`'s own failure status, ends the call with 7 as
   well: once the run's marker came the two cannot be told apart. So does an answer that could not be written out here
-  whole — a full disk, or a reader of the output that stopped early — and a crash of the client during the copy or the
-  question; the message says why, and what the run ended with.
+  whole — a full disk, or a reader of the output that stopped early — whose message names what the run ended with, and a
+  crash of the client during the copy or the question, whose traceback names where.
 
 An interrupt (Ctrl-C) ends the call with 130 and says where it found it.
 
