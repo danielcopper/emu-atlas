@@ -1666,14 +1666,44 @@ class TestTheFirstProbe:
 
     def test_a_key_that_is_no_field_name_is_not_printed(self) -> None:
         """A key can be a path or a title off the device: only a plain field name is shown."""
-        labelled = {"options": {"/run/media/card/A Game (Europe).chd": 1, "Some Title": 1, "core_option": 1}}
-        bare = {"options": {"/run/media/card/A Game (Europe).chd": 2, "Some Title": 2, "core_option": 2}}
+        keys = ("/run/media/card/A Game (Europe).chd", "Some Title", "game (europe).chd", "core_option")
+        labelled = {"options": dict.fromkeys(keys, 1)}
+        bare = {"options": dict.fromkeys(keys, 2)}
 
         status, lines = answers_agree.compare(self._one_retrodeck(labelled, bare))
 
         assert status == answers_agree.DISAGREE
-        assert "systems retrodeck: differ at .options.<key>, .options.<key>, .options.core_option" in lines
-        assert "Game" not in " ".join(lines) and "Title" not in " ".join(lines)
+        assert (
+            "systems retrodeck: differ at .options.<key>, .options.<key>, .options.core_option, .options.<key>" in lines
+        )
+        assert "Game" not in " ".join(lines) and "Title" not in " ".join(lines) and "europe" not in " ".join(lines)
+
+    def test_every_key_of_a_data_object_is_not_printed(self) -> None:
+        """A caveat's data can be keyed by a name off the device, a lowercase one among them."""
+        labelled = {"caveats": [{"code": "x", "data": {"mario_kart": 1, "core_option": 1}}]}
+        bare = {"caveats": [{"code": "x", "data": {"mario_kart": 2, "core_option": 2}}]}
+
+        status, lines = answers_agree.compare(self._one_retrodeck(labelled, bare))
+
+        assert status == answers_agree.DISAGREE
+        assert "systems retrodeck: differ at .caveats[0].data.<key>, .caveats[0].data.<key>" in lines
+        assert "mario" not in " ".join(lines)
+
+    @pytest.mark.parametrize(
+        "detected", [[{"kind": None}], [{"label": "no kind"}], [{"kind": 3}]], ids=["None", "missing", "a number"]
+    )
+    def test_an_installation_without_a_kind_is_a_shape_that_cannot_be_read(self, detected: list[Any]) -> None:
+        status, lines = answers_agree.compare(self.asker({("detect",): (0, detected)}))
+
+        assert (status, lines) == (answers_agree.NOT_PUT, ["detect: an answer with a shape this probe cannot read"])
+
+    def test_a_labelled_entry_without_a_kind_is_a_shape_that_cannot_be_read(self) -> None:
+        answers = self.every_question([{"kind": "retrodeck"}], [{"installation": {"kind": None}, "answer": {}}], {})
+
+        status, lines = answers_agree.compare(self.asker(answers))
+
+        assert status == answers_agree.NOT_PUT
+        assert f"health: {answers_agree.UNREADABLE}" in lines
 
     def test_a_long_list_of_places_is_cut_and_counted(self) -> None:
         status, lines = answers_agree.compare(self._one_retrodeck(list(range(8)), list(range(1, 9))))
@@ -1733,7 +1763,7 @@ class TestTheFirstProbe:
         )
 
     def test_a_kind_the_labelled_answer_leaves_out_is_a_disagreement(self) -> None:
-        """The owner's ruling: detect reported the kind, the answer for every installation left it out."""
+        """detect reported the kind; the answer for every installation left it out: atlas's own answers part."""
         answers = self.every_question([{"kind": "retrodeck"}], [], {})
 
         status, lines = answers_agree.compare(self.asker(answers))
@@ -1786,11 +1816,11 @@ class TestTheFirstProbe:
     @pytest.mark.parametrize(
         ("ends", "out", "asked"),
         [
-            (SystemExit(2), "", (2, None, "usage: emu-atlas")),
-            (SystemExit(None), "[]", (0, [], "usage: emu-atlas")),
-            (SystemExit("text"), "", (1, None, "usage: emu-atlas")),
-            (0, "not json", (2, None, "its answer is no JSON")),
-            (0, '{"a": 1}', (0, {"a": 1}, "usage: emu-atlas")),
+            (SystemExit(2), "", (2, answers_agree.NO_ANSWER, "emu-atlas: error: the reason")),
+            (SystemExit(None), "[]", (0, [], "emu-atlas: error: the reason")),
+            (SystemExit("text"), "", (1, answers_agree.NO_ANSWER, "emu-atlas: error: the reason")),
+            (0, "not json", (0, answers_agree.NO_ANSWER, "its answer is no JSON")),
+            (0, '{"a": 1}', (0, {"a": 1}, "emu-atlas: error: the reason")),
         ],
         ids=["exit 2", "exit None", "exit with text", "no JSON", "an answer"],
     )
@@ -1801,7 +1831,7 @@ class TestTheFirstProbe:
 
         def run(argv: list[str]) -> int:
             print(out, end="")
-            print("usage: emu-atlas\nmore", file=sys.stderr)
+            print("usage: emu-atlas [-h]\nemu-atlas: error: the reason", file=sys.stderr)
             if isinstance(ends, SystemExit):
                 raise ends
             assert isinstance(ends, int)
@@ -1809,7 +1839,17 @@ class TestTheFirstProbe:
 
         monkeypatch.setattr(atlas.cli, "run", run)
 
-        assert answers_agree.ask_atlas(["detect"]) == answers_agree.Asked(*asked)
+        result = answers_agree.ask_atlas(["detect"])
+
+        assert result == answers_agree.Asked(*asked)
+        assert result.answered is (result.status == 0 and asked[1] is not answers_agree.NO_ANSWER)
+
+    def test_an_answer_that_is_no_json_says_atlas_ended_with_0(self) -> None:
+        asked = answers_agree.Asked(0, answers_agree.NO_ANSWER, "its answer is no JSON")
+
+        assert answers_agree.not_put("health", asked) == (
+            "health: could not be put (atlas ended with 0: its answer is no JSON)"
+        )
 
     def test_it_reports_through_the_client_here(
         self, monkeypatch: pytest.MonkeyPatch, capfd: pytest.CaptureFixture[str]

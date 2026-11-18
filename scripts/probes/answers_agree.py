@@ -14,7 +14,8 @@ is a disagreement as well: atlas's own answers part there.
 One line per question and kind says whether the two agree; where they do not,
 the line names the places in the answer where they part, as paths into its
 JSON, never the values there — a key that is no plain field name, which can be
-a path or a name off the device, is shown as ``<key>``. The probe ends with 0
+a path or a name off the device, is shown as ``<key>``, and so is every key of
+a ``data`` object. The probe ends with 0
 when every pair agrees, 1 when one does not, and 2 when a question could not
 be put: atlas refused it, answered with no JSON, or answered with a shape this
 probe cannot read. A question whose comparison crashes is one not put, with
@@ -51,23 +52,31 @@ DISAGREE = 1
 NOT_PUT = 2
 
 FIELD_NAME = re.compile(r"[a-z][a-z0-9_]*", re.ASCII)
-"""A key printed as it is in a path: a plain field name of the contract. Any other key stands as ``<key>``."""
+"""A key printed as it is in a path: a plain field name of the contract. Any other key stands as ``<key>``, and so
+does every key of a ``data`` object, whose keys a caveat can take from the device."""
 
 UNREADABLE = "an answer put to every installation with a shape this probe cannot read"
 
 MISSING = object()
 """What a labelled answer holds for a kind it has no entry of."""
 
+NO_ANSWER = object()
+"""What :attr:`Asked.answer` holds where atlas gave none: it refused the question, or what it wrote is no JSON."""
+
 
 class Asked(NamedTuple):
     """What atlas made of one command line."""
 
     status: int
-    """atlas's exit status; :data:`NOT_PUT` as well for an answer that is no JSON."""
+    """atlas's own exit status."""
     answer: Any
-    """The answer parsed, where the status is 0; ``None`` otherwise."""
+    """The answer parsed, or :data:`NO_ANSWER`."""
     said: str
-    """The first line atlas wrote on stderr, or why there is no answer; empty where there is nothing to say."""
+    """The last line atlas wrote on stderr — where an error ends — or why there is no answer; empty for nothing."""
+
+    @property
+    def answered(self) -> bool:
+        return self.status == 0 and self.answer is not NO_ANSWER
 
 
 Asker = Callable[[list[str]], Asked]
@@ -91,17 +100,17 @@ def ask_atlas(argv: list[str]) -> Asked:
             status = run(argv)
         except SystemExit as stop:
             status = exit_status(stop)
-    said = next(iter(err.getvalue().strip().splitlines()), "")
+    said = next(iter(reversed(err.getvalue().strip().splitlines())), "")
     if status != 0:
-        return Asked(status, None, said)
+        return Asked(status, NO_ANSWER, said)
     try:
         return Asked(0, json.loads(out.getvalue()), said)
     except ValueError:
-        return Asked(NOT_PUT, None, "its answer is no JSON")
+        return Asked(0, NO_ANSWER, "its answer is no JSON")
 
 
-def shown_key(key: str) -> str:
-    return key if FIELD_NAME.fullmatch(key) else "<key>"
+def shown_key(key: str, *, in_data: bool) -> str:
+    return key if FIELD_NAME.fullmatch(key) and not in_data else "<key>"
 
 
 def differences(left: Any, right: Any, path: str = "") -> list[str]:
@@ -120,8 +129,9 @@ def differences(left: Any, right: Any, path: str = "") -> list[str]:
 
 def _dict_differences(left: dict[str, Any], right: dict[str, Any], path: str) -> list[str]:
     found: list[str] = []
+    in_data = path.endswith(".data")
     for key in sorted(set(left) | set(right)):
-        place = f"{path}.{shown_key(key)}"
+        place = f"{path}.{shown_key(key, in_data=in_data)}"
         if key in left and key in right:
             found += differences(left[key], right[key], place)
         else:
@@ -151,14 +161,16 @@ def entries(labelled: Any) -> list[tuple[str, Any]] | None:
     for item in labelled:
         if not isinstance(item, dict) or not isinstance(item.get("installation"), dict) or "answer" not in item:
             return None
-        pairs.append((str(item["installation"].get("kind")), item["answer"]))
+        if not isinstance(item["installation"].get("kind"), str):
+            return None
+        pairs.append((item["installation"]["kind"], item["answer"]))
     return pairs
 
 
 def compare_question(ask: Asker, question: str, kinds: list[str]) -> tuple[int, list[str]]:
     """*question* in both forms for each of *kinds*: the highest status among them, and one line each."""
     asked = ask([question])
-    if asked.status != 0:
+    if not asked.answered:
         return NOT_PUT, [not_put(f"{question} put to every installation", asked)]
     labelled = entries(asked.answer)
     if labelled is None:
@@ -177,7 +189,7 @@ def compare_kind(ask: Asker, question: str, kind: str, labelled: list[tuple[str,
     if entry is MISSING:
         return DISAGREE, f"{question} {kind}: the answer put to every installation holds none of this kind"
     asked = ask([question, "--installation", kind])
-    if asked.status != 0:
+    if not asked.answered:
         return NOT_PUT, not_put(f"{question} {kind} with --installation", asked)
     paths = differences(entry, asked.answer)
     return (DISAGREE if paths else AGREE), verdict(question, kind, paths)
@@ -195,16 +207,19 @@ def compare_or_crash(ask: Asker, question: str, kinds: list[str]) -> tuple[int, 
 def compare(ask: Asker) -> tuple[int, list[str]]:
     """Every question of :data:`QUESTIONS` in both forms, for the first installation of each kind; status and lines."""
     asked = ask(["detect"])
-    if asked.status != 0:
+    if not asked.answered:
         return NOT_PUT, [not_put("detect", asked)]
-    if not isinstance(asked.answer, list) or not all(isinstance(item, dict) for item in asked.answer):
+    installations = asked.answer
+    if not isinstance(installations, list) or not all(
+        isinstance(item, dict) and isinstance(item.get("kind"), str) for item in installations
+    ):
         return NOT_PUT, ["detect: an answer with a shape this probe cannot read"]
-    kinds = list(dict.fromkeys(str(item.get("kind")) for item in asked.answer))
+    kinds = list(dict.fromkeys(item["kind"] for item in installations))
     if not kinds:
         return AGREE, ["no installation detected; nothing to compare"]
     lines = [
         f"{kind}: {count - 1} more installation(s) of this kind left out; --installation answers for the first only"
-        for kind, count in ((kind, sum(str(item.get("kind")) == kind for item in asked.answer)) for kind in kinds)
+        for kind, count in ((kind, sum(item["kind"] == kind for item in installations)) for kind in kinds)
         if count > 1
     ]
     worst = AGREE
