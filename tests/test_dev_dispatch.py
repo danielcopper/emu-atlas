@@ -199,16 +199,22 @@ def a_probe_whose_caller_hangs_up(home: Path) -> None:
 
 
 # Starts the dispatcher with its output on a pipe only this process reads,
-# prints the dispatcher's pid, passes on the line the probe writes once it
-# runs, and waits to be killed, the pipe still open: the parent that goes.
+# prints the dispatcher's pid, says whether the probe wrote the line it writes
+# once it runs — within a minute, or before that output ended — and waits to
+# be killed, the pipe still open: the parent that goes.
 _PARENT = (
-    "import os, subprocess, sys, time\n"
+    "import os, select, subprocess, sys, time\n"
     "child = subprocess.Popen(sys.argv[1:], stdin=subprocess.DEVNULL, stdout=subprocess.PIPE)\n"
     "print(child.pid, flush=True)\n"
-    "for line in child.stdout:\n"
-    "    if line == b'started\\n':\n"
-    "        print('started', flush=True)\n"
+    "deadline, seen = time.monotonic() + 60, b''\n"
+    "def ready():\n"
+    "    return select.select([child.stdout], [], [], max(0, deadline - time.monotonic()))[0]\n"
+    "while b'started\\n' not in seen and ready():\n"
+    "    chunk = os.read(child.stdout.fileno(), 4096)\n"
+    "    if not chunk:\n"
     "        break\n"
+    "    seen += chunk\n"
+    "print('started' if b'started\\n' in seen else 'never started', flush=True)\n"
     "time.sleep(600)\n"
 )
 
@@ -360,9 +366,9 @@ class TestTheRefusals:
 
     def test_its_statuses_are_none_atlas_uses_and_differ(self) -> None:
         statuses = set(dev_dispatch.STATUSES)
-        assert statuses == {
-            dev_dispatch.REFUSED, dev_dispatch.CANNOT_RUN, dev_dispatch.COPY_FAILED, dev_dispatch.TREE_GONE
-        }
+        named = [dev_dispatch.REFUSED, dev_dispatch.CANNOT_RUN, dev_dispatch.COPY_FAILED, dev_dispatch.TREE_GONE]
+        assert len(set(named)) == len(named)
+        assert statuses == set(named)
         assert all(getattr(dev_dispatch, name) == status for status, name in dev_dispatch.STATUSES.items())
         assert statuses.isdisjoint({0, 1, 2})
 

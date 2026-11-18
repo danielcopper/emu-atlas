@@ -29,6 +29,7 @@ import signal
 import subprocess
 import sys
 import tarfile
+import time
 import tomllib
 import uuid
 from collections.abc import Callable
@@ -1106,11 +1107,12 @@ class TestTheAnswer:
             f" dispatcher:\n    mise run setup:remote-target handheld player@{_ADDRESS}\n"
         )
         if probe == "say.py":
+            atlas_file = (there.root / "current").resolve() / "atlas" / "__init__.py"
             assert err.startswith("the probe said this on stderr\n")
             assert err.endswith(
                 "emu-atlas-dev: no marker came from handheld, so what arrived on stdout cannot be told apart from what"
                 " its shell prints:\n"
-                f"    '{{\"file\": \"{(there.root / 'current').resolve() / 'atlas' / '__init__.py'}\", \"argv\": []}}'\n"
+                f"    '{{\"file\": \"{atlas_file}\", \"argv\": []}}'\n"
                 f"{older}  No answer was taken; the probe say.py gave none here.\n"
             )
         else:
@@ -1118,6 +1120,49 @@ class TestTheAnswer:
                 "emu-atlas-dev: handheld's dispatcher ran the request but wrote no marker ahead of its answer, so"
                 f" none was taken.\n{older}"
             )
+
+    def test_output_ahead_of_the_marker_ends_the_run_on_the_target(
+        self, there: There, capfd: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """No answer is taken, and the run is not waited for: it ends with the connection."""
+        token = uuid.uuid4().hex
+        write_tree(
+            there.tree,
+            {"scripts/probes/linger.py": "import sys, time\nprint('started', flush=True)\ntime.sleep(20)\n"},
+        )
+
+        def prints_now(_: str) -> None:
+            there.target().login_output = "You have new mail.\n"
+            there.save()
+
+        copy_then(there, monkeypatch, prints_now)
+        try:
+            began = time.monotonic()
+            status, out, _ = called(capfd, "probe", "--target", "handheld", "linger.py", token)
+            took = time.monotonic() - began
+
+            assert (status, out) == (ask.NOT_ASKED, "")
+            assert took < 15
+            assert gone_within(token, 5), processes_holding(token)
+        finally:
+            end_what_is_left(token)
+
+    def test_a_dispatcher_that_fails_before_the_run_ends_unmarked_and_broken_off(
+        self, there: There, capfd: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def a_broken_dispatcher(_: str) -> None:
+            (there.root / "dispatch.py").write_text("raise SystemExit('broke')\n", encoding="utf-8")
+
+        copy_then(there, monkeypatch, a_broken_dispatcher)
+
+        status, out, err = called(capfd, "ask", "--target", "handheld", "detect")
+
+        assert (status, out) == (ask.BROKE_OFF, "")
+        assert err == (
+            "broke\n"
+            "emu-atlas-dev: the question on handheld ended with 1 before its run started: the connection broke, or"
+            " the dispatcher or its sandbox there failed to start; what ssh and the target said is above.\n"
+        )
 
     def test_a_sandbox_that_fails_after_the_trial_ends_unmarked_and_broken_off(
         self, there: There, capfd: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch, tmp_path: Path
@@ -1244,11 +1289,21 @@ class TestTheAnswer:
             gone_when_reported.append(gone_within(token, 30))
             return real_crashed(phase)
 
+        started: list[subprocess.Popen[bytes]] = []
+        real_popen = subprocess.Popen
+
+        class Recording(real_popen[bytes]):
+            def __init__(self, *args: Any, **kwargs: Any) -> None:
+                super().__init__(*args, **kwargs)
+                started.append(self)
+
         monkeypatch.setattr(ask, "read_answer", reads_then_crashes)
         monkeypatch.setattr(ask, "crashed", reports)
+        monkeypatch.setattr(ask.subprocess, "Popen", Recording)
         try:
             status, _, err = called(capfd, "probe", "--target", "handheld", "linger.py", token)
 
+            assert started[-1].returncode == -signal.SIGKILL
             assert status == ask.BROKE_OFF
             assert err.endswith(
                 "emu-atlas-dev: this client failed while asking the target (the traceback is above). What the run"
@@ -1571,6 +1626,8 @@ class TestTheRealMise:
             "MISE_TRUSTED_CONFIG_PATHS": str(project),
             "MISE_OFFLINE": "1",
             "MISE_GLOBAL_CONFIG_FILE": str(tmp_path / "no-global.toml"),
+            "MISE_SYSTEM_CONFIG_DIR": str(tmp_path / "no-system"),
+            "MISE_CEILING_PATHS": str(tmp_path),
             **isolated,
         }
         argv = ["--target", "deck", "--", "save-portability", "gba", "--source", "a", "--target", "b", "--content",
@@ -1590,6 +1647,8 @@ class TestTheRealMise:
 class TestTheStatuses:
     def test_the_clients_own_are_none_atlas_or_the_dispatcher_ends_with(self) -> None:
         dispatcher = set(dev_dispatch.STATUSES)
+        named = [dev_dispatch.REFUSED, dev_dispatch.CANNOT_RUN, dev_dispatch.COPY_FAILED, dev_dispatch.TREE_GONE]
+        assert len(set(named)) == len(named) == len(dispatcher)
         assert ask.USAGE == 2
         assert {ask.NOT_ASKED, ask.BROKE_OFF}.isdisjoint({0, 1, 2} | dispatcher)
         assert ask.NOT_ASKED != ask.BROKE_OFF
@@ -1600,6 +1659,11 @@ class TestTheStatuses:
 
         for name in ("USAGE", "NOT_ASKED", "BROKE_OFF"):
             assert f"- **{getattr(ask, name)} `{name}`** — " in guide, name
+
+    def test_the_guide_spells_the_marker_as_the_dispatcher_writes_it(self) -> None:
+        guide = " ".join((REPO / "docs" / "remote-target.md").read_text(encoding="utf-8").split())
+
+        assert f"`{dev_dispatch.RUN_MARKER}`" in guide
 
     def test_the_guide_has_the_section_the_client_points_to(self) -> None:
         guide = (REPO / "docs" / "remote-target.md").read_text(encoding="utf-8")

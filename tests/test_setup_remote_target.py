@@ -2163,17 +2163,22 @@ class TestTheReadingOfSsh:
         with pytest.raises(ValueError, match="carries another kind's payload"):
             setup_remote_target.SshFailure("no server", "target", **payload)
 
-    def test_an_unresolved_name_is_placed_by_the_names_failed_where_uses(self) -> None:
-        """The target's own name ssh could not resolve, behind a hop, is the target's, as failed_where says."""
+    @pytest.mark.parametrize(
+        ("named", "where"),
+        [("handheld", "target"), ("emu-atlas-dev.handheld", "target"), (_ADDRESS, "target"), ("bastion", "hop")],
+        ids=["the target's name", "its host key alias", "its address", "another name"],
+    )
+    def test_an_unresolved_name_is_placed_by_the_names_failed_where_uses(self, named: str, where: str) -> None:
+        """Behind a hop, a name ssh could not resolve is the target's where it is one of the target's names."""
         destination = setup_remote_target.Destination(
-            text="handheld", user="player", hostname="handheld", port="22", proxy_jump="jumper@203.0.113.5",
+            text="handheld", user="player", hostname=_ADDRESS, port="22", proxy_jump="jumper@203.0.113.5",
             proxy_command=None,
         )
-        stderr = "ssh: Could not resolve hostname emu-atlas-dev.handheld: Name or service not known\n"
+        stderr = f"ssh: Could not resolve hostname {named}: Name or service not known\n"
 
         failure = setup_remote_target.ssh_failure(stderr, name="handheld", destination=destination)
 
-        assert failure.where == "target" == setup_remote_target.failed_where(
+        assert failure.where == where == setup_remote_target.failed_where(
             stderr, name="handheld", destination=destination
         )
 

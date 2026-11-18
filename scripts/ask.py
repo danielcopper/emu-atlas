@@ -660,7 +660,10 @@ def ask_there(target: Target, request: Request, tree: str) -> int:
         errors.start()
         answer = read_answer(process.stdout, Sink(sys.stdout.fileno()))
         if answer.ahead:
+            # The run ends with its connection: ssh gone and its output no
+            # longer read, the dispatcher sees its output hang up.
             process.kill()
+            process.stdout.close()
         status = dev_dispatch.status_of(process.wait())
         errors.join()
     except BaseException:
