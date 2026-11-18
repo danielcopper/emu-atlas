@@ -98,7 +98,7 @@ def ask_atlas(argv: list[str]) -> Asked:
     with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
         try:
             status = run(argv)
-        except SystemExit as stop:
+        except SystemExit as stop:  # NOSONAR S5754: atlas's own exit is its status; nothing else is caught
             status = exit_status(stop)
     said = next(iter(reversed(err.getvalue().strip().splitlines())), "")
     if status != 0:

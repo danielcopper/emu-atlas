@@ -134,6 +134,13 @@ FailureKind = Literal["host key changed", "host key not accepted", "no login", "
 """What ended an ``ssh`` before the login, as its stderr says (:func:`ssh_failure`); ``unknown`` where no pattern knows
 what it said."""
 
+KIND_HOST_KEY_CHANGED: Final = "host key changed"
+KIND_HOST_KEY_NOT_ACCEPTED: Final = "host key not accepted"
+KIND_NO_LOGIN: Final = "no login"
+KIND_UNRESOLVED: Final = "unresolved"
+KIND_NO_SERVER: Final = "no server"
+KIND_UNKNOWN: Final = "unknown"
+
 
 @dataclass(frozen=True)
 class SshFailure:
@@ -155,9 +162,9 @@ class SshFailure:
 
     def __post_init__(self) -> None:
         stray = (
-            (self.host and self.kind != "unresolved")
-            or (self.offending and self.kind != "host key changed")
-            or (self.permission_denied and self.kind != "no login")
+            (self.host and self.kind != KIND_UNRESOLVED)
+            or (self.offending and self.kind != KIND_HOST_KEY_CHANGED)
+            or (self.permission_denied and self.kind != KIND_NO_LOGIN)
         )
         if stray:
             raise ValueError(f"an SshFailure of kind {self.kind!r} carries another kind's payload: {self!r}")
@@ -501,19 +508,19 @@ def ssh_failure(stderr: str, *, name: str, destination: Destination) -> SshFailu
     where = failed_where(stderr, name=name, destination=destination)
     if _HOST_KEY_CHANGED.search(stderr):
         offending = _OFFENDING_FILE.search(stderr)
-        return SshFailure("host key changed", where, offending="" if offending is None else offending.group(1))
+        return SshFailure(KIND_HOST_KEY_CHANGED, where, offending="" if offending is None else offending.group(1))
     if _HOST_KEY_NOT_ACCEPTED.search(stderr):
-        return SshFailure("host key not accepted", where)
+        return SshFailure(KIND_HOST_KEY_NOT_ACCEPTED, where)
     if _NO_LOGIN.search(stderr):
-        return SshFailure("no login", where, permission_denied=bool(_KEY_REFUSED.search(stderr)))
+        return SshFailure(KIND_NO_LOGIN, where, permission_denied=bool(_KEY_REFUSED.search(stderr)))
     unresolved = _UNRESOLVED.search(stderr)
     if unresolved is not None:
         host = unresolved.group(1)
         on_hop = bool(destination.via) and host not in target_names(name, destination)
-        return SshFailure("unresolved", "hop" if on_hop else "target", host=host)
+        return SshFailure(KIND_UNRESOLVED, "hop" if on_hop else "target", host=host)
     if _NO_SERVER.search(stderr):
-        return SshFailure("no server", where)
-    return SshFailure("unknown", where)
+        return SshFailure(KIND_NO_SERVER, where)
+    return SshFailure(KIND_UNKNOWN, where)
 
 
 def failure_text(
@@ -527,25 +534,25 @@ def failure_text(
     the hop's. *known_hosts* are this tool's own files, the recorded one first.
     """
     hop = f"the hop {destination.via}"
-    if failure.kind == "unknown":
+    if failure.kind == KIND_UNKNOWN:
         return None
-    if failure.kind == "host key changed":
+    if failure.kind == KIND_HOST_KEY_CHANGED:
         ours = tuple(str(path) for path in known_hosts)
         return _host_key_changed(failure, name=name, destination=destination, ours=ours)
-    if failure.kind == "host key not accepted":
+    if failure.kind == KIND_HOST_KEY_NOT_ACCEPTED:
         host = destination.hostname
         wording: dict[Where, str] = {"target": f"at {host}", "hop": f"of {hop}", "either": f"of {host} or of {hop}"}
         return (
             f"{PREFIX}: the host key {wording[failure.where]} was not accepted, or ssh could not ask about it — it"
             " asks on a terminal. No connection was made."
         )
-    if failure.kind == "no login":
+    if failure.kind == KIND_NO_LOGIN:
         if failure.where == "hop":
             return f"{PREFIX}: {hop} accepted no login from this machine.\n  Check that hop with your own ssh."
         return None
-    if failure.kind == "unresolved":
+    if failure.kind == KIND_UNRESOLVED:
         return _unresolved(failure, name=name, destination=destination)
-    if failure.kind == "no server":
+    if failure.kind == KIND_NO_SERVER:
         return _no_server(destination, failure.where)
     assert_never(failure.kind)
 
@@ -632,7 +639,7 @@ def failure_message(
     if result.returncode == SSH_FAILED:
         reading = ssh_failure(result.stderr, name=name, destination=destination)
         failure = failure_text(reading, name=name, destination=destination, known_hosts=known_hosts)
-        if failure is None and reading.kind == "no login":
+        if failure is None and reading.kind == KIND_NO_LOGIN:
             failure = no_login_message(destination, key_refused=key_refused)
         if failure is not None:
             return failure + nothing

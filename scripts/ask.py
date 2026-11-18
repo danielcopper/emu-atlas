@@ -54,6 +54,8 @@ TREE = ROOT
 COPIED = ("atlas", dev_dispatch.PROBES)
 """What a copy carries, relative to :data:`TREE`."""
 
+_COPIED_ROOTS = tuple(Path(top).as_posix() for top in COPIED)
+
 SKIPPED_DIRECTORY = "__pycache__"
 SKIPPED_SUFFIX = ".pyc"
 
@@ -279,6 +281,19 @@ def _visit(path: Path, members: list[Path], left_out: list[Path]) -> None:
             _visit(child, members, left_out)
 
 
+def member_name(tree: Path, path: Path) -> str:
+    """*path*'s name in a copy of *tree*: relative to it, inside one of :data:`COPIED`, with no ``..`` in it.
+
+    The walk of :func:`copy_members` follows no link, so every name it gives
+    holds already; this says so where the archive is written.
+    """
+    name = path.relative_to(tree).as_posix()
+    inside = any(name == root or name.startswith(f"{root}/") for root in _COPIED_ROOTS)
+    if not inside or ".." in name.split("/"):
+        raise ValueError(f"{name!r} lies outside what a copy carries")
+    return name
+
+
 def build_copy(tree: Path, floor: str) -> bytes:
     """The uncompressed tar stream a ``copy`` sends: :func:`copy_members` of *tree*, then the manifest last.
 
@@ -291,14 +306,14 @@ def build_copy(tree: Path, floor: str) -> bytes:
     buffer = io.BytesIO()
     with tarfile.open(fileobj=buffer, mode="w", format=tarfile.PAX_FORMAT) as archive:
         for path in members:
-            info = archive.gettarinfo(str(path), arcname=path.relative_to(tree).as_posix())
+            info = archive.gettarinfo(str(path), arcname=member_name(tree, path))
             info.uid = info.gid = 0
             info.uname = info.gname = ""
             if info.isreg():
                 with open(path, "rb") as handle:
-                    archive.addfile(info, handle)
+                    archive.addfile(info, handle)  # NOSONAR S6096: writes, never unpacks; names from member_name
             else:
-                archive.addfile(info)
+                archive.addfile(info)  # NOSONAR S6096: writes, never unpacks; names from member_name
         manifest = json.dumps({"requires_python": floor}).encode("utf-8")
         info = tarfile.TarInfo(dev_dispatch.MANIFEST)
         info.size = len(manifest)
@@ -408,26 +423,26 @@ def _key_refused(target: Target) -> str:
 def _target_message(failure: setup.SshFailure, target: Target) -> str | None:
     """This client's message for a failure ``ssh`` placed on the target itself; ``None`` for one the setup words."""
     name, destination, kind = target.name, target.destination, failure.kind
-    if kind == "unresolved":
+    if kind == setup.KIND_UNRESOLVED:
         return (
             f"{PREFIX}: this machine cannot resolve {destination.hostname}, where {name}'s entry says it is.\n"
             f"  Run the setup with the target's address, or a name the network resolves:\n"
             f"{setup_line(name, destination, '<address>')}"
         )
-    if kind == "no server":
+    if kind == setup.KIND_NO_SERVER:
         return (
             f"{PREFIX}: no SSH server answers at {destination.hostname} port {destination.port}, where {name}'s entry"
             f" says it is.\n  {name} may be asleep: wake it and ask again. Or it has a new address: run the setup"
             f" with that one:\n{setup_line(name, destination, '<new address>')}"
         )
-    if kind == "host key not accepted":
+    if kind == setup.KIND_HOST_KEY_NOT_ACCEPTED:
         return (
             f"{PREFIX}: this machine holds no record of {name}'s host key, so no connection was made.\n"
             f"  Run the setup again, which shows the fingerprint and records it:\n{setup_line(name, destination)}"
         )
-    if kind == "no login":
+    if kind == setup.KIND_NO_LOGIN:
         return _key_refused(target)
-    if kind in ("host key changed", "unknown"):
+    if kind in (setup.KIND_HOST_KEY_CHANGED, setup.KIND_UNKNOWN):
         return None
     assert_never(kind)
 
@@ -448,7 +463,7 @@ def not_reached(stderr: str, target: Target) -> str | None:
     )
     if worded is not None:
         return worded
-    if failure.kind == "no login":
+    if failure.kind == setup.KIND_NO_LOGIN:
         return _key_refused(target)
     return None
 
@@ -618,7 +633,7 @@ def collect(pipe: IO[bytes], sink: Sink, kept: bytearray) -> None:
     """Pass *pipe* on to *sink* as it arrives, and keep it all in *kept*."""
     for chunk in iter(lambda: os.read(pipe.fileno(), 65536), b""):
         sink.write(chunk)
-        kept += chunk
+        kept.extend(chunk)
 
 
 def read_answer(pipe: IO[bytes], sink: Sink) -> Answer:

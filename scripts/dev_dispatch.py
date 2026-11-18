@@ -35,7 +35,7 @@ import tarfile
 import tempfile
 import threading
 import traceback
-from typing import IO, Iterator, Literal
+from typing import IO, Final, Iterator, Literal
 
 # The dispatcher's own exit statuses, none of which atlas uses (it ends with 0
 # or 2); docs/remote-target.md lists what each one covers. A question's or a
@@ -225,6 +225,11 @@ def check_floor(floor: tuple[int, int]) -> None:
 SandboxFailure = Literal["missing", "not executable", "did not start", "failed"]
 """How a ``bwrap`` fails the trial: none there, not executable, not started, or unable to start a sandbox."""
 
+SANDBOX_MISSING: Final = "missing"
+SANDBOX_NOT_EXECUTABLE: Final = "not executable"
+SANDBOX_DID_NOT_START: Final = "did not start"
+SANDBOX_FAILED: Final = "failed"
+
 
 def sandbox_failure(bwrap: str, python: str) -> tuple[SandboxFailure, str] | None:
     """How *bwrap* fails to start the sandbox here with *python* in it, and why; ``None`` where it can.
@@ -233,16 +238,17 @@ def sandbox_failure(bwrap: str, python: str) -> tuple[SandboxFailure, str] | Non
     kind, not the wording of the reason, decides the repair (:func:`sandbox_repair`).
     """
     if not os.path.lexists(bwrap):
-        return "missing", "there is none"
+        return SANDBOX_MISSING, "there is none"
     if not os.access(bwrap, os.X_OK):
-        return "not executable", "it is not executable"
+        return SANDBOX_NOT_EXECUTABLE, "it is not executable"
     trial = sandboxed(bwrap, [python, "-I", "-S", "-c", "pass"])
     try:
         result = subprocess.run(trial, stdin=subprocess.DEVNULL, capture_output=True, check=False)
     except OSError as error:
-        return "did not start", "it did not start: {}".format(reason(error))
+        return SANDBOX_DID_NOT_START, "it did not start: {}".format(reason(error))
     if result.returncode != 0:
-        return "failed", "it said: {}".format(result.stderr.decode("utf-8", "replace").strip() or result.returncode)
+        said = result.stderr.decode("utf-8", "replace").strip() or result.returncode
+        return SANDBOX_FAILED, "it said: {}".format(said)
     return None
 
 
@@ -254,7 +260,7 @@ def sandbox_repair(kind: SandboxFailure) -> str:
     namespaces is named beside a reinstall, the reason quoting what ``bwrap``
     said where it said anything.
     """
-    if kind in ("missing", "not executable"):
+    if kind in (SANDBOX_MISSING, SANDBOX_NOT_EXECUTABLE):
         return "install bubblewrap"
     return "install bubblewrap, or allow unprivileged user namespaces"
 

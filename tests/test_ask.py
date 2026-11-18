@@ -479,6 +479,21 @@ class TestThere:
 class TestTheCopy:
     """What a copy carries, built from a test tree."""
 
+    @pytest.mark.parametrize(
+        "name",
+        ["atlas/../../outside.py", "atlas/../tests/test_x.py", "scripts/other.py", "tests/test_x.py"],
+        ids=["out of the tree", "out of atlas", "beside the probes", "another root"],
+    )
+    def test_a_member_outside_what_a_copy_carries_is_refused(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, name: str
+    ) -> None:
+        """The walk gives no such name; the archive's writer refuses one all the same."""
+        tree = write_tree(tmp_path / "tree", _SAYING_ATLAS)
+        monkeypatch.setattr(ask, "copy_members", lambda root: ([root / "atlas", root / name], []))
+
+        with pytest.raises(ValueError, match="lies outside what a copy carries"):
+            ask.build_copy(tree, "3.12")
+
     def test_it_holds_atlas_and_the_probes_without_caches_and_the_manifest_last(
         self, tmp_path: Path, capfd: pytest.CaptureFixture[str]
     ) -> None:
@@ -1383,8 +1398,10 @@ class TestTheCopysAnswer:
     def test_anything_beside_the_id_is_shown_escaped_and_older_only_without_one(
         self, tmp_path: Path, stdout: bytes, arrived: str, older: bool
     ) -> None:
+        target = a_target_for(_HANDHELD, tmp_path)
+
         with pytest.raises(ask.Refusal) as refusal:
-            ask.tree_named(stdout, a_target_for(_HANDHELD, tmp_path))
+            ask.tree_named(stdout, target)
 
         assert refusal.value.status == ask.NOT_ASKED
         message = refusal.value.message
@@ -1748,7 +1765,10 @@ class TestTheFirstProbe:
         assert (
             "systems retrodeck: differ at .options.<key>, .options.<key>, .options.core_option, .options.<key>" in lines
         )
-        assert "Game" not in " ".join(lines) and "Title" not in " ".join(lines) and "europe" not in " ".join(lines)
+        printed = " ".join(lines)
+        assert "Game" not in printed
+        assert "Title" not in printed
+        assert "europe" not in printed
 
     def test_every_key_below_a_data_object_is_not_printed(self) -> None:
         """A mapping under a data key can be keyed by names off the device too, lowercase identifiers among them."""
@@ -1759,7 +1779,9 @@ class TestTheFirstProbe:
 
         assert status == answers_agree.DISAGREE
         assert "systems retrodeck: differ at .caveats[0].data.<key>.<key>, .caveats[0].data.<key>.<key>" in lines
-        assert "mario" not in " ".join(lines) and "zelda" not in " ".join(lines)
+        printed = " ".join(lines)
+        assert "mario" not in printed
+        assert "zelda" not in printed
 
     def test_every_key_of_a_data_object_is_not_printed(self) -> None:
         """A caveat's data can be keyed by a name off the device, a lowercase one among them."""
@@ -1886,6 +1908,18 @@ class TestTheFirstProbe:
         err = capfd.readouterr().err
         assert "Traceback (most recent call last):" in err
         assert err.endswith("RuntimeError: atlas broke\n")
+
+    def test_an_interrupt_inside_ask_atlas_is_no_verdict(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Only atlas's own SystemExit is read as its status: an interrupt goes on up and ends the probe."""
+        import atlas.cli
+
+        def interrupted(argv: list[str]) -> int:
+            raise KeyboardInterrupt
+
+        monkeypatch.setattr(atlas.cli, "run", interrupted)
+
+        with pytest.raises(KeyboardInterrupt):
+            answers_agree.main([])
 
     def test_no_installation_is_nothing_to_compare(self) -> None:
         nothing = answers_agree.compare(self.asker({("detect",): (0, [])}))

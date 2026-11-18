@@ -2106,7 +2106,8 @@ class TestReadingAnEntryBack:
 
         entry = setup_remote_target.read_entry(text, "handheld")
 
-        assert entry is not None and entry.hostname == _ADDRESS
+        assert entry is not None
+        assert entry.hostname == _ADDRESS
 
     def test_only_a_single_quoted_word_is_unquoted(self) -> None:
         text = (

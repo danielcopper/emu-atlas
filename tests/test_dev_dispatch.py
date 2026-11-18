@@ -1387,6 +1387,7 @@ _PYTHON_3_8_NAMES = {
     "threading",
     "traceback",
     "typing.Callable",
+    "typing.Final",
     "typing.IO",
     "typing.Iterator",
     "typing.Literal",
