@@ -718,7 +718,8 @@ class TestTheDispatchersOwnStatuses:
         assert err == (
             "emu-atlas-dev: refused: copy\n"
             "emu-atlas-dev: that was handheld's dispatcher (3, REFUSED), not atlas or a probe.\n"
-            "  The dispatcher there is older than this client; run the setup again, which installs the current one:\n"
+            "  The dispatcher there does not take this client's requests; run the setup again, which installs this"
+            " checkout's dispatcher:\n"
             "    mise run setup:remote-target handheld <destination>\n"
             "  Nothing was asked.\n"
         )
@@ -847,7 +848,7 @@ class TestBetweenTheCopyAndTheQuestion:
             f"emu-atlas-dev: no SSH server answers at {_ADDRESS} port 22, where handheld's entry says it is.\n"
             "  handheld may be asleep: wake it and ask again. Or it has a new address: run the setup with that one:\n"
             "    mise run setup:remote-target handheld player@<new address>\n"
-            f"  {what} was not asked; the copy made just before is current on handheld.\n"
+            f"  {what} was not asked; the copy went through.\n"
         )
         assert snapshot(there.target_home) == after_the_copy[0]
 
@@ -867,13 +868,13 @@ class TestTheTargetsShell:
         assert status == ask.NOT_ASKED
         assert out == ""
         assert err == (
-            "emu-atlas-dev: handheld wrote this on stdout ahead of its dispatcher's answer to the copy:\n"
-            "    Welcome back.\n"
-            "    Last login: never\n"
+            "emu-atlas-dev: handheld wrote this on stdout beside its dispatcher's answer to the copy:\n"
+            "    'Welcome back.'\n"
+            "    'Last login: never'\n"
             "  The shell there prints from its startup files for a command run without a terminal, and that would"
             " land in front of every answer. Make them silent for non-interactive shells (in ~/.bashrc, say, return"
             " at the top unless $- holds i).\n"
-            "  The copy is current on handheld; nothing was asked.\n"
+            "  The copy went through; nothing was asked.\n"
         )
         assert log_lines(there.world)[logged:] == [f"login {_ADDRESS} key"]
 
@@ -888,9 +889,10 @@ class TestTheTargetsShell:
         assert out == ""
         assert err == (
             "emu-atlas-dev: handheld's dispatcher took the copy but named no tree to ask from.\n"
-            "  The dispatcher there is older than this client; run the setup again, which installs the current one:\n"
+            "  The dispatcher there is older than this client; run the setup again, which installs this checkout's"
+            " dispatcher:\n"
             f"    mise run setup:remote-target handheld player@{_ADDRESS}\n"
-            "  The copy is current on handheld; nothing was asked.\n"
+            "  The copy went through; nothing was asked.\n"
         )
 
     def test_output_and_no_tree_say_both(self, there: There, capfd: pytest.CaptureFixture[str]) -> None:
@@ -901,10 +903,10 @@ class TestTheTargetsShell:
         status, _, err = called(capfd, "ask", "--target", "handheld", "detect")
 
         assert status == ask.NOT_ASKED
-        assert "    hello\n" in err
+        assert "    'hello'\n" in err
         assert (
-            "  It named no tree either. The dispatcher there is older than this client; run the setup again, which"
-            " installs the current one:\n" in err
+            "  It named no tree either.\n  The dispatcher there is older than this client; run the setup again, which"
+            " installs this checkout's dispatcher:\n" in err
         )
 
 
@@ -915,8 +917,9 @@ class TestACrashOfTheClient:
         ("name", "phase", "status", "after"),
         [
             ("build_copy", "before anything was contacted", ask.NOT_ASKED, "Nothing was contacted."),
-            ("tree_named", "while copying to the target", ask.BROKE_OFF,
-             "The target's current tree is this copy whole, or the one before it. Nothing was asked."),
+            ("run_ssh", "while copying to the target", ask.BROKE_OFF,
+             "handheld's current tree is this copy whole, or the one before it. Nothing was asked."),
+            ("tree_named", "after the copy went through", ask.NOT_ASKED, "The copy went through; nothing was asked."),
             ("judge", "while asking the target", ask.BROKE_OFF, "What the run printed is above; its status is lost."),
         ],
     )
@@ -948,7 +951,7 @@ class TestACrashOfTheClient:
         def crashes(*_: object) -> object:
             raise ValueError("an unforeseen value")
 
-        monkeypatch.setattr(ask, "status_of", crashes)
+        monkeypatch.setattr(dev_dispatch, "status_of", crashes)
 
         code, _, err = called(capfd, "ask", "detect")
 
@@ -1215,4 +1218,6 @@ class TestTheFirstProbe:
         )
 
         assert result.returncode == 0, result.stdout + result.stderr
-        assert (result.returncode, result.stdout) == (here_status, here_out)
+        marker = dev_dispatch.RUN_MARKER + "\n"
+        assert result.stdout.startswith(marker)
+        assert (result.returncode, result.stdout.removeprefix(marker)) == (here_status, here_out)

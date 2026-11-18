@@ -159,6 +159,7 @@ def a_probe_running_while_a_copy_lands(home: Path, go: Path) -> None:
     running = start(home, f"probe {first.name} wait.py {word([str(go)])}")
     try:
         assert running.stdout is not None
+        assert running.stdout.readline() == MARKER_LINE
         assert running.stdout.readline() == b"started\n"
         second = copied(home, {"marker.txt": b"second\n"})
         assert first.is_dir()
@@ -222,6 +223,7 @@ def a_probe_whose_caller_hangs_up(home: Path) -> None:
     running = start(home, f"probe {first.name} linger.py {word([token])}")
     try:
         assert running.stdout is not None
+        assert running.stdout.readline() == MARKER_LINE
         assert running.stdout.readline() == b"started\n"
         running.stdout.close()
         assert running.wait(timeout=30) == 128 + signal.SIGKILL
@@ -310,6 +312,15 @@ def copied(home: Path, files: dict[str, bytes], *, manifest: bytes | None = MANI
     tree = (home / ROOT / "current").resolve()
     assert result.stdout == f"{tree.name}\n".encode()
     return tree
+
+
+MARKER_LINE = (dev_dispatch.RUN_MARKER + "\n").encode()
+
+
+def answered(result: subprocess.CompletedProcess[bytes]) -> bytes:
+    """What a run wrote on stdout: what follows the marker the dispatcher writes right before the run starts."""
+    assert result.stdout.startswith(MARKER_LINE), result.stdout
+    return result.stdout[len(MARKER_LINE) :]
 
 
 def latest(home: Path) -> str:
@@ -783,15 +794,18 @@ class TestWhatCannotRun:
             " nothing ran.\n  Ask again: every call copies first.\n"
         )
 
-    def test_a_tree_without_a_readable_manifest_says_to_copy_first(self, home: Path) -> None:
+    def test_a_tree_without_a_readable_manifest_says_to_ask_again(self, home: Path) -> None:
         install(home)
         tree = copied(home, _SAYING_ATLAS)
         (tree / "tree.json").write_text("{", encoding="utf-8")
 
-        assert "states no Python floor (tree.json: no JSON: Expecting" in self._cannot_run(home, f"ask {latest(home)} {word([])}")
+        assert "states no Python floor (tree.json: no JSON: Expecting" in self._cannot_run(
+            home, f"ask {tree.name} {word([])}"
+        )
         (tree / "tree.json").unlink()
-        assert "states no Python floor (tree.json: No such file or directory): copy first." in self._cannot_run(
-            home, f"ask {latest(home)} {word([])}"
+        assert self._cannot_run(home, f"ask {tree.name} {word([])}") == (
+            "emu-atlas-dev: the copied tree states no Python floor (tree.json: No such file or directory); nothing"
+            " ran.\n  Ask again: every call copies first.\n"
         )
 
 
@@ -932,7 +946,7 @@ class TestWhatReachesTheSandbox:
         result = dispatch(home, f"ask {latest(home)} {word(['detect'])}")
 
         assert result.returncode == 0, result.stderr
-        said = json.loads(result.stdout)
+        said = json.loads(answered(result))
         assert said["file"] == str(tree / "atlas" / "__init__.py")
         assert said["argv"] == ["detect"]
         assert said["path"][-1] == str(tree)
@@ -946,7 +960,7 @@ class TestWhatReachesTheSandbox:
         result = dispatch(home, f"ask {latest(home)} {word(arguments)}")
 
         assert result.returncode == 0, result.stderr
-        assert json.loads(result.stdout)["argv"] == arguments
+        assert json.loads(answered(result))["argv"] == arguments
 
     @pytest.mark.parametrize("status", [0, 2, 7])
     def test_the_questions_own_status_is_passed_through(self, home: Path, fakes: Path, status: int) -> None:
@@ -966,7 +980,7 @@ class TestWhatReachesTheSandbox:
         result = dispatch(home, f"probe {latest(home)} two_answers.py {encoded}")
 
         assert result.returncode == 0, result.stderr
-        assert result.stdout == b"True ['a b', '(c)']\n"
+        assert answered(result) == b"True ['a b', '(c)']\n"
 
     def test_a_run_ended_by_a_signal_answers_128_plus_its_number(self, home: Path, fakes: Path) -> None:
         install(home, bwrap=str(fakes / "bwrap"))
@@ -981,7 +995,7 @@ class TestWhatReachesTheSandbox:
         result = dispatch(home, f"probe {latest(home)} bare.py")
 
         assert result.returncode == 0, result.stderr
-        assert result.stdout == b"[]\n"
+        assert answered(result) == b"[]\n"
 
 
 class TestACopyWhileAProbeRuns:
@@ -1019,7 +1033,7 @@ class TestTheTreeARequestNames:
             f"emu-atlas-dev: the tree {first.name} is not here: a later copy replaced it, or it was never copied;"
             " nothing ran.\n  Ask again: every call copies first.\n"
         )
-        assert json.loads(dispatch(home, f"ask {second.name} {word(['detect'])}").stdout)["file"] == str(
+        assert json.loads(answered(dispatch(home, f"ask {second.name} {word(['detect'])}")))["file"] == str(
             second / "atlas" / "__init__.py"
         )
 
@@ -1036,6 +1050,7 @@ class TestTheTreeARequestNames:
         holding = start(home, f"probe {first.name} linger.py {word([token])}")
         try:
             assert holding.stdout is not None
+            assert holding.stdout.readline() == MARKER_LINE
             assert holding.stdout.readline() == b"started\n"
             second = copied(home, files)
             assert first.is_dir()
@@ -1048,7 +1063,7 @@ class TestTheTreeARequestNames:
             holding.wait()
             end_what_is_left(token)
 
-        assert [json.loads(result.stdout)["file"] for result in asked] == [
+        assert [json.loads(answered(result))["file"] for result in asked] == [
             str(first / "atlas" / "__init__.py"),
             str(second / "atlas" / "__init__.py"),
         ]
@@ -1137,7 +1152,7 @@ class TestTheRealSandbox:
         result = dispatch(home, f"probe {latest(home)} write.py {word(targets)}")
 
         assert result.returncode == 0, result.stderr
-        said = json.loads(result.stdout)
+        said = json.loads(answered(result))
         assert said == {"refused": [30, 30, 30], "interfaces": ["lo"]}  # 30: EROFS
         assert not any(Path(target).exists() for target in targets)
 
@@ -1159,7 +1174,7 @@ class TestTheRealSandbox:
         result = dispatch(sandbox_home, f"probe {latest(sandbox_home)} processes.py")
 
         assert result.returncode == 0, result.stderr
-        seen = json.loads(result.stdout)
+        seen = json.loads(answered(result))
         assert 1 <= len(seen) <= 3, seen
         assert all("processes.py" in line or "bwrap" in line for line in seen.values()), seen
 
@@ -1197,7 +1212,7 @@ class TestTheRealSandbox:
         result = dispatch(sandbox_home, f"probe {latest(sandbox_home)} descriptors.py")
 
         assert result.returncode == 0, result.stderr
-        assert json.loads(result.stdout) == []
+        assert json.loads(answered(result)) == []
         assert not list(tree.rglob("escaped"))
 
     def test_a_question_answers_as_it_does_unsandboxed(self, sandbox_home: Path) -> None:
@@ -1212,7 +1227,7 @@ class TestTheRealSandbox:
         result = dispatch(home, f"ask {latest(home)} {word(['detect'])}")
 
         assert result.returncode == 0, result.stderr
-        assert result.stdout == direct.stdout
+        assert answered(result) == direct.stdout
 
     def test_a_core_probe_loads_a_deployed_core_in_the_sandbox(self, sandbox_home: Path) -> None:
         """#810 D3: atlas starts the core probe as a child of ``sys.executable``, inside the sandbox too."""
@@ -1230,7 +1245,7 @@ class TestTheRealSandbox:
         result = dispatch(home, f"probe {latest(home)} read_core.py {word([so_path])}")
 
         assert result.returncode == 0, result.stderr
-        assert json.loads(result.stdout) == {"status": "answered", "unloadable": None}
+        assert json.loads(answered(result)) == {"status": "answered", "unloadable": None}
 
 
 def _a_core_that_answers_here() -> str:
@@ -1311,6 +1326,7 @@ _PYTHON_3_8_NAMES = {
     "tarfile",
     "tempfile",
     "threading",
+    "traceback",
     "typing.Callable",
     "typing.IO",
     "typing.Iterator",
