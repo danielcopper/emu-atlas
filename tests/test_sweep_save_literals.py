@@ -59,8 +59,9 @@ class TestTheCoresDirectory:
     def test_a_directory_anywhere_else_is_refused(self, roots, raw):
         repository, *_, outside = roots
         (repository / "escape").symlink_to(outside)
+        argument = raw(repository, outside)
         with pytest.raises(ValueError, match="cores directory .* lies outside the repository, the home directory,"):
-            sweep.resolve_cores_dir(raw(repository, outside))
+            sweep.resolve_cores_dir(argument)
 
     def test_main_refuses_an_outside_directory_before_it_reads_anything(self, roots, monkeypatch, capsys):
         *_, outside = roots
