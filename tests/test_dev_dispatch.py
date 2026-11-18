@@ -988,6 +988,29 @@ class TestWhatReachesTheSandbox:
 
         assert dispatch(home, f"probe {latest(home)} ends.py").returncode == 128 + signal.SIGTERM
 
+    def test_a_probe_that_crashes_ends_with_2_and_its_traceback(self, home: Path, fakes: Path) -> None:
+        install(home, bwrap=str(fakes / "bwrap"))
+        tree = copied(home, {"scripts/probes/crashes.py": b"import no_such_module\n"})
+
+        result = dispatch(home, f"probe {tree.name} crashes.py")
+
+        assert result.returncode == dev_dispatch.PROBE_NOT_PUT == 2
+        assert answered(result) == b""
+        assert b"ModuleNotFoundError: No module named 'no_such_module'" in result.stderr
+        assert result.stderr.endswith(
+            b"emu-atlas-dev: the probe crashes.py crashed (the traceback is above): a question it could not put.\n"
+        )
+
+    def test_a_question_that_crashes_keeps_atlas_s_own_status(self, home: Path, fakes: Path) -> None:
+        """Only a probe's crash is turned into 2: atlas's own ending stands."""
+        install(home, bwrap=str(fakes / "bwrap"))
+        tree = copied(home, {"atlas/__init__.py": b"", "atlas/__main__.py": b"raise KeyError('x')\n"})
+
+        result = dispatch(home, f"ask {tree.name} {word([])}")
+
+        assert result.returncode == 1
+        assert b"KeyError: 'x'" in result.stderr
+
     def test_a_probe_without_words_gets_none(self, home: Path, fakes: Path) -> None:
         install(home, bwrap=str(fakes / "bwrap"))
         copied(home, {"scripts/probes/bare.py": b"import sys\nprint(sys.argv[1:])\n"})

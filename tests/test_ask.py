@@ -291,6 +291,26 @@ class TestHere:
         assert said(out) == {"file": str(here / "atlas" / "__init__.py"), "argv": ["1", "a b"]}
         assert err == "the probe said this on stderr\n"
 
+    @pytest.mark.parametrize(
+        ("source", "error"),
+        [("print('before')\nraise KeyError('x')\n", "KeyError: 'x'"), ("def broken(:\n", "SyntaxError")],
+        ids=["at run time", "at compile time"],
+    )
+    def test_a_probe_that_crashes_ends_with_2_not_1(
+        self, here: Path, capfd: pytest.CaptureFixture[str], source: str, error: str
+    ) -> None:
+        """A crash is a question not put, never "does not hold": the bootstrap the dispatcher runs probes with."""
+        write_tree(here, {"scripts/probes/crashes.py": source})
+
+        code, out, err = called(capfd, "probe", "crashes.py")
+
+        assert code == dev_dispatch.PROBE_NOT_PUT == 2
+        assert out == ("before\n" if "KeyError" in source else "")
+        assert error in err
+        assert err.endswith(
+            "emu-atlas-dev: the probe crashes.py crashed (the traceback is above): a question it could not put.\n"
+        )
+
     def test_the_real_atlas_answers_as_python_m_atlas_does(
         self, monkeypatch: pytest.MonkeyPatch, capfd: pytest.CaptureFixture[str], tmp_path: Path
     ) -> None:
@@ -1078,14 +1098,23 @@ class TestTheFirstProbe:
 
     @staticmethod
     def asker(answers: dict[tuple[str, ...], tuple[int, Any]]) -> answers_agree.Asker:
-        return lambda argv: answers[tuple(argv)]
+        """Answers by command line, each a status and an answer; atlas says nothing on stderr."""
+        return lambda argv: answers_agree.Asked(*answers[tuple(argv)], "")
+
+    @staticmethod
+    def every_question(
+        installations: list[dict[str, str]], labelled: object, bare: object, *, kind: str = "retrodeck"
+    ) -> dict[tuple[str, ...], tuple[int, Any]]:
+        answers: dict[tuple[str, ...], tuple[int, Any]] = {("detect",): (0, installations)}
+        for question in answers_agree.QUESTIONS:
+            answers[(question,)] = (0, labelled)
+            answers[(question, "--installation", kind)] = (0, bare)
+        return answers
 
     def _one_retrodeck(self, labelled: object, bare: object) -> answers_agree.Asker:
         installation = {"kind": "retrodeck", "label": "RetroDECK"}
-        answers: dict[tuple[str, ...], tuple[int, Any]] = {("detect",): (0, [installation])}
-        for question in answers_agree.QUESTIONS:
-            answers[(question,)] = (0, [{"installation": installation, "answer": {"same": [1, 2]}}])
-            answers[(question, "--installation", "retrodeck")] = (0, {"same": [1, 2]})
+        answers = self.every_question([installation], [{"installation": installation, "answer": {"same": [1, 2]}}],
+                                      {"same": [1, 2]})
         answers[("systems",)] = (0, [{"installation": installation, "answer": labelled}])
         answers[("systems", "--installation", "retrodeck")] = (0, bare)
         return self.asker(answers)
@@ -1106,6 +1135,17 @@ class TestTheFirstProbe:
         assert "systems retrodeck: differ at .systems[0].roms, .systems[1].extra (in one only)" in lines
         assert "VALUE" not in " ".join(lines)
 
+    def test_a_key_that_is_no_field_name_is_not_printed(self) -> None:
+        """A key can be a path or a title off the device: only a plain field name is shown."""
+        labelled = {"options": {"/run/media/card/A Game (Europe).chd": 1, "Some Title": 1, "core_option": 1}}
+        bare = {"options": {"/run/media/card/A Game (Europe).chd": 2, "Some Title": 2, "core_option": 2}}
+
+        status, lines = answers_agree.compare(self._one_retrodeck(labelled, bare))
+
+        assert status == answers_agree.DISAGREE
+        assert "systems retrodeck: differ at .options.<key>, .options.<key>, .options.core_option" in lines
+        assert "Game" not in " ".join(lines) and "Title" not in " ".join(lines)
+
     def test_a_long_list_of_places_is_cut_and_counted(self) -> None:
         status, lines = answers_agree.compare(self._one_retrodeck(list(range(8)), list(range(1, 9))))
 
@@ -1117,27 +1157,44 @@ class TestTheFirstProbe:
         assert answers_agree.differences({"a": [1]}, {"a": [1, 2]}) == [".a[] (lengths)"]
         assert answers_agree.verdict("health", "retrodeck", [""]) == "health retrodeck: differ at (the whole answer)"
 
-    def test_a_question_that_could_not_be_put_ends_with_2(self) -> None:
+    def test_a_question_atlas_refuses_with_installation_could_not_be_put_and_says_why(self) -> None:
         installation = {"kind": "retrodeck"}
-        answers: dict[tuple[str, ...], tuple[int, Any]] = {("detect",): (0, [installation])}
-        for question in answers_agree.QUESTIONS:
-            answers[(question,)] = (0, [{"installation": installation, "answer": {}}])
-            answers[(question, "--installation", "retrodeck")] = (2, None)
+        answers = self.every_question([installation], [{"installation": installation, "answer": {}}], None)
+        refused = {key: (2, None) for key in answers if len(key) == 3}
+
+        def ask(argv: list[str]) -> answers_agree.Asked:
+            if tuple(argv) in refused:
+                return answers_agree.Asked(2, None, "no detected installation of kind 'retrodeck'")
+            return answers_agree.Asked(*answers[tuple(argv)], "")
+
+        status, lines = answers_agree.compare(ask)
+
+        assert status == answers_agree.NOT_PUT == 2
+        assert (
+            "health retrodeck with --installation: could not be put (atlas ended with 2: no detected installation of"
+            " kind 'retrodeck')" in lines
+        )
+
+    def test_a_question_atlas_refuses_for_every_installation_could_not_be_put(self) -> None:
+        installation = {"kind": "retrodeck"}
+        answers = self.every_question([installation], [{"installation": installation, "answer": {}}], {})
+        answers[("systems",)] = (2, None)
 
         status, lines = answers_agree.compare(self.asker(answers))
 
-        assert status == answers_agree.NOT_PUT == 2
-        assert "health retrodeck: could not be put with --installation (atlas ended with 2)" in lines
+        assert status == answers_agree.NOT_PUT
+        assert "systems put to every installation: could not be put (atlas ended with 2)" in lines
+        assert "health retrodeck: agree" in lines
+
+    def test_detect_refused_could_not_be_put(self) -> None:
+        status, lines = answers_agree.compare(self.asker({("detect",): (2, None)}))
+
+        assert (status, lines) == (answers_agree.NOT_PUT, ["detect: could not be put (atlas ended with 2)"])
 
     def test_a_second_installation_of_a_kind_is_named_and_left_out(self) -> None:
         first, second = {"kind": "emudeck", "root": "1"}, {"kind": "emudeck", "root": "2"}
-        answers: dict[tuple[str, ...], tuple[int, Any]] = {("detect",): (0, [first, second])}
-        for question in answers_agree.QUESTIONS:
-            answers[(question,)] = (
-                0,
-                [{"installation": first, "answer": {"n": 1}}, {"installation": second, "answer": {"n": 2}}],
-            )
-            answers[(question, "--installation", "emudeck")] = (0, {"n": 1})
+        labelled = [{"installation": first, "answer": {"n": 1}}, {"installation": second, "answer": {"n": 2}}]
+        answers = self.every_question([first, second], labelled, {"n": 1}, kind="emudeck")
 
         status, lines = answers_agree.compare(self.asker(answers))
 
@@ -1146,38 +1203,84 @@ class TestTheFirstProbe:
             "emudeck: 1 more installation(s) of this kind left out; --installation answers for the first only"
         )
 
-    def test_a_labelled_answer_without_the_kind_could_not_be_compared(self) -> None:
-        installation = {"kind": "retrodeck"}
-        answers: dict[tuple[str, ...], tuple[int, Any]] = {("detect",): (0, [installation])}
-        for question in answers_agree.QUESTIONS:
-            answers[(question,)] = (0, [])
-            answers[(question, "--installation", "retrodeck")] = (0, {})
+    def test_a_kind_the_labelled_answer_leaves_out_is_a_disagreement(self) -> None:
+        """The owner's ruling: detect reported the kind, the answer for every installation left it out."""
+        answers = self.every_question([{"kind": "retrodeck"}], [], {})
+
+        status, lines = answers_agree.compare(self.asker(answers))
+
+        assert status == answers_agree.DISAGREE
+        assert "health retrodeck: the answer put to every installation holds none of this kind" in lines
+
+    @pytest.mark.parametrize("labelled", [{"not": "a list"}, [{"answer": {}}], ["text"]])
+    def test_an_answer_whose_shape_cannot_be_read_could_not_be_put(self, labelled: object) -> None:
+        answers = self.every_question([{"kind": "retrodeck"}], labelled, {})
 
         status, lines = answers_agree.compare(self.asker(answers))
 
         assert status == answers_agree.NOT_PUT
-        assert "health retrodeck: the answer put to every installation holds none of this kind" in lines
+        assert f"health: {answers_agree.UNREADABLE}" in lines
 
-    def test_a_crash_could_not_put_a_question_and_does_not_read_as_a_disagreement(
-        self, monkeypatch: pytest.MonkeyPatch, capfd: pytest.CaptureFixture[str]
+    def test_a_question_whose_comparison_crashes_keeps_the_verdicts_before_and_after_it(
+        self, capfd: pytest.CaptureFixture[str]
     ) -> None:
-        def crashes(argv: list[str]) -> tuple[int, Any]:
-            raise RuntimeError("atlas broke")
+        installation = {"kind": "retrodeck"}
+        answers = self.every_question([installation], [{"installation": installation, "answer": {}}], {})
 
-        monkeypatch.setattr(answers_agree, "ask_atlas", crashes)
+        def ask(argv: list[str]) -> answers_agree.Asked:
+            if argv == ["systems"]:
+                raise RuntimeError("atlas broke")
+            return answers_agree.Asked(*answers[tuple(argv)], "")
 
-        status = answers_agree.main([])
+        status, lines = answers_agree.compare(ask)
 
-        captured = capfd.readouterr()
         assert status == answers_agree.NOT_PUT == 2
-        assert captured.out == "answers_agree: a question could not be put (crashed: RuntimeError).\n"
-        assert "Traceback (most recent call last):" in captured.err
-        assert captured.err.endswith("RuntimeError: atlas broke\n")
+        assert lines == [
+            "health retrodeck: agree",
+            "systems: could not be put (the comparison crashed: RuntimeError)",
+            "rom-locations retrodeck: agree",
+            "firmware-inventory retrodeck: agree",
+        ]
+        err = capfd.readouterr().err
+        assert "Traceback (most recent call last):" in err
+        assert err.endswith("RuntimeError: atlas broke\n")
 
     def test_no_installation_is_nothing_to_compare(self) -> None:
         nothing = answers_agree.compare(self.asker({("detect",): (0, [])}))
 
         assert nothing == (0, ["no installation detected; nothing to compare"])
+
+    def test_it_takes_no_arguments(self, capfd: pytest.CaptureFixture[str]) -> None:
+        assert answers_agree.main(["--home", "x"]) == answers_agree.NOT_PUT
+        assert capfd.readouterr().err == "answers_agree.py takes no arguments, not ['--home', 'x']\n"
+
+    @pytest.mark.parametrize(
+        ("ends", "out", "asked"),
+        [
+            (SystemExit(2), "", (2, None, "usage: emu-atlas")),
+            (SystemExit(None), "[]", (0, [], "usage: emu-atlas")),
+            (SystemExit("text"), "", (1, None, "usage: emu-atlas")),
+            (0, "not json", (2, None, "its answer is no JSON")),
+            (0, '{"a": 1}', (0, {"a": 1}, "usage: emu-atlas")),
+        ],
+        ids=["exit 2", "exit None", "exit with text", "no JSON", "an answer"],
+    )
+    def test_ask_atlas_reads_what_atlas_did(
+        self, monkeypatch: pytest.MonkeyPatch, ends: object, out: str, asked: tuple[int, Any, str]
+    ) -> None:
+        import atlas.cli
+
+        def run(argv: list[str]) -> int:
+            print(out, end="")
+            print("usage: emu-atlas\nmore", file=sys.stderr)
+            if isinstance(ends, SystemExit):
+                raise ends
+            assert isinstance(ends, int)
+            return ends
+
+        monkeypatch.setattr(atlas.cli, "run", run)
+
+        assert answers_agree.ask_atlas(["detect"]) == answers_agree.Asked(*asked)
 
     def test_it_reports_through_the_client_here(
         self, monkeypatch: pytest.MonkeyPatch, capfd: pytest.CaptureFixture[str]
