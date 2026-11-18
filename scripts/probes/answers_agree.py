@@ -64,7 +64,8 @@ def differences(left: Any, right: Any, path: str = "") -> list[str]:
     if isinstance(left, list):
         if len(left) != len(right):
             return [f"{path}[] (lengths)"]
-        return [found for index, pair in enumerate(zip(left, right)) for found in differences(*pair, f"{path}[{index}]")]
+        pairs = enumerate(zip(left, right))
+        return [found for index, pair in pairs for found in differences(*pair, f"{path}[{index}]")]
     return [] if left == right else [path]
 
 

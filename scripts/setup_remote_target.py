@@ -729,7 +729,8 @@ def read_entry(config: str, name: str) -> Destination | None:
     and a user. :attr:`Destination.text` is the target's name, the one every
     ``--target`` call gives ``ssh``.
     """
-    settings = {words[0].lower(): _unquoted(words[1].strip()) for words in _entry_lines(config, name) if len(words) == 2}
+    lines = _entry_lines(config, name)
+    settings = {words[0].lower(): _unquoted(words[1].strip()) for words in lines if len(words) == 2}
     if _HOSTNAME not in settings or _USER not in settings:
         return None
     return Destination(

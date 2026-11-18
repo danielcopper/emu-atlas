@@ -72,6 +72,8 @@ USAGE_LINES = (
     "       mise run probe [--target <name>] <script> [arguments]"
 )
 
+NO_SSH = f"{PREFIX}: asking a target needs ssh, and this machine has none on its PATH."
+
 _DISPATCHER_STATUSES = {
     dev_dispatch.REFUSED: "REFUSED",
     dev_dispatch.CANNOT_RUN: "CANNOT_RUN",
@@ -126,9 +128,11 @@ def probes_directory() -> Path:
 
 
 def check_probe(script: str) -> None:
-    """Refuse a probe script that is no bare file name of scripts/probes/ — the dispatcher's own rule — or is not there."""
+    """Refuse a probe script that is no bare file name (the dispatcher's own rule) or that scripts/probes/ lacks."""
     if not dev_dispatch.PROBE_NAME.fullmatch(script):
-        raise usage(f"a probe script is a file name of scripts/probes/, letters, digits and '_' then .py — not {script!r}.")
+        raise usage(
+            f"a probe script is a file name of scripts/probes/, letters, digits and '_' then .py — not {script!r}."
+        )
     if not (probes_directory() / script).is_file():
         held = sorted(path.name for path in probes_directory().glob("*.py"))
         raise usage(f"scripts/probes/ holds no {script}; it holds: {', '.join(held) or 'nothing'}.")
@@ -242,7 +246,7 @@ def remote_request(request: Request) -> list[str]:
 
 
 def setup_line(name: str, destination: setup.Destination | None, address: str = "") -> str:
-    """The setup's command line for *name*: with *address* for the user's, or the entry's own where no hop is in the way."""
+    """The setup's command line for *name*: with *address*, or the entry's own, where no hop is in the way."""
     if destination is None or destination.via:
         where = "<destination>"
     else:
@@ -263,7 +267,7 @@ class Target:
         return self.config.with_name(setup.KNOWN_HOSTS_NAME)
 
     def ssh(self, words: list[str]) -> list[str]:
-        """``ssh`` reading the target's entry from this tool's config alone — the restricted key alone — with *words* as the request."""
+        """``ssh`` reading the entry from this tool's config alone, so with the restricted key alone, asking *words*."""
         return [
             "ssh",
             "-F",
@@ -285,7 +289,9 @@ def find_target(name: str) -> Target:
     except FileNotFoundError:
         text, held = "", f"there is no {config}"
     except (OSError, UnicodeError) as error:
-        raise Refusal(NOT_ASKED, f"{PREFIX}: could not read {config}: {setup.reason(error)}. Nothing was contacted.") from error
+        raise Refusal(
+            NOT_ASKED, f"{PREFIX}: could not read {config}: {setup.reason(error)}. Nothing was contacted."
+        ) from error
     else:
         held = f"{config} has no entry for it"
     destination = setup.read_entry(text, name)
@@ -351,7 +357,7 @@ def run_ssh(command: list[str], stdin: bytes | None) -> subprocess.CompletedProc
     try:
         return subprocess.run(command, input=stdin, capture_output=True, check=False)
     except FileNotFoundError as error:
-        raise Refusal(NOT_ASKED, f"{PREFIX}: asking a target needs ssh, and this machine has none on its PATH.") from error
+        raise Refusal(NOT_ASKED, f"{NO_SSH}\n  Nothing was contacted.") from error
 
 
 def pass_on(data: bytes) -> None:
@@ -368,7 +374,9 @@ def dispatcher_status(status: int, name: str) -> str:
     """The line this client adds below a status of the dispatcher's own, which ran nothing of the request's."""
     line = f"{PREFIX}: that was {name}'s dispatcher ({status}, {_DISPATCHER_STATUSES[status]}), not atlas or a probe."
     if status == dev_dispatch.REFUSED:
-        line += f"\n  The dispatcher there may be older than this client; run the setup again:\n{setup_line(name, None)}"
+        line += (
+            f"\n  The dispatcher there may be older than this client; run the setup again:\n{setup_line(name, None)}"
+        )
     return line
 
 
@@ -377,7 +385,9 @@ def copy_tree(target: Target) -> int | None:
     try:
         stream = build_copy(TREE, setup.python_floor())
     except OSError as error:
-        raise Refusal(NOT_ASKED, f"{PREFIX}: the copy could not be built here: {error}. Nothing was contacted.") from error
+        raise Refusal(
+            NOT_ASKED, f"{PREFIX}: the copy could not be built here: {error}. Nothing was contacted."
+        ) from error
     copied = run_ssh(target.ssh(["copy"]), stream)
     stderr = copied.stderr.decode("utf-8", "replace")
     if copied.returncode == 0:
@@ -403,10 +413,11 @@ def ask_there(target: Target, request: Request) -> int:
     """Send the request after the copy: its stdout straight through, its stderr passed on as it comes and kept."""
     sys.stdout.flush()
     sys.stderr.flush()
+    command = target.ssh(remote_request(request))
     try:
-        process = subprocess.Popen(target.ssh(remote_request(request)), stdin=subprocess.DEVNULL, stderr=subprocess.PIPE)
+        process = subprocess.Popen(command, stdin=subprocess.DEVNULL, stderr=subprocess.PIPE)
     except FileNotFoundError as error:
-        raise Refusal(NOT_ASKED, f"{PREFIX}: asking a target needs ssh, and this machine has none on its PATH.") from error
+        raise Refusal(NOT_ASKED, NO_SSH) from error
     pipe = process.stderr
     assert pipe is not None
     said = bytearray()
@@ -419,7 +430,7 @@ def ask_there(target: Target, request: Request) -> int:
 
 
 def judge(status: int, stderr: str, target: Target, request: Request) -> int:
-    """This call's status for a request that ended with *status*: the run's own, or the dispatcher's or this client's."""
+    """This call's status for a request that ended with *status*: the run's own, the dispatcher's or the client's."""
     what = "the question" if request.mode == "ask" else f"the probe {request.words[0]}"
     if status in _DISPATCHER_STATUSES and status != dev_dispatch.COPY_FAILED:
         say(dispatcher_status(status, target.name))

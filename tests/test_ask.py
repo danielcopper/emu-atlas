@@ -332,7 +332,8 @@ class TestThere:
         self, there: There, capfd: pytest.CaptureFixture[str]
     ) -> None:
         """#813: ``save-portability --source <a> --target <b>`` is asked there with its own ``--target``."""
-        question = ["save-portability", "gba", "--source", "a", "--target", "b", "--content", "/x/A Game (Europe) 'x' \"y\".chd", "ü"]
+        content = "/x/A Game (Europe) 'x' \"y\".chd"
+        question = ["save-portability", "gba", "--source", "a", "--target", "b", "--content", content, "ü"]
 
         code, out, _ = called(capfd, "ask", "--target", "handheld", *question)
 
@@ -407,7 +408,9 @@ class TestThere:
         assert (there.root / "current").resolve() != tree
         assert contents(without_caches(snapshot((there.root / "current").resolve()))) == sent
 
-    def test_the_entry_written_here_is_read_alone(self, there: There, capfd: pytest.CaptureFixture[str], tmp_path: Path) -> None:
+    def test_the_entry_written_here_is_read_alone(
+        self, there: There, capfd: pytest.CaptureFixture[str], tmp_path: Path
+    ) -> None:
         """The user's own SSH config would send ``handheld`` elsewhere; the call reaches the entry's target."""
         decoy = tmp_path / "decoy"
         decoy.mkdir()
@@ -486,7 +489,9 @@ class TestTheCopy:
         assert {(member.uid, member.gid, member.uname, member.gname) for member in members} == {(0, 0, "", "")}
         assert capfd.readouterr().err == "emu-atlas-dev: not copied, being no file or directory: atlas/link.py\n"
 
-    def test_its_floor_is_the_packages_and_its_manifest_name_the_dispatchers(self, there: There, capfd: pytest.CaptureFixture[str]) -> None:
+    def test_its_floor_is_the_packages_and_its_manifest_name_the_dispatchers(
+        self, there: There, capfd: pytest.CaptureFixture[str]
+    ) -> None:
         called(capfd, "ask", "--target", "handheld", "detect")
 
         manifest = (there.root / "current" / dev_dispatch.MANIFEST).read_text(encoding="utf-8")
@@ -554,6 +559,20 @@ class TestWhenTheTargetCannotBeUsed:
         )
         assert len(ssh_calls(there.world)) == logins
         assert snapshot(there.target_home) == before
+
+    def test_no_ssh_on_this_machine(
+        self, there: There, capfd: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        empty = tmp_path / "no-programs"
+        empty.mkdir()
+        monkeypatch.setenv("PATH", str(empty))
+
+        err = self._not_asked(there, capfd)
+
+        assert err == (
+            "emu-atlas-dev: asking a target needs ssh, and this machine has none on its PATH.\n"
+            "  Nothing was contacted.\n"
+        )
 
     def test_no_config_at_all(self, there: There, capfd: pytest.CaptureFixture[str]) -> None:
         there.config.unlink()
@@ -869,10 +888,14 @@ class TestTheFirstProbe:
         status, lines = answers_agree.compare(self.asker(answers))
 
         assert status == 0
-        assert lines[0] == "emudeck: 1 more installation(s) of this kind left out; --installation answers for the first only"
+        assert lines[0] == (
+            "emudeck: 1 more installation(s) of this kind left out; --installation answers for the first only"
+        )
 
     def test_no_installation_is_nothing_to_compare(self) -> None:
-        assert answers_agree.compare(self.asker({("detect",): (0, [])})) == (0, ["no installation detected; nothing to compare"])
+        nothing = answers_agree.compare(self.asker({("detect",): (0, [])}))
+
+        assert nothing == (0, ["no installation detected; nothing to compare"])
 
     def test_it_reports_through_the_client_here(
         self, monkeypatch: pytest.MonkeyPatch, capfd: pytest.CaptureFixture[str]
