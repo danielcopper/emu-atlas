@@ -130,18 +130,24 @@ HandOver = Literal["refused", "forced command", "hop"]
 FORCED_COMMAND: Final = "forced command"
 """The key was taken, but its forced command ran no install."""
 
-FailureKind = Literal["host key changed", "host key not accepted", "no login", "unresolved", "no server"]
-"""What ended an ``ssh`` before the login, as its stderr says (:func:`ssh_failure`)."""
+FailureKind = Literal["host key changed", "host key not accepted", "no login", "unresolved", "no server", "unknown"]
+"""What ended an ``ssh`` before the login, as its stderr says (:func:`ssh_failure`); ``unknown`` where no pattern knows
+what it said."""
 
 
 @dataclass(frozen=True)
 class SshFailure:
-    """A failure of ``ssh``'s own before the login: what it was, and whose (:func:`failed_where`)."""
+    """A failure of ``ssh``'s own: what it was, and whose (:func:`failed_where`)."""
 
     kind: FailureKind
     where: Where
     host: str = ""
     """For ``unresolved``, the name ``ssh`` could not resolve; empty otherwise."""
+    offending: str = ""
+    """For ``host key changed``, the known-hosts file ``ssh`` names as holding the other key; empty otherwise."""
+    key_refused: bool = False
+    """For ``no login``, whether the host refused the keys (``Permission denied``) rather than ending the login after
+    too many of them."""
 
 
 class SetupError(Exception):
@@ -408,14 +414,13 @@ def failed_where(stderr: str, *, name: str, destination: Destination) -> Where:
     return "hop" if named else "either"
 
 
-def _host_key_changed(stderr: str, *, name: str, destination: Destination, ours: tuple[str, ...]) -> str:
+def _host_key_changed(failure: SshFailure, *, name: str, destination: Destination, ours: tuple[str, ...]) -> str:
     """The message for a host key that is not the one a known-hosts file records.
 
     The ``ssh-keygen -R`` advice only where the file ssh names is this tool's
     own: a record in the user's files is the user's to judge.
     """
-    offending = _OFFENDING_FILE.search(stderr)
-    if offending is None or offending.group(1) in ours:
+    if not failure.offending or failure.offending in ours:
         return (
             f"{PREFIX}: the host key at {destination.hostname} is not the one recorded for {name} — another machine"
             " may be answering at that address. No connection was made.\n"
@@ -424,7 +429,7 @@ def _host_key_changed(stderr: str, *, name: str, destination: Destination, ours:
         )
     return (
         f"{PREFIX}: a hop on the way to {name} ({destination.via}) has a host key that is not the one"
-        f" {offending.group(1)} records — another machine may be answering there. No connection was made.\n"
+        f" {failure.offending} records — another machine may be answering there. No connection was made.\n"
         "  Check that hop with your own ssh."
     )
 
@@ -457,45 +462,54 @@ def _no_server(destination: Destination, where: Where) -> str:
     )
 
 
-def ssh_failure(stderr: str, *, name: str, destination: Destination) -> SshFailure | None:
-    """What ended an ``ssh`` to the target *name* before the login, from what it said; ``None`` for anything else.
+def ssh_failure(stderr: str, *, name: str, destination: Destination) -> SshFailure:
+    """What an ``ssh`` to the target *name* that ended with its own failure status said, and whose failure it was.
 
-    The one reading of ssh's stderr that both this setup and every later
-    ``--target`` call word their messages on. The patterns are tested in the
+    The one reading of ssh's stderr: this setup's messages and its hand-over
+    from the key's login, and every later ``--target`` call, act on what it
+    returns and read the stderr no second time. The patterns are tested in the
     order their comment gives; a name ssh could not resolve is the hop's where
     it is not the target's own address.
     """
     where = failed_where(stderr, name=name, destination=destination)
     if _HOST_KEY_CHANGED.search(stderr):
-        return SshFailure("host key changed", where)
+        offending = _OFFENDING_FILE.search(stderr)
+        return SshFailure("host key changed", where, offending="" if offending is None else offending.group(1))
     if _HOST_KEY_NOT_ACCEPTED.search(stderr):
         return SshFailure("host key not accepted", where)
     if _NO_LOGIN.search(stderr):
-        return SshFailure("no login", where)
+        return SshFailure("no login", where, key_refused=bool(_KEY_REFUSED.search(stderr)))
     unresolved = _UNRESOLVED.search(stderr)
     if unresolved is not None:
         host = unresolved.group(1)
         return SshFailure("unresolved", "hop" if destination.via and host != destination.hostname else "target", host)
     if _NO_SERVER.search(stderr):
         return SshFailure("no server", where)
-    return None
+    return SshFailure("unknown", where)
 
 
 def classify(stderr: str, *, name: str, destination: Destination, known_hosts: tuple[pathlib.Path, ...]) -> str | None:
-    """What to tell the user for an ``ssh`` that ended before the login.
+    """What to tell the user for an ``ssh`` that ended before the login, from its *stderr* (:func:`failure_text`)."""
+    failure = ssh_failure(stderr, name=name, destination=destination)
+    return failure_text(failure, name=name, destination=destination, known_hosts=known_hosts)
+
+
+def failure_text(
+    failure: SshFailure, *, name: str, destination: Destination, known_hosts: tuple[pathlib.Path, ...]
+) -> str | None:
+    """What to tell the user for the *failure* :func:`ssh_failure` read.
 
     ``None`` for the target's refusal of the login, which ``no_login_message``
     words, and for anything that is no failure of ssh's. A failure ssh names on
     a hop is worded as the hop's; one it names on no host, as the target's or
     the hop's. *known_hosts* are this tool's own files, the recorded one first.
     """
-    failure = ssh_failure(stderr, name=name, destination=destination)
-    if failure is None:
-        return None
     hop = f"the hop {destination.via}"
+    if failure.kind == "unknown":
+        return None
     if failure.kind == "host key changed":
         ours = tuple(str(path) for path in known_hosts)
-        return _host_key_changed(stderr, name=name, destination=destination, ours=ours)
+        return _host_key_changed(failure, name=name, destination=destination, ours=ours)
     if failure.kind == "host key not accepted":
         host = destination.hostname
         wording: dict[Where, str] = {"target": f"at {host}", "hop": f"of {hop}", "either": f"of {host} or of {hop}"}
@@ -510,10 +524,6 @@ def classify(stderr: str, *, name: str, destination: Destination, known_hosts: t
     if failure.kind == "unresolved":
         return _unresolved(failure, name=name, destination=destination)
     return _no_server(destination, failure.where)
-
-
-def is_no_login(stderr: str) -> bool:
-    return bool(_NO_LOGIN.search(stderr))
 
 
 def route_source(destination: Destination) -> str:
@@ -596,8 +606,9 @@ def failure_message(
             f"  The setup needs Python {python_floor()} or newer at {TARGET_PYTHON} there." + nothing
         )
     if result.returncode == SSH_FAILED:
-        failure = classify(result.stderr, name=name, destination=destination, known_hosts=known_hosts)
-        if failure is None and is_no_login(result.stderr):
+        reading = ssh_failure(result.stderr, name=name, destination=destination)
+        failure = failure_text(reading, name=name, destination=destination, known_hosts=known_hosts)
+        if failure is None and reading.kind == "no login":
             failure = no_login_message(destination, key_refused=key_refused)
         if failure is not None:
             return failure + nothing
@@ -864,10 +875,10 @@ def hand_over(result: subprocess.CompletedProcess[str], *, name: str, destinatio
         return None
     if result.returncode != SSH_FAILED:
         return FORCED_COMMAND
-    where = failed_where(result.stderr, name=name, destination=destination)
-    if where == "target" and _KEY_REFUSED.search(result.stderr):
+    failure = ssh_failure(result.stderr, name=name, destination=destination)
+    if failure.where == "target" and failure.key_refused:
         return "refused"
-    if where == "hop":
+    if failure.where == "hop":
         return "hop"
     return None
 

@@ -29,6 +29,7 @@ import subprocess
 import sys
 import tarfile
 import time
+import traceback
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
@@ -52,10 +53,11 @@ COPIED = ("atlas", dev_dispatch.PROBES)
 SKIPPED_DIRECTORY = "__pycache__"
 SKIPPED_SUFFIX = ".pyc"
 
-# This client's own exit statuses, none of which atlas (0, 2) or the
-# dispatcher (3, 4, 5) ends with; a question's or a probe's own status is
-# passed through. USAGE is atlas's own status for a question that could not
-# be put. docs/remote-target.md lists what each one covers.
+# This client's own exit statuses. A usage error ends with 2, as atlas's own
+# does, before anything is contacted; the client's other failures end with
+# statuses neither atlas (0, 2) nor the dispatcher (3, 4, 5, 8) ends with. A
+# question's or a probe's own status is passed through. docs/remote-target.md
+# lists what each one covers.
 USAGE = 2
 NOT_ASKED = 6
 BROKE_OFF = 7
@@ -73,11 +75,15 @@ USAGE_LINES = (
 )
 
 NO_SSH = f"{PREFIX}: asking a target needs ssh, and this machine has none on its PATH."
+OLDER_DISPATCHER = (
+    "The dispatcher there is older than this client; run the setup again, which installs the current one:"
+)
 
 _DISPATCHER_STATUSES = {
     dev_dispatch.REFUSED: "REFUSED",
     dev_dispatch.CANNOT_RUN: "CANNOT_RUN",
     dev_dispatch.COPY_FAILED: "COPY_FAILED",
+    dev_dispatch.TREE_GONE: "TREE_GONE",
 }
 
 
@@ -97,6 +103,26 @@ class Request:
     mode: Mode
     target: str | None
     words: list[str]
+
+
+BEFORE_CONTACT = "before anything was contacted"
+HERE = "while running here"
+COPYING = "while copying to the target"
+ASKING = "while asking the target"
+
+_AFTER_A_CRASH = {
+    BEFORE_CONTACT: (NOT_ASKED, "Nothing was contacted."),
+    HERE: (NOT_ASKED, "No target was contacted; whatever ran here printed above, and its status is lost."),
+    COPYING: (BROKE_OFF, "The target's current tree is this copy whole, or the one before it. Nothing was asked."),
+    ASKING: (BROKE_OFF, "What the run printed is above; its status is lost."),
+}
+
+
+class Phase:
+    """Where a call is, for the message a crash of this client ends it with."""
+
+    def __init__(self) -> None:
+        self.now = BEFORE_CONTACT
 
 
 def usage(message: str) -> Refusal:
@@ -237,12 +263,13 @@ def word(arguments: list[str]) -> str:
     return base64.urlsafe_b64encode(json.dumps(arguments).encode("utf-8")).decode("ascii").rstrip("=")
 
 
-def remote_request(request: Request) -> list[str]:
-    """The dispatcher's request for *request*: ``ask <word>``, or ``probe <name>`` with a word for its arguments."""
+def remote_request(request: Request, tree: str) -> list[str]:
+    """The dispatcher's request for *request*, run from *tree*: ``ask <tree> <word>``, or ``probe <tree> <name>`` with
+    a word for its arguments."""
     if request.mode == "ask":
-        return ["ask", word(request.words)]
+        return ["ask", tree, word(request.words)]
     script, arguments = request.words[0], request.words[1:]
-    return ["probe", script, *([word(arguments)] if arguments else [])]
+    return ["probe", tree, script, *([word(arguments)] if arguments else [])]
 
 
 def setup_line(name: str, destination: setup.Destination | None, address: str = "") -> str:
@@ -337,27 +364,33 @@ def _target_message(kind: setup.FailureKind, target: Target) -> str:
 
 
 def not_reached(stderr: str, target: Target) -> str | None:
-    """What to say for an ``ssh`` that ended before the login, from the setup's reading of it; ``None`` otherwise.
+    """What to say for an ``ssh`` that ended before the login, from the setup's one reading of it; ``None`` otherwise.
 
     A failure on the target itself is worded with this client's repair; one on
     a hop, and a host key that is not the recorded one, as the setup words it.
     """
     failure = setup.ssh_failure(stderr, name=target.name, destination=target.destination)
-    if failure is None:
+    if failure.kind == "unknown":
         return None
     if failure.where == "target" and failure.kind != "host key changed":
         return _target_message(failure.kind, target)
-    worded = setup.classify(
-        stderr, name=target.name, destination=target.destination, known_hosts=(target.known_hosts,)
+    worded = setup.failure_text(
+        failure, name=target.name, destination=target.destination, known_hosts=(target.known_hosts,)
     )
     return worded if worded is not None else _key_refused(target)
+
+
+def ssh_not_started(error: OSError) -> str:
+    if isinstance(error, FileNotFoundError):
+        return NO_SSH
+    return f"{PREFIX}: ssh could not be started: {setup.reason(error)}."
 
 
 def run_ssh(command: list[str], stdin: bytes | None) -> subprocess.CompletedProcess[bytes]:
     try:
         return subprocess.run(command, input=stdin, capture_output=True, check=False)
-    except FileNotFoundError as error:
-        raise Refusal(NOT_ASKED, f"{NO_SSH}\n  Nothing was contacted.") from error
+    except OSError as error:
+        raise Refusal(NOT_ASKED, f"{ssh_not_started(error)}\n  Nothing was contacted.") from error
 
 
 def pass_on(data: bytes) -> None:
@@ -374,50 +407,83 @@ def dispatcher_status(status: int, name: str) -> str:
     """The line this client adds below a status of the dispatcher's own, which ran nothing of the request's."""
     line = f"{PREFIX}: that was {name}'s dispatcher ({status}, {_DISPATCHER_STATUSES[status]}), not atlas or a probe."
     if status == dev_dispatch.REFUSED:
-        line += (
-            f"\n  The dispatcher there may be older than this client; run the setup again:\n{setup_line(name, None)}"
-        )
+        line += f"\n  {OLDER_DISPATCHER}\n{setup_line(name, None)}"
     return line
 
 
-def copy_tree(target: Target) -> int | None:
-    """Send the copy; ``None`` once the target took it, else the status this call ends with."""
+def indented(text: str) -> str:
+    return "\n".join(f"    {line}" for line in text.splitlines())
+
+
+def tree_named(stdout: bytes, target: Target) -> str:
+    """The id of the tree the copy made, the one line its dispatcher answers with on stdout.
+
+    Anything else on that stdout is refused before a question is asked: it
+    is what the target's shell prints for a command run without a terminal,
+    and it would land in front of every answer. No line at all is what a
+    dispatcher older than this client answers.
+    """
+    text = stdout.decode("utf-8", "replace")
+    lines = text.splitlines()
+    tree = lines[-1] if lines and dev_dispatch.TREE_ID.fullmatch(lines[-1]) else None
+    if tree is not None and text == f"{tree}\n":
+        return tree
+    current = f"  The copy is current on {target.name}; nothing was asked."
+    if not text:
+        raise Refusal(
+            NOT_ASKED,
+            f"{PREFIX}: {target.name}'s dispatcher took the copy but named no tree to ask from.\n"
+            f"  {OLDER_DISPATCHER}\n{setup_line(target.name, target.destination)}\n{current}",
+        )
+    repair = setup_line(target.name, target.destination)
+    older = "" if tree is not None else f"\n  It named no tree either. {OLDER_DISPATCHER}\n{repair}"
+    arrived = indented(text if tree is None else "\n".join(lines[:-1]))
+    raise Refusal(
+        NOT_ASKED,
+        f"{PREFIX}: {target.name} wrote this on stdout ahead of its dispatcher's answer to the copy:\n{arrived}\n"
+        "  The shell there prints from its startup files for a command run without a terminal, and that would land"
+        " in front of every answer. Make them silent for non-interactive shells (in ~/.bashrc, say, return at the"
+        f" top unless $- holds i).{older}\n{current}",
+    )
+
+
+def copy_tree(target: Target, phase: Phase) -> str:
+    """Send the copy; the id of the tree it made, else a :class:`Refusal` with the status this call ends with."""
     try:
         stream = build_copy(TREE, setup.python_floor())
     except OSError as error:
         raise Refusal(
             NOT_ASKED, f"{PREFIX}: the copy could not be built here: {error}. Nothing was contacted."
         ) from error
+    phase.now = COPYING
     copied = run_ssh(target.ssh(["copy"]), stream)
-    stderr = copied.stderr.decode("utf-8", "replace")
     if copied.returncode == 0:
         pass_on(copied.stderr)
-        return None
+        return tree_named(copied.stdout, target)
     if copied.returncode == setup.SSH_FAILED:
-        message = not_reached(stderr, target)
+        message = not_reached(copied.stderr.decode("utf-8", "replace"), target)
         if message is not None:
             raise Refusal(NOT_ASKED, f"{message}\n  Nothing was done on {target.name}.")
     pass_on(copied.stderr)
     if copied.returncode in _DISPATCHER_STATUSES:
-        say(dispatcher_status(copied.returncode, target.name) + "\n  Nothing was asked.")
-        return copied.returncode
-    say(
+        raise Refusal(copied.returncode, dispatcher_status(copied.returncode, target.name) + "\n  Nothing was asked.")
+    raise Refusal(
+        BROKE_OFF,
         f"{PREFIX}: the copy to {target.name} ended with {copied.returncode} without a word from its dispatcher —"
         " the connection broke, or the dispatcher there did not run; what ssh said is above.\n"
-        f"  {target.name}'s current tree is this copy whole, or the one before it. Nothing was asked."
+        f"  {target.name}'s current tree is this copy whole, or the one before it. Nothing was asked.",
     )
-    return BROKE_OFF
 
 
-def ask_there(target: Target, request: Request) -> int:
-    """Send the request after the copy: its stdout straight through, its stderr passed on as it comes and kept."""
+def ask_there(target: Target, request: Request, tree: str) -> int:
+    """Send the request for *tree*: its stdout straight through, its stderr passed on as it comes and kept."""
     sys.stdout.flush()
     sys.stderr.flush()
-    command = target.ssh(remote_request(request))
+    command = target.ssh(remote_request(request, tree))
     try:
         process = subprocess.Popen(command, stdin=subprocess.DEVNULL, stderr=subprocess.PIPE)
-    except FileNotFoundError as error:
-        raise Refusal(NOT_ASKED, NO_SSH) from error
+    except OSError as error:
+        raise Refusal(NOT_ASKED, f"{ssh_not_started(error)}\n{not_asked(request, target)}") from error
     pipe = process.stderr
     assert pipe is not None
     said = bytearray()
@@ -429,9 +495,16 @@ def ask_there(target: Target, request: Request) -> int:
     return judge(status, bytes(said).decode("utf-8", "replace"), target, request)
 
 
+def what_runs(request: Request) -> str:
+    return "the question" if request.mode == "ask" else f"the probe {request.words[0]}"
+
+
+def not_asked(request: Request, target: Target) -> str:
+    return f"  {what_runs(request).capitalize()} was not asked; the copy made just before is current on {target.name}."
+
+
 def judge(status: int, stderr: str, target: Target, request: Request) -> int:
     """This call's status for a request that ended with *status*: the run's own, the dispatcher's or the client's."""
-    what = "the question" if request.mode == "ask" else f"the probe {request.words[0]}"
     if status in _DISPATCHER_STATUSES and status != dev_dispatch.COPY_FAILED:
         say(dispatcher_status(status, target.name))
         return status
@@ -439,29 +512,44 @@ def judge(status: int, stderr: str, target: Target, request: Request) -> int:
         return status
     message = not_reached(stderr, target)
     if message is not None:
-        say(f"{message}\n  {what.capitalize()} was not asked; the copy made just before is current on {target.name}.")
+        say(f"{message}\n{not_asked(request, target)}")
         return NOT_ASKED
     say(
-        f"{PREFIX}: ssh ended with {setup.SSH_FAILED} while {what} ran on {target.name}: the connection broke, or"
-        f" the run itself ended with {setup.SSH_FAILED}; what it printed is above."
+        f"{PREFIX}: ssh ended with {setup.SSH_FAILED} while {what_runs(request)} ran on {target.name}: the connection"
+        f" broke, or the run itself ended with {setup.SSH_FAILED}; what it printed is above."
     )
     return BROKE_OFF
 
 
-def run_there(request: Request) -> int:
-    """Copy this tree to the target, then ask there; the run's own status, or the dispatcher's or this client's."""
+def run_there(request: Request, phase: Phase) -> int:
+    """Copy this tree to the target, then ask there from that copy; the run's own status, the dispatcher's or ours."""
     assert request.target is not None
     target = find_target(request.target)
-    ended = copy_tree(target)
-    if ended is not None:
-        return ended
-    return ask_there(target, request)
+    tree = copy_tree(target, phase)
+    phase.now = ASKING
+    return ask_there(target, request, tree)
+
+
+def crashed(phase: Phase) -> int:
+    """Print the traceback of the exception being handled, say where the call was, and end with a status of ours.
+
+    A crash must not end this process with Python's 1, which a probe uses for
+    what it checks not holding.
+    """
+    traceback.print_exc()
+    status, after = _AFTER_A_CRASH[phase.now]
+    say(f"{PREFIX}: this client failed {phase.now} (the traceback is above). {after}")
+    return status
 
 
 def main(mode: Mode, argv: list[str]) -> int:
+    phase = Phase()
     try:
         request = parse(mode, argv)
-        return run_here(request) if request.target is None else run_there(request)
+        if request.target is None:
+            phase.now = HERE
+            return run_here(request)
+        return run_there(request, phase)
     except Refusal as refusal:
         say(refusal.message)
         return refusal.status
@@ -474,6 +562,8 @@ def main(mode: Mode, argv: list[str]) -> int:
             " ends there with its connection."
         )
         return 128 + signal.SIGINT
+    except Exception:
+        return crashed(phase)
 
 
 if __name__ == "__main__":

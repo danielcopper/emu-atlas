@@ -28,7 +28,8 @@ on OpenSSH's messages, not measured against a real server:
   unless ``BatchMode=yes`` or ``PreferredAuthentications`` leaves it out; every
   refused key counts towards the target's ``MaxAuthTries``;
 - a login runs its command with ``/bin/sh -c`` in the target's home, with
-  ``SSH_CLIENT`` set, after whatever the target's login files print;
+  ``SSH_CLIENT`` set, after whatever the target's login files print on stderr
+  and on stdout;
 - a destination behind a ProxyJump fails on its hop when the world says so,
   with what OpenSSH prints for that failure.
 
@@ -110,6 +111,8 @@ class Target:
     login_noise: str = ""
     """What the target's login files write on stderr before the command runs; a lone surrogate is written as
     the byte it escapes (``surrogateescape``), so the noise can hold bytes that are no UTF-8."""
+    login_output: str = ""
+    """What the target's login files write on stdout before the command runs."""
 
 
 @dataclass
@@ -485,6 +488,8 @@ def _run_on_target(world: World, target: Target, command: str, forced: str | Non
     sys.stderr.flush()
     sys.stderr.buffer.write(target.login_noise.encode("utf-8", "surrogateescape"))
     sys.stderr.buffer.flush()
+    sys.stdout.write(target.login_output)
+    sys.stdout.flush()
     if not world.drop_after_first_line:
         return subprocess.run(["/bin/sh", "-c", command], cwd=target.home, env=env, check=False).returncode
     ran = subprocess.run(

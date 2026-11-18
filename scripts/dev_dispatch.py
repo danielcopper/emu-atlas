@@ -6,8 +6,9 @@ and names it in the key's ``authorized_keys`` line, run as
 the key's holder asked for and hands that request over in
 ``SSH_ORIGINAL_COMMAND``; the request alone decides. It is split on blanks and
 never handed to a shell. Four requests pass — the setup request
-(``<interpreter> -I -``), ``copy``, ``ask <word>`` and ``probe <name> [<word>]``
-— and everything else, an empty request (a login) among it, is refused with
+(``<interpreter> -I -``), ``copy``, ``ask <tree> <word>`` and
+``probe <tree> <name> [<word>]``, where ``<tree>`` is what the copy answered —
+and everything else, an empty request (a login) among it, is refused with
 :data:`REFUSED`. What each request does, the exit statuses, and what the setup
 request lets the key do: docs/remote-target.md, "What the key may do on the
 target".
@@ -37,10 +38,12 @@ from typing import IO, Iterator, Literal
 
 # The dispatcher's own exit statuses, none of which atlas uses (it ends with 0
 # or 2); docs/remote-target.md lists what each one covers. A question's or a
-# probe's own status is passed through.
+# probe's own status is passed through. TREE_GONE is 8 because the build host's
+# client (scripts/ask.py) ends with 6 and 7 of its own.
 REFUSED = 3
 CANNOT_RUN = 4
 COPY_FAILED = 5
+TREE_GONE = 8
 
 # Every question and probe runs in this sandbox: the file system read-only but
 # for a fresh /dev and /tmp, writable and gone with the run; a process view of
@@ -75,17 +78,21 @@ PROBES = os.path.join("scripts", "probes")
 COULD_NOT_START = "{}: the copy could not start ({}); the current tree is as it was."
 
 MAY = (
-    "  This key may only run the setup, copy a tree (copy), ask atlas a question (ask <word>)\n"
-    "  and run a probe script of the copied tree (probe <name> [<word>])."
+    "  This key may only run the setup, copy a tree (copy), ask atlas a question (ask <tree> <word>)\n"
+    "  and run a probe script (probe <tree> <name> [<word>]), <tree> being what the copy answered."
 )
 
 # A probe script's name: a bare file name in the tree's scripts/probes/. The
 # build host's client (scripts/ask.py) checks a name against this same pattern.
 PROBE_NAME = re.compile(r"\w+\.py", re.ASCII)
+# A copied tree's id, the name of its directory under trees/: what a copy
+# answers on stdout, and what a question names to run from exactly that tree.
+TREE_PREFIX = "tree-"
+TREE_ID = re.compile(re.escape(TREE_PREFIX) + r"\w+", re.ASCII)
 _WORD = re.compile(r"[A-Za-z0-9_-]*={0,2}")
 _FLOOR = re.compile(r"(\d+)\.(\d+)", re.ASCII)
 
-# What the sandboxed interpreter runs: the current tree put on ``sys.path``
+# What the sandboxed interpreter runs: the tree the request names put on ``sys.path``
 # behind the standard library — ``-I`` keeps the working directory and every
 # PYTHON* variable out, ``-S`` the site-packages — and then the question as
 # ``python -m atlas`` or the probe script as ``python <script>``.
@@ -152,16 +159,6 @@ def decode(word: str, request: str) -> list[str]:
 
 def version_text(version: tuple[int, ...]) -> str:
     return ".".join(str(part) for part in version)
-
-
-def current_tree(root: str) -> str:
-    link = os.path.join(root, CURRENT)
-    if not os.path.lexists(link):
-        raise Stop(CANNOT_RUN, "{}: no tree has been copied here yet: copy first.".format(PREFIX))
-    tree = os.path.realpath(link)
-    if not os.path.isdir(tree):
-        raise Stop(CANNOT_RUN, "{}: {} names {}, which is not there: copy again.".format(PREFIX, CURRENT, tree))
-    return tree
 
 
 def read_floor(tree: str) -> tuple[tuple[int, int] | None, str]:
@@ -268,35 +265,41 @@ def _locked_if_same(descriptor: int, tree: str) -> bool:
     return same
 
 
-def _lock_current(root: str) -> tuple[str, int]:
-    """The current tree, and a descriptor of its directory holding a shared lock on it.
-
-    Only a tree a copy removed between resolving ``current`` and taking the
-    lock is met by resolving again; any other error ends the request.
-    """
-    for _ in range(3):
-        tree = current_tree(root)
-        try:
-            descriptor = os.open(tree, os.O_RDONLY | os.O_DIRECTORY)
-        except (FileNotFoundError, NotADirectoryError):
-            continue
-        if _locked_if_same(descriptor, tree):
-            return tree, descriptor
-    raise Stop(
-        CANNOT_RUN, "{}: copies kept replacing the current tree while this one started; nothing ran.".format(PREFIX)
+def tree_gone(tree_id: str) -> Stop:
+    return Stop(
+        TREE_GONE,
+        "{}: the tree {} is not here: a later copy replaced it, or it was never copied; nothing ran.\n"
+        "  Ask again: every call copies first.".format(PREFIX, tree_id),
     )
 
 
+def _lock_tree(root: str, tree_id: str) -> tuple[str, int]:
+    """The tree *tree_id*, and a descriptor of its directory holding a shared lock on it.
+
+    A tree a copy removed — before this request, or between opening it and
+    taking the lock — is refused with :data:`TREE_GONE`; no other tree stands
+    in for it. Any other error ends the request.
+    """
+    tree = os.path.join(root, TREES, tree_id)
+    try:
+        descriptor = os.open(tree, os.O_RDONLY | os.O_DIRECTORY)
+    except (FileNotFoundError, NotADirectoryError):
+        raise tree_gone(tree_id) from None
+    if not _locked_if_same(descriptor, tree):
+        raise tree_gone(tree_id)
+    return tree, descriptor
+
+
 @contextlib.contextmanager
-def held_tree(root: str) -> Iterator[str]:
-    """The current tree, held for as long as the block runs: a copy removes no held tree (:func:`remove_others`).
+def held_tree(root: str, tree_id: str) -> Iterator[str]:
+    """The tree *tree_id*, held for as long as the block runs: a copy removes no held tree (:func:`remove_others`).
 
     The lock lives on a descriptor of the tree's directory that this process
     keeps, and a sandboxed program must not inherit: a directory descriptor
     opened outside the sandbox writes through its read-only view. That is why
     the dispatcher waits for ``bwrap`` rather than becoming it.
     """
-    tree, descriptor = _lock_current(root)
+    tree, descriptor = _lock_tree(root, tree_id)
     try:
         yield tree
     finally:
@@ -344,9 +347,9 @@ def run_held(tree: str, kind: Kind, target: str, arguments: list[str]) -> int:
     return status if status >= 0 else 128 - status
 
 
-def run_sandboxed(root: str, kind: Kind, target: str, arguments: list[str]) -> int:
-    """Run the question or the probe script *target* of the current tree in the sandbox; its own status."""
-    with held_tree(root) as tree:
+def run_sandboxed(root: str, tree_id: str, kind: Kind, target: str, arguments: list[str]) -> int:
+    """Run the question or the probe script *target* of the tree *tree_id* in the sandbox; its own status."""
+    with held_tree(root, tree_id) as tree:
         return run_held(tree, kind, target, arguments)
 
 
@@ -458,7 +461,7 @@ def take(root: str, stream: IO[bytes]) -> str:
     for the next copy to remove.
     """
     try:
-        tree = tempfile.mkdtemp(prefix="tree-", dir=os.path.join(root, TREES))
+        tree = tempfile.mkdtemp(prefix=TREE_PREFIX, dir=os.path.join(root, TREES))
     except OSError as error:
         raise Stop(
             COPY_FAILED, COULD_NOT_START.format(PREFIX, error)
@@ -489,7 +492,12 @@ def take(root: str, stream: IO[bytes]) -> str:
 
 
 def copy(root: str, stream: IO[bytes]) -> int:
-    """Take the tree on *stream*; a copy that does not arrive whole leaves the current one as it was."""
+    """Take the tree on *stream* and answer its id on stdout; a copy that does not arrive whole leaves the current
+    one as it was.
+
+    The id, the one line this request writes on stdout, is what a question
+    names to run from this tree and no other (:func:`held_tree`).
+    """
     if not hasattr(tarfile, "data_filter"):
         raise Stop(
             CANNOT_RUN,
@@ -512,6 +520,7 @@ def copy(root: str, stream: IO[bytes]) -> int:
         notes = remove_others(trees, tree)
     for note in notes:
         sys.stderr.write("{}: the copy is current, but {}.\n".format(PREFIX, note))
+    sys.stdout.write(os.path.basename(tree) + "\n")
     return 0
 
 
@@ -522,11 +531,13 @@ def dispatch(request: str, root: str) -> int:
         os.execv(sys.executable, [sys.executable, "-I", "-"])
     if words == ["copy"]:
         return copy(root, sys.stdin.buffer)
-    if len(words) == 2 and words[0] == "ask":
-        return run_sandboxed(root, "module", "atlas", decode(words[1], request))
-    if len(words) in (2, 3) and words[0] == "probe" and PROBE_NAME.fullmatch(words[1]):
-        arguments = decode(words[2], request) if len(words) == 3 else []
-        return run_sandboxed(root, "path", words[1], arguments)
+    if len(words) < 3 or not TREE_ID.fullmatch(words[1]):
+        raise refused(request)
+    if len(words) == 3 and words[0] == "ask":
+        return run_sandboxed(root, words[1], "module", "atlas", decode(words[2], request))
+    if len(words) in (3, 4) and words[0] == "probe" and PROBE_NAME.fullmatch(words[2]):
+        arguments = decode(words[3], request) if len(words) == 4 else []
+        return run_sandboxed(root, words[1], "path", words[2], arguments)
     raise refused(request)
 
 

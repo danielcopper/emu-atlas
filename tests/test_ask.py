@@ -717,7 +717,7 @@ class TestTheDispatchersOwnStatuses:
         assert err == (
             "emu-atlas-dev: refused: copy\n"
             "emu-atlas-dev: that was handheld's dispatcher (3, REFUSED), not atlas or a probe.\n"
-            "  The dispatcher there may be older than this client; run the setup again:\n"
+            "  The dispatcher there is older than this client; run the setup again, which installs the current one:\n"
             "    mise run setup:remote-target handheld <destination>\n"
             "  Nothing was asked.\n"
         )
@@ -931,7 +931,8 @@ class TestTheFirstProbe:
 
         result = subprocess.run(
             [sys.executable, "-I", str(installed)], capture_output=True, text=True, check=False,
-            env={**env, "SSH_ORIGINAL_COMMAND": "probe answers_agree.py"}, cwd=sandbox_home,
+            env={**env, "SSH_ORIGINAL_COMMAND": f"probe {copied.stdout.decode().strip()} answers_agree.py"},
+            cwd=sandbox_home,
         )
 
         assert result.returncode == 0, result.stdout + result.stderr
