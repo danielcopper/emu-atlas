@@ -1177,7 +1177,16 @@ class TestTheAnswer:
                     raise ValueError("an unforeseen value")
             raise AssertionError("the probe never started")
 
+        real_crashed = ask.crashed
+        gone_when_reported: list[bool] = []
+
+        def reports(phase: ask.Phase) -> int:
+            """The run ends while the exception, and the client's hold on ssh's pipes with it, is still alive."""
+            gone_when_reported.append(gone_within(token, 30))
+            return real_crashed(phase)
+
         monkeypatch.setattr(ask, "read_answer", reads_then_crashes)
+        monkeypatch.setattr(ask, "crashed", reports)
         try:
             status, _, err = called(capfd, "probe", "--target", "handheld", "linger.py", token)
 
@@ -1186,7 +1195,7 @@ class TestTheAnswer:
                 "emu-atlas-dev: this client failed while asking the target (the traceback is above). What the run"
                 " printed is above; its status is lost.\n"
             )
-            assert gone_within(token, 30), processes_holding(token)
+            assert gone_when_reported == [True], processes_holding(token)
         finally:
             end_what_is_left(token)
 
