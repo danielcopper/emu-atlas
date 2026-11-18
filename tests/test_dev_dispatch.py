@@ -176,7 +176,13 @@ def a_probe_running_while_a_copy_lands(home: Path, go: Path) -> None:
 
 
 def processes_holding(token: str) -> list[int]:
-    """The processes on this machine whose command line holds *token*."""
+    """The processes on this machine whose command line holds *token*.
+
+    A process in the middle of an ``execve`` reads as an empty command line, so
+    a scan can miss one that is still starting — the ``bwrap`` stand-in becoming
+    the probe's interpreter, or ``bwrap`` starting it. Wait for a line the probe
+    writes before scanning for it.
+    """
     found = []
     for name in os.listdir("/proc"):
         if not name.isdigit() or int(name) == os.getpid():
@@ -231,11 +237,16 @@ def a_probe_whose_caller_hangs_up(home: Path) -> None:
 
 
 # Starts the dispatcher with its output on a pipe only this process reads,
-# prints the dispatcher's pid, and waits to be killed: the parent that goes.
+# prints the dispatcher's pid, passes on the line the probe writes once it
+# runs, and waits to be killed, the pipe still open: the parent that goes.
 _PARENT = (
     "import os, subprocess, sys, time\n"
     "child = subprocess.Popen(sys.argv[1:], stdin=subprocess.DEVNULL, stdout=subprocess.PIPE)\n"
     "print(child.pid, flush=True)\n"
+    "for line in child.stdout:\n"
+    "    if line == b'started\\n':\n"
+    "        print('started', flush=True)\n"
+    "        break\n"
     "time.sleep(600)\n"
 )
 
@@ -253,9 +264,7 @@ def a_probe_whose_caller_goes(home: Path) -> None:
     try:
         assert parent.stdout is not None
         dispatcher = int(parent.stdout.readline())
-        deadline = time.monotonic() + 30
-        while not processes_holding(token) and time.monotonic() < deadline:
-            time.sleep(0.05)
+        assert parent.stdout.readline() == b"started\n"
         assert processes_holding(token)
         parent.kill()
         parent.wait()
