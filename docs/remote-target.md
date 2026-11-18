@@ -8,6 +8,8 @@ needs no checkout and no toolchain; everything it runs is in `/usr/bin`.
 ```bash
 mise run setup:remote-target <name> <destination>           # log in, install, and record the target here
 mise run setup:remote-target <name> <destination> --print   # print a script to run on the target instead
+mise run ask --target <name> -- <question>                  # then: ask atlas a question there
+mise run probe --target <name> <script> [arguments]         # or run a probe script of scripts/probes/ there
 ```
 
 `<destination>` is anything your own `ssh` reaches: `player@192.0.2.20`, or an alias from your `~/.ssh/config`, which
@@ -194,6 +196,60 @@ finishes that too. Interrupted with Ctrl-C, the setup says which side may be par
 A target whose address changed is set up again with the new one, and needs no password for it: the key still holds,
 because `from=` bounds the build host's address, not the target's.
 
+## Asking a target
+
+```bash
+mise run ask [--target <name>] -- <question>
+mise run probe [--target <name>] <script> [arguments]
+```
+
+`<question>` is what `python -m atlas` takes, word for word; `<script>` is a file name in `scripts/probes/`, whose
+`README.md` says what a probe script may do. Without `--target` both run here, on this tree's interpreter with this
+tree's `atlas`, and nothing else changes. `--target <name>` (or `--target=<name>`) counts only as the first argument:
+everything after it is the question, so
+`mise run ask --target handheld -- save-portability gba --source <a> --target
+<b>` keeps the question's own `--target`.
+
+**Every call copies first.** With `--target`, the client reads the target's entry from this tool's SSH config alone
+(`ssh -F ~/.config/emu-atlas-dev/ssh_config`) — so with the restricted key alone, and nothing of your own SSH config —
+and sends a `copy` of the working tree as it stands, uncommitted edits and all: every file and directory under `atlas/`
+and `scripts/probes/`, without `__pycache__` and `*.pyc`, in a stable order, then `tree.json` with `pyproject.toml`'s
+floor. A link, or anything else that is no file or directory, is left out and named on stderr. Then it sends
+`ask <word>` or `probe <name> [<word>]`. The run's stdout arrives on stdout and its stderr on stderr, byte for byte, and
+its exit status is the command's. A note the copy writes on stderr — an older tree it could not remove — is shown there,
+and the question is still asked. `ssh` gives up on an address that takes no connection within 15 seconds.
+
+What comes back describes one machine: it is printed here and written nowhere, the tree included.
+
+**The statuses.** atlas ends with 0 or 2; the dispatcher's 3, 4 and 5 are passed on with what it said and a line that
+names them as the dispatcher's. The client's own are none of those, and a probe script ends with 0, 1 or 2 so that its
+status is never taken for one of them:
+
+- **2 `USAGE`** — the call could not be put, as for atlas: no question, no probe script, a script `scripts/probes/` does
+  not hold or the dispatcher would not take, or a target name the setup would not accept. Nothing was contacted.
+- **6 `NOT_ASKED`** — nothing was asked and nothing was done on the target: no such target, a copy that could not be
+  built here, or an `ssh` that ended before the login (below).
+- **7 `BROKE_OFF`** — the request reached the target and ended without a status of the dispatcher's or the run's: the
+  connection broke, or the dispatcher there did not run. After a copy, the target's current tree is that copy whole or
+  the one before it. A run that itself ends with 255, `ssh`'s own failure status, ends the call with 7 as well: the two
+  cannot be told apart.
+
+Each failure before the login says what to do and ends with **nothing done on the target**, or, after a copy went
+through, that the question was not asked and the copy is current there:
+
+| What the call meets                     | What to do                                                                                |
+| --------------------------------------- | ----------------------------------------------------------------------------------------- |
+| no entry for the name                   | set the target up first: `mise run setup:remote-target <name> <destination>`              |
+| a name this machine cannot resolve      | run the setup with the target's address, or a name the network resolves                   |
+| no SSH server answering                 | the target may be asleep: wake it; or it has a new address: run the setup with that one   |
+| a host key that is not the recorded one | another machine may answer there; if the target was reinstalled, remove its record, rerun |
+| no record of the target's host key      | run the setup again: it shows the fingerprint and records it                              |
+| the build host's key refused            | run the setup again: the address the target sees this machine at may have changed         |
+| a hop on the way that fails             | as the setup words it: check that hop with your own `ssh`                                 |
+
+The failures are told apart by the setup's own reading of `ssh`'s stderr (`ssh_failure` in
+`scripts/setup_remote_target.py`), so the two cannot drift apart.
+
 ## A device that is also a romm-tender target
 
 romm-tender sets up targets the same way, with a key of its own and its own line in the same `authorized_keys`. This
@@ -203,13 +259,20 @@ same time** against one device: the one that finishes second would not carry the
 
 ## What rests on OpenSSH's documentation alone
 
-Everything the setup reads off `ssh` — `ssh -G`'s output format, the messages on stderr it tells failures apart by, and
-exit status 255 for a failure of `ssh`'s own — follows OpenSSH's documentation and source, **not a measurement against a
-real server**. The tests run against a stand-in `ssh` (`tests/remote_target.py`) that prints what OpenSSH is documented
-to print; what it does is not evidence of what `ssh` does. A message no pattern knows is quoted as `ssh` wrote it. The
+Measured on OpenSSH 10.0p2 with `ssh -G -F /dev/null …`, which reads no config and connects nowhere: `--` before the
+destination is accepted, also after `-p <port>`; the output is lowercase `key value` lines; and a destination that reads
+as an option after `--` is refused by `ssh` itself (255, "hostname contains invalid characters"). The entry the setup
+writes, read with `-F` alone and the client's own `-T -o ConnectTimeout=15 --`, resolves to its address, user, key,
+known-hosts file and `BatchMode yes` there as well.
+
+Everything else the setup and the client read off `ssh` — the messages on stderr they tell failures apart by, and exit
+status 255 for a failure of `ssh`'s own — follows OpenSSH's documentation and source, **not a measurement against a real
+server**. The tests run against a stand-in `ssh` (`tests/remote_target.py`) that prints what OpenSSH is documented to
+print; what it does is not evidence of what `ssh` does. A message no pattern knows is quoted as `ssh` wrote it. The
 patterns steer more than the message, though: whether the setup hands over from the key's login to your own (on
 `Permission denied (`) and whether a failure is the target's or a hop's depend on them, so a change in OpenSSH's wording
-can change what the setup does, not only what it says.
+can change what the setup does, not only what it says. The same holds for the client's status: a failure before the
+login it does not recognise ends the call with 7, not 6.
 
 Two things on the target side rest on the same reading. sshd sends a command that runs without a terminal no signal when
 its connection drops, which is why the dispatcher watches its own output for the hang-up and ends the run itself; that

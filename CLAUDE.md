@@ -114,6 +114,8 @@ mise run contract    # regenerate and format docs/contract-reference.md from thi
 mise run matrix      # regenerate and format docs/research/coverage-matrix.md from this tree
 mise run snapshot-platforms  # re-record every single-key platform answer; by hand, once each moved key is meant
 mise run setup:remote-target <name> <destination>  # set another machine up as a remote target (docs/remote-target.md)
+mise run ask [--target <name>] -- <question>       # one question to atlas, here or on a set-up target
+mise run probe [--target <name>] <script> [args]   # a probe script of scripts/probes/, here or on a set-up target
 ```
 
 `mise run complexity` moves the first complexity measurement to before the push; the Sonar gate on the pull request is
@@ -136,7 +138,8 @@ measures them — so a clean Sonar page does not mean a green gate.
   deployment, a few core probes skip for reasons of the core or the interpreter rather than of the deployment, and
   `pytest -rs` lists each with its reason. The EmuDeck tripwires and the checks of standalone Flathub builds go
   unchecked without those installations, and the canary deploys neither. Several tripwires judge only the builds and
-  cores present and name none they passed over, so a pass does not say everything pinned was checked.
+  cores present and name none they passed over, so a pass does not say everything pinned was checked. Nor does the gate
+  ask a set-up installation: see "Asking a set-up installation".
 - **Review checks**: `basedpyright <files>`, `deno fmt --check <files>`
 - **Worktree task**: `mise run worktree-new` (a global mise task from the owner's dotfiles, not in this repository)
 - **Agent rules**:
@@ -154,6 +157,16 @@ measures them — so a clean Sonar page does not mean a green gate.
   - Stop only your own processes, by PID; never `pkill` or `killall`.
   - No device values or ROM titles in committed text; describe data shapes.
 
+## Asking a set-up installation
+
+A machine with RetroDECK installed and never started answers `not-set-up` to every question, so nothing on it states
+what atlas says on a set-up installation with content, firmware and saves. A change that alters such an answer is
+checked on one, from the build host: `mise run ask --target <name> -- <question>` puts one question to a target set up
+with `mise run setup:remote-target`, and `mise run probe --target <name> <script>` runs a probe script there
+(`docs/remote-target.md`, `scripts/probes/README.md`). What comes back describes one machine: it never goes into the
+tree, a commit, a pull request or an issue — describe its shape. The live round that saves in a game stays at the
+device. An agent asks a target only when its brief says so.
+
 ## Pitfalls
 
 - **Worktrees**: fresh worktrees need `mise trust && mise run setup` (per-directory venvs). mise does not rebuild an
@@ -166,5 +179,6 @@ measures them — so a clean Sonar page does not mean a green gate.
   description of its format — every input key, the question each query key asks, and how an expected block is asserted —
   so read it before writing or editing a vector; `tests/test_vectors_readme.py` fails when the validator accepts an
   input key the README does not name.
-- Live verification against the real RetroDECK installation on this machine is the final check for resolver changes;
-  fixtures prove logic, the machine proves reality.
+- Live verification against a set-up installation is the final check for resolver changes — this machine's where it has
+  one, otherwise a target asked as "Asking a set-up installation" says; fixtures prove logic, the machine proves
+  reality.

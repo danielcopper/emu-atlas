@@ -65,6 +65,22 @@ run = '''
 exec python scripts/setup_remote_target.py ${usage_print:+--print} -- "$usage_name" "$usage_destination"
 '''
 
+[tasks.ask]
+description = "Ask atlas one question, here or with --target <name> on a remote target: mise run ask [--target <name>] -- <question>"
+# One line and no usage spec: mise appends the arguments to that line, each
+# quoted as one word, and leaves a later --target to the question
+# (save-portability --target <label>); a usage spec would take it out. The
+# script reads its own --target only as the first argument. `raw` so the
+# answer reaches stdout untouched, whatever output mode mise is set to.
+raw = true
+run = "python scripts/ask.py ask"
+
+[tasks.probe]
+description = "Run a probe script of scripts/probes/, here or with --target <name> on a remote target: mise run probe [--target <name>] <script> [arguments]"
+# As the ask task: one line, no usage spec, raw.
+raw = true
+run = "python scripts/ask.py probe"
+
 [tasks.test-oldest]
 description = "Run the tests on the oldest supported interpreter (the floor `test` does not cover)"
 # By hand, not part of `test` or the gate: this one needs its own venv and, the first
