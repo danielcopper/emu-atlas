@@ -837,6 +837,31 @@ class TestWhatTheTargetLacks:
             " install bubblewrap, or allow unprivileged user namespaces." in err
         )
 
+    @pytest.mark.parametrize(
+        ("reason", "reworded", "repair"),
+        [
+            ("there is none", "nothing lies at that path", "install bubblewrap"),
+            ("it said: {}", "it answered: {}", "install bubblewrap, or allow unprivileged user namespaces"),
+        ],
+        ids=["missing", "no sandbox"],
+    )
+    def test_the_repair_follows_the_kind_of_failure_not_the_wording_of_its_reason(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, reason: str, reworded: str, repair: str
+    ) -> None:
+        from scripts import dev_target_install
+
+        source = DISPATCHER.read_text(encoding="utf-8")
+        assert source.count(f'"{reason}"') == 1
+        monkeypatch.setattr(dev_target_install, "DISPATCHER_SOURCE", source.replace(f'"{reason}"', f'"{reworded}"'))
+        monkeypatch.setattr(dev_target_install, "VALUES", {"lacks": "lacks: "})
+        bwrap = tmp_path / "no-bwrap" if repair == "install bubblewrap" else Path(fake_path(tmp_path)) / "bwrap-broken"
+
+        with pytest.raises(dev_target_install.Stop) as stop:
+            dev_target_install.check_sandbox(str(bwrap), sys.executable)
+
+        assert stop.value.line.endswith(f"; {repair}")
+        assert f" — {reworded.split(':')[0]}" in stop.value.line
+
     @pytest.mark.parametrize("lacking", ["python", "bwrap"])
     def test_the_printed_script_refuses_the_same_way(
         self, remote: Remote, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch, lacking: str

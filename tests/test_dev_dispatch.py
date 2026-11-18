@@ -304,7 +304,7 @@ def copied(home: Path, files: dict[str, bytes], *, manifest: bytes | None = MANI
 def sandbox_unavailable() -> str | None:
     """Why the real sandbox cannot be shown here, or ``None`` where it starts: the dispatcher's own trial."""
     failure = dev_dispatch.sandbox_failure(REAL_BWRAP, sys.executable)
-    return None if failure is None else f"{REAL_BWRAP} cannot start a sandbox here: {failure}"
+    return None if failure is None else f"{REAL_BWRAP} cannot start a sandbox here: {failure[1]}"
 
 
 @pytest.fixture
@@ -610,6 +610,26 @@ class TestTheCopy:
         assert "the current tree is as it was." in result.stderr.decode()
         assert snapshot(home / ROOT) == before
 
+    @pytest.mark.skipif(os.geteuid() == 0, reason="root creates a directory whatever its parent's mode")
+    def test_a_trees_directory_that_takes_no_new_tree_leaves_the_root_as_it_was(self, home: Path) -> None:
+        """The directory is there, so the copy gets past creating it and fails making the new tree in it."""
+        install(home)
+        copied(home, {"atlas/__init__.py": b"the tree that was there\n"})
+        trees = home / ROOT / "trees"
+        trees.chmod(0o500)
+        try:
+            before = snapshot(home / ROOT)
+            result = dispatch(home, "copy", tar({"atlas/__init__.py": b"new\n"}))
+            after = snapshot(home / ROOT)
+        finally:
+            trees.chmod(0o700)
+
+        assert result.returncode == dev_dispatch.COPY_FAILED, result.stderr
+        message = result.stderr.decode()
+        assert message.startswith(f"emu-atlas-dev: the copy could not start ([Errno {errno.EACCES}] Permission denied")
+        assert message.endswith("); the current tree is as it was.\n")
+        assert after == before
+
     def test_older_trees_that_cannot_be_listed_leave_the_copy_current_and_named(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
     ) -> None:
@@ -797,6 +817,35 @@ class TestWhatCannotRun:
         message = self._cannot_run(home, f"ask {word([])}")
 
         assert f"no sandbox at {not_executable} — it is not executable; nothing ran." in message
+
+    @pytest.mark.parametrize(
+        ("which", "repair"),
+        [
+            ("missing", "install bubblewrap"),
+            ("not executable", "install bubblewrap"),
+            ("no sandbox", "install bubblewrap, or allow unprivileged user namespaces"),
+        ],
+    )
+    def test_its_refusal_names_the_repair_the_setup_names(
+        self, home: Path, tmp_path: Path, fakes: Path, monkeypatch: pytest.MonkeyPatch, which: str, repair: str
+    ) -> None:
+        from scripts import dev_target_install
+
+        bwrap = {"missing": tmp_path / "no-bwrap", "no sandbox": fakes / "bwrap-broken"}.get(which, tmp_path / "bwrap")
+        if which == "not executable":
+            bwrap.write_text("", encoding="utf-8")
+            bwrap.chmod(0o644)
+        install(home, bwrap=str(bwrap))
+        copied(home, _SAYING_ATLAS)
+        monkeypatch.setattr(dev_target_install, "DISPATCHER_SOURCE", DISPATCHER.read_text(encoding="utf-8"))
+        monkeypatch.setattr(dev_target_install, "VALUES", {"lacks": ""})
+
+        message = self._cannot_run(home, f"ask {word([])}")
+        with pytest.raises(dev_target_install.Stop) as lacking:
+            dev_target_install.check_sandbox(str(bwrap), sys.executable)
+
+        assert message.endswith(f"; nothing ran.\n  To repair: {repair} on this target.\n")
+        assert lacking.value.line.endswith(f"; {repair}")
 
     def test_a_lock_the_file_system_refuses_ends_the_question_with_the_error(
         self, home: Path, fakes: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]

@@ -103,7 +103,7 @@ copy stays current, and a later copy tries again.
 read-only, except a fresh `/dev` and `/tmp` that are writable and gone with the run; a process view of its own, in which
 it sees its own processes and none of the device's; and no network. Without a `/usr/bin/bwrap`, or with one that cannot
 start a sandbox — a kernel that forbids unprivileged user namespaces — nothing runs, ever: the dispatcher refuses with
-the reason rather than run unsandboxed.
+the reason and the repair the setup names for the same failure, rather than run unsandboxed.
 
 **The run's lifetime.** The dispatcher waits for `bwrap` and ends the run when its connection is gone — when nothing
 reads its output any more — and the sandboxed program ends with `bwrap`. For as long as a question or a probe runs, the
@@ -154,15 +154,15 @@ the build host cannot know.
 Each refusal says what to do next and ends with whether anything was changed. These end it with **nothing changed, here
 or on the target**:
 
-| What the setup meets                        | What to do                                                                                                        |
-| ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| a name this machine cannot resolve          | give the target's address, or a name the network resolves                                                         |
-| no SSH server answering                     | check the address, and that the target runs an SSH server                                                         |
-| no login accepted                           | `--print`, as above — behind a jump host or proxy command, a login of yours on the target                         |
-| a host key that is not the recorded one     | another machine may answer at that address; if the target was reinstalled, remove its record                      |
-| the key refused (after `--print`)           | the address the printed script restricted the key to; run it again with the right one                             |
-| a target lacking `/usr/bin/python3`         | install Python at or above the floor there; the message names the floor, and the version found where there is one |
-| a target lacking a working `/usr/bin/bwrap` | install bubblewrap there, or allow unprivileged user namespaces; the message quotes `bwrap`                       |
+| What the setup meets                        | What to do                                                                                                                                                 |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| a name this machine cannot resolve          | give the target's address, or a name the network resolves                                                                                                  |
+| no SSH server answering                     | check the address, and that the target runs an SSH server                                                                                                  |
+| no login accepted                           | `--print`, as above — behind a jump host or proxy command, a login of yours on the target                                                                  |
+| a host key that is not the recorded one     | another machine may answer at that address; if the target was reinstalled, remove its record                                                               |
+| the key refused (after `--print`)           | the address the printed script restricted the key to; run it again with the right one                                                                      |
+| a target lacking `/usr/bin/python3`         | install Python at or above the floor there; the message names the floor, and the version found where there is one                                          |
+| a target lacking a working `/usr/bin/bwrap` | install bubblewrap there — or, where one runs but starts no sandbox, allow unprivileged user namespaces; the message says which, quoting what `bwrap` said |
 
 When `ssh` names a jump host on the way as the one that failed — a name this machine cannot resolve, a host key your own
 files record differently, a login it refused, no server answering — the message names the hop, and the setup leaves your
@@ -174,9 +174,10 @@ terminal, ends the setup the same way. A login that runs no install at all ends 
 A failure counts as one before the login only where the install never started and `ssh` ended with its own failure
 status (255): the remote shell's login files write to the same stderr as `ssh`, so a `Permission denied` they print is
 not taken for a refused key. Once the install has started, a failure is the target's, and this machine is unchanged. The
-install builds its files first and moves them into place last. One that fails with an error removes the directories it
-created, once empty, and a dispatcher it put where none was, unless `authorized_keys` is already in place; what it
-cannot take back, the message names. One that is killed takes back nothing. It ends one of three ways:
+install builds its files first and moves them into place last. One that refuses to go on or fails with an error takes
+back what it can: the directories it created, once empty, and a dispatcher it put where none was, unless
+`authorized_keys` is already in place; what it cannot take back, the message names. One that is killed takes back
+nothing. It ends one of three ways:
 
 - **It refuses to go on** — no address it can restrict the key to, a home the key's line cannot carry, or a rebuilt
   `authorized_keys` that did not come out whole: the setup gives its reason. Running it again as it stands would not

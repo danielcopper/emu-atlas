@@ -199,30 +199,56 @@ def check_floor(floor: tuple[int, int]) -> None:
         )
 
 
-def sandbox_failure(bwrap: str, python: str) -> str | None:
-    """Why *bwrap* cannot start the sandbox here with *python* in it; ``None`` where it can.
+SandboxFailure = Literal["missing", "not executable", "did not start", "failed"]
+"""How a ``bwrap`` fails the trial: none there, not executable, not started, or unable to start a sandbox."""
 
-    The one trial both this dispatcher and the setup's install script run.
+
+def sandbox_failure(bwrap: str, python: str) -> tuple[SandboxFailure, str] | None:
+    """How *bwrap* fails to start the sandbox here with *python* in it, and why; ``None`` where it can.
+
+    The one trial both this dispatcher and the setup's install script run. The
+    kind, not the wording of the reason, decides the repair (:func:`sandbox_repair`).
     """
     if not os.path.lexists(bwrap):
-        return "there is none"
+        return "missing", "there is none"
     if not os.access(bwrap, os.X_OK):
-        return "it is not executable"
+        return "not executable", "it is not executable"
     trial = sandboxed(bwrap, [python, "-I", "-S", "-c", "pass"])
     try:
         result = subprocess.run(trial, stdin=subprocess.DEVNULL, capture_output=True, check=False)
     except OSError as error:
-        return "it did not start: {}".format(reason(error))
+        return "did not start", "it did not start: {}".format(reason(error))
     if result.returncode != 0:
-        return "it said: {}".format(result.stderr.decode("utf-8", "replace").strip() or result.returncode)
+        return "failed", "it said: {}".format(result.stderr.decode("utf-8", "replace").strip() or result.returncode)
     return None
+
+
+def sandbox_repair(kind: SandboxFailure) -> str:
+    """What makes a ``bwrap`` that failed the trial as *kind* start the sandbox; the setup's install says the same.
+
+    Where there is a ``bwrap`` that runs, a kernel that forbids unprivileged
+    user namespaces is the other likely cause.
+    """
+    if kind in ("missing", "not executable"):
+        return "install bubblewrap"
+    return "install bubblewrap, or allow unprivileged user namespaces"
+
+
+def no_sandbox(bwrap: str, kind: SandboxFailure, why: str) -> Stop:
+    """The refusal for a *bwrap* that starts no sandbox: what it is, that nothing ran, and the repair."""
+    return Stop(
+        CANNOT_RUN,
+        "{}: no sandbox at {} — {}; nothing ran.\n  To repair: {} on this target.".format(
+            PREFIX, bwrap, why, sandbox_repair(kind)
+        ),
+    )
 
 
 def check_sandbox(bwrap: str) -> None:
     """Refuse unless *bwrap* starts a sandbox here: nothing runs unsandboxed, ever."""
     failure = sandbox_failure(bwrap, sys.executable)
     if failure is not None:
-        raise Stop(CANNOT_RUN, "{}: no sandbox at {} — {}; nothing ran.".format(PREFIX, bwrap, failure))
+        raise no_sandbox(bwrap, failure[0], failure[1])
 
 
 def _locked_if_same(descriptor: int, tree: str) -> bool:
@@ -305,9 +331,7 @@ def run_held(tree: str, kind: Kind, target: str, arguments: list[str]) -> int:
     try:
         process = subprocess.Popen(sandboxed(BWRAP, command))
     except OSError as error:
-        raise Stop(CANNOT_RUN, "{}: no sandbox at {} — it did not start: {}; nothing ran.".format(
-            PREFIX, BWRAP, reason(error)
-        ))
+        raise no_sandbox(BWRAP, "did not start", "it did not start: {}".format(reason(error))) from None
     try:
         threading.Thread(target=end_on_hang_up, args=(process, sys.stdout.fileno()), daemon=True).start()
     except RuntimeError as error:
