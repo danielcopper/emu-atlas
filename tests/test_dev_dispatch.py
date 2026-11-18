@@ -405,8 +405,8 @@ class TestTheRefusals:
         )
 
     def test_its_statuses_are_none_atlas_uses_and_differ(self) -> None:
-        statuses = {dev_dispatch.REFUSED, dev_dispatch.CANNOT_RUN, dev_dispatch.COPY_FAILED}
-        assert len(statuses) == 3
+        statuses = {dev_dispatch.REFUSED, dev_dispatch.CANNOT_RUN, dev_dispatch.COPY_FAILED, dev_dispatch.TREE_GONE}
+        assert len(statuses) == 4
         assert statuses.isdisjoint({0, 1, 2})
 
 
