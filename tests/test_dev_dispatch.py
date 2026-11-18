@@ -30,26 +30,34 @@ import errno
 import io
 import json
 import os
-import shutil
 import signal
 import subprocess
 import sys
 import tarfile
-import tempfile
 import time
 import uuid
-from collections.abc import Callable, Iterator
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
 
 from scripts import dev_dispatch, setup_remote_target
 from tests.remote_target import GUARDED_VARIABLE, fake_path
-from tests.remote_target_suite import DISPATCHER, INSTALL_SCRIPT, REPO, ROOT, contents, isolated_module, snapshot
+from tests.remote_target_suite import (
+    DISPATCHER,
+    INSTALL_SCRIPT,
+    REAL_BWRAP,
+    REPO,
+    ROOT,
+    contents,
+    isolated_module,
+    sandbox_home,
+    snapshot,
+)
+from tests.remote_target_suite import install_dispatcher as install
 
 pytestmark = pytest.mark.usefixtures(isolated_module.__name__)
 
-REAL_BWRAP = "/usr/bin/bwrap"
 MANIFEST = b'{"requires_python": "3.12"}'
 
 DEPLOYED_CORES = Path(
@@ -87,17 +95,6 @@ def fakes(tmp_path: Path) -> Path:
 def word(arguments: list[str]) -> str:
     """The argument list as a request carries it: JSON, UTF-8, base64url without padding."""
     return base64.urlsafe_b64encode(json.dumps(arguments).encode("utf-8")).decode("ascii").rstrip("=")
-
-
-def install(home: Path, *, bwrap: str = REAL_BWRAP, root: Path = ROOT) -> Path:
-    """The dispatcher, installed under *home* as the setup installs it, naming *bwrap* for its sandbox."""
-    installed = home / root / "dispatch.py"
-    installed.parent.mkdir(parents=True, exist_ok=True)
-    source = DISPATCHER.read_text(encoding="utf-8")
-    line = f'BWRAP = "{REAL_BWRAP}"\n'
-    assert source.count(line) == 1
-    installed.write_text(source.replace(line, f"BWRAP = {bwrap!r}\n"), encoding="utf-8")
-    return installed
 
 
 def environment(home: Path, request: str | None) -> dict[str, str]:
@@ -306,12 +303,13 @@ def atlas_files() -> dict[str, bytes]:
 
 
 def copied(home: Path, files: dict[str, bytes], *, manifest: bytes | None = MANIFEST) -> Path:
-    """*files* copied in through the dispatcher; the tree ``current`` then names, whose id the copy answered with."""
+    """*files* copied in through the dispatcher; the tree whose id the copy answered with, which ``current`` names."""
     result = dispatch(home, "copy", tar(files, manifest=manifest))
     assert result.returncode == 0, result.stderr
-    tree = (home / ROOT / "current").resolve()
-    assert result.stdout == f"{tree.name}\n".encode()
-    return tree
+    tree = home / ROOT / "trees" / result.stdout.decode().removesuffix("\n")
+    assert tree.is_dir()
+    assert (home / ROOT / "current").resolve() == tree.resolve()
+    return tree.resolve()
 
 
 MARKER_LINE = (dev_dispatch.RUN_MARKER + "\n").encode()
@@ -321,33 +319,6 @@ def answered(result: subprocess.CompletedProcess[bytes]) -> bytes:
     """What a run wrote on stdout: what follows the marker the dispatcher writes right before the run starts."""
     assert result.stdout.startswith(MARKER_LINE), result.stdout
     return result.stdout[len(MARKER_LINE) :]
-
-
-def latest(home: Path) -> str:
-    """The id of the tree the last copy into *home* made."""
-    return (home / ROOT / "current").resolve().name
-
-
-def sandbox_unavailable() -> str | None:
-    """Why the real sandbox cannot be shown here, or ``None`` where it starts: the dispatcher's own trial."""
-    failure = dev_dispatch.sandbox_failure(REAL_BWRAP, sys.executable)
-    return None if failure is None else f"{REAL_BWRAP} cannot start a sandbox here: {failure[1]}"
-
-
-@pytest.fixture
-def sandbox_home() -> Iterator[Path]:
-    """A home outside ``/tmp`` — the sandbox puts an empty ``/tmp`` of its own over it — or a skip saying why
-    the sandbox cannot be shown here."""
-    unavailable = sandbox_unavailable()
-    if unavailable is not None:
-        pytest.skip(unavailable)
-    base = Path(tempfile.mkdtemp(prefix="emu-atlas-dev-test-", dir="/var/tmp"))
-    try:
-        (base / "home").mkdir()
-        (base / "outside").mkdir()
-        yield base / "home"
-    finally:
-        shutil.rmtree(base)
 
 
 class TestTheRefusals:
@@ -815,7 +786,7 @@ class TestWhatCannotRun:
         tree = copied(home, _SAYING_ATLAS)
         tree.chmod(0o000)
         try:
-            message = self._cannot_run(home, f"ask {latest(home)} {word([])}")
+            message = self._cannot_run(home, f"ask {tree.name} {word([])}")
         finally:
             tree.chmod(0o700)
 
@@ -823,25 +794,27 @@ class TestWhatCannotRun:
 
     def test_an_interpreter_below_the_trees_floor_is_refused_naming_both_versions(self, home: Path) -> None:
         install(home)
-        copied(home, _SAYING_ATLAS, manifest=b'{"requires_python": "99.0"}')
+        tree = copied(home, _SAYING_ATLAS, manifest=b'{"requires_python": "99.0"}')
         have = ".".join(str(part) for part in sys.version_info[:3])
 
-        message = self._cannot_run(home, f"ask {latest(home)} {word([])}")
+        message = self._cannot_run(home, f"ask {tree.name} {word([])}")
 
         assert f"this target's Python is {have}, below the 99.0 the copied tree needs; nothing ran." in message
 
     def test_without_bwrap_nothing_runs_unsandboxed(self, home: Path, tmp_path: Path) -> None:
         missing = tmp_path / "no-bwrap"
         install(home, bwrap=str(missing))
-        copied(home, _SAYING_ATLAS)
+        tree = copied(home, _SAYING_ATLAS)
 
-        assert f"no sandbox at {missing} — there is none; nothing ran." in self._cannot_run(home, f"ask {latest(home)} {word([])}")
+        message = self._cannot_run(home, f"ask {tree.name} {word([])}")
+
+        assert f"no sandbox at {missing} — there is none; nothing ran." in message
 
     def test_a_bwrap_that_cannot_start_a_sandbox_runs_nothing(self, home: Path, fakes: Path) -> None:
         install(home, bwrap=str(fakes / "bwrap-broken"))
-        copied(home, _SAYING_ATLAS)
+        tree = copied(home, _SAYING_ATLAS)
 
-        message = self._cannot_run(home, f"ask {latest(home)} {word([])}")
+        message = self._cannot_run(home, f"ask {tree.name} {word([])}")
 
         assert f"no sandbox at {fakes / 'bwrap-broken'} — it said: bwrap: setting up uid map: Permission denied;" in message
 
@@ -850,9 +823,9 @@ class TestWhatCannotRun:
         not_executable.write_text("", encoding="utf-8")
         not_executable.chmod(0o644)
         install(home, bwrap=str(not_executable))
-        copied(home, _SAYING_ATLAS)
+        tree = copied(home, _SAYING_ATLAS)
 
-        message = self._cannot_run(home, f"ask {latest(home)} {word([])}")
+        message = self._cannot_run(home, f"ask {tree.name} {word([])}")
 
         assert f"no sandbox at {not_executable} — it is not executable; nothing ran." in message
 
@@ -874,11 +847,11 @@ class TestWhatCannotRun:
             bwrap.write_text("", encoding="utf-8")
             bwrap.chmod(0o644)
         install(home, bwrap=str(bwrap))
-        copied(home, _SAYING_ATLAS)
+        tree = copied(home, _SAYING_ATLAS)
         monkeypatch.setattr(dev_target_install, "DISPATCHER_SOURCE", DISPATCHER.read_text(encoding="utf-8"))
         monkeypatch.setattr(dev_target_install, "VALUES", {"lacks": ""})
 
-        message = self._cannot_run(home, f"ask {latest(home)} {word([])}")
+        message = self._cannot_run(home, f"ask {tree.name} {word([])}")
         with pytest.raises(dev_target_install.Stop) as lacking:
             dev_target_install.check_sandbox(str(bwrap), sys.executable)
 
@@ -889,14 +862,14 @@ class TestWhatCannotRun:
         self, home: Path, fakes: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
     ) -> None:
         install(home, bwrap=str(fakes / "bwrap"))
-        copied(home, _SAYING_ATLAS)
+        tree = copied(home, _SAYING_ATLAS)
 
         def no_locks(descriptor: object, operation: int) -> None:
             raise OSError(errno.ENOLCK, "No locks available")
 
         monkeypatch.setattr(dev_dispatch.fcntl, "flock", no_locks)
         monkeypatch.setattr(dev_dispatch, "root_directory", lambda: str(home / ROOT))
-        monkeypatch.setenv("SSH_ORIGINAL_COMMAND", f"ask {latest(home)} {word([])}")
+        monkeypatch.setenv("SSH_ORIGINAL_COMMAND", f"ask {tree.name} {word([])}")
 
         status = dev_dispatch.main()
 
@@ -929,10 +902,10 @@ class TestWhatCannotRun:
 
     def test_a_probe_the_tree_does_not_hold_is_named(self, home: Path, fakes: Path) -> None:
         install(home, bwrap=str(fakes / "bwrap"))
-        copied(home, _SAYING_ATLAS)
+        tree = copied(home, _SAYING_ATLAS)
 
         assert "the copied tree has no scripts/probes/absent.py; nothing ran." in self._cannot_run(
-            home, f"probe {latest(home)} absent.py"
+            home, f"probe {tree.name} absent.py"
         )
 
 
@@ -943,7 +916,7 @@ class TestWhatReachesTheSandbox:
         install(home, bwrap=str(fakes / "bwrap"))
         tree = copied(home, _SAYING_ATLAS)
 
-        result = dispatch(home, f"ask {latest(home)} {word(['detect'])}")
+        result = dispatch(home, f"ask {tree.name} {word(['detect'])}")
 
         assert result.returncode == 0, result.stderr
         said = json.loads(answered(result))
@@ -954,10 +927,10 @@ class TestWhatReachesTheSandbox:
 
     def test_words_with_blanks_quotes_and_parentheses_arrive_as_they_were(self, home: Path, fakes: Path) -> None:
         install(home, bwrap=str(fakes / "bwrap"))
-        copied(home, _SAYING_ATLAS)
+        tree = copied(home, _SAYING_ATLAS)
         arguments = ["savefile-location", "/run/media/card/roms/A Game (Europe) 'Rev 1' \"x\".chd", "--core", "ü"]
 
-        result = dispatch(home, f"ask {latest(home)} {word(arguments)}")
+        result = dispatch(home, f"ask {tree.name} {word(arguments)}")
 
         assert result.returncode == 0, result.stderr
         assert json.loads(answered(result))["argv"] == arguments
@@ -965,28 +938,28 @@ class TestWhatReachesTheSandbox:
     @pytest.mark.parametrize("status", [0, 2, 7])
     def test_the_questions_own_status_is_passed_through(self, home: Path, fakes: Path, status: int) -> None:
         install(home, bwrap=str(fakes / "bwrap"))
-        copied(home, _SAYING_ATLAS)
+        tree = copied(home, _SAYING_ATLAS)
 
-        assert dispatch(home, f"ask {latest(home)} {word([str(status)])}").returncode == status
+        assert dispatch(home, f"ask {tree.name} {word([str(status)])}").returncode == status
 
     @pytest.mark.parametrize("padded", [False, True], ids=["unpadded", "padded"])
     def test_a_probe_script_runs_with_its_words(self, home: Path, fakes: Path, padded: bool) -> None:
         install(home, bwrap=str(fakes / "bwrap"))
         probe = b"import sys, atlas\nprint(sys.argv[0].endswith('/scripts/probes/two_answers.py'), sys.argv[1:])\n"
-        copied(home, {**_SAYING_ATLAS, "scripts/probes/two_answers.py": probe})
+        tree = copied(home, {**_SAYING_ATLAS, "scripts/probes/two_answers.py": probe})
         encoded = word(["a b", "(c)"])
         encoded += "=" * (-len(encoded) % 4) if padded else ""
 
-        result = dispatch(home, f"probe {latest(home)} two_answers.py {encoded}")
+        result = dispatch(home, f"probe {tree.name} two_answers.py {encoded}")
 
         assert result.returncode == 0, result.stderr
         assert answered(result) == b"True ['a b', '(c)']\n"
 
     def test_a_run_ended_by_a_signal_answers_128_plus_its_number(self, home: Path, fakes: Path) -> None:
         install(home, bwrap=str(fakes / "bwrap"))
-        copied(home, {"scripts/probes/ends.py": b"import os, signal\nos.kill(os.getpid(), signal.SIGTERM)\n"})
+        tree = copied(home, {"scripts/probes/ends.py": b"import os, signal\nos.kill(os.getpid(), signal.SIGTERM)\n"})
 
-        assert dispatch(home, f"probe {latest(home)} ends.py").returncode == 128 + signal.SIGTERM
+        assert dispatch(home, f"probe {tree.name} ends.py").returncode == 128 + signal.SIGTERM
 
     def test_a_probe_that_crashes_ends_with_2_and_its_traceback(self, home: Path, fakes: Path) -> None:
         install(home, bwrap=str(fakes / "bwrap"))
@@ -1013,9 +986,9 @@ class TestWhatReachesTheSandbox:
 
     def test_a_probe_without_words_gets_none(self, home: Path, fakes: Path) -> None:
         install(home, bwrap=str(fakes / "bwrap"))
-        copied(home, {"scripts/probes/bare.py": b"import sys\nprint(sys.argv[1:])\n"})
+        tree = copied(home, {"scripts/probes/bare.py": b"import sys\nprint(sys.argv[1:])\n"})
 
-        result = dispatch(home, f"probe {latest(home)} bare.py")
+        result = dispatch(home, f"probe {tree.name} bare.py")
 
         assert result.returncode == 0, result.stderr
         assert answered(result) == b"[]\n"
@@ -1038,8 +1011,9 @@ class TestTheTreeARequestNames:
         result = dispatch(home, "copy", tar({"atlas/__init__.py": b"\n"}))
 
         assert result.returncode == 0, result.stderr
-        assert result.stdout == f"{latest(home)}\n".encode()
-        assert dev_dispatch.TREE_ID.fullmatch(latest(home))
+        tree_id = result.stdout.decode().removesuffix("\n")
+        assert dev_dispatch.TREE_ID.fullmatch(tree_id)
+        assert (home / ROOT / "trees" / tree_id / "atlas" / "__init__.py").is_file()
 
     def test_a_question_whose_tree_another_copy_replaced_runs_nowhere(self, home: Path, fakes: Path) -> None:
         """Two clients: the first copies, the second copies, then the first asks."""
@@ -1145,7 +1119,7 @@ class TestTheSandboxCommandLine:
         install(home, bwrap=str(recorder))
         tree = copied(home, _SAYING_ATLAS)
 
-        assert dispatch(home, f"ask {latest(home)} {word(['detect'])}").returncode == 0
+        assert dispatch(home, f"ask {tree.name} {word(['detect'])}").returncode == 0
 
         argv = json.loads(record.read_text(encoding="utf-8"))
         command = argv[argv.index("--") + 1 :]
@@ -1172,7 +1146,7 @@ class TestTheRealSandbox:
         tree = copied(home, {"scripts/probes/write.py": probe})
         targets = [str(home / "written"), str(tree / "written"), str(home.parent / "outside" / "written")]
 
-        result = dispatch(home, f"probe {latest(home)} write.py {word(targets)}")
+        result = dispatch(home, f"probe {tree.name} write.py {word(targets)}")
 
         assert result.returncode == 0, result.stderr
         said = json.loads(answered(result))
@@ -1192,9 +1166,9 @@ class TestTheRealSandbox:
             b"print(json.dumps(seen))\n"
         )
         install(sandbox_home)
-        copied(sandbox_home, {"scripts/probes/processes.py": probe})
+        tree = copied(sandbox_home, {"scripts/probes/processes.py": probe})
 
-        result = dispatch(sandbox_home, f"probe {latest(sandbox_home)} processes.py")
+        result = dispatch(sandbox_home, f"probe {tree.name} processes.py")
 
         assert result.returncode == 0, result.stderr
         seen = json.loads(answered(result))
@@ -1232,7 +1206,7 @@ class TestTheRealSandbox:
         install(sandbox_home)
         tree = copied(sandbox_home, {"scripts/probes/descriptors.py": probe})
 
-        result = dispatch(sandbox_home, f"probe {latest(sandbox_home)} descriptors.py")
+        result = dispatch(sandbox_home, f"probe {tree.name} descriptors.py")
 
         assert result.returncode == 0, result.stderr
         assert json.loads(answered(result)) == []
@@ -1241,13 +1215,13 @@ class TestTheRealSandbox:
     def test_a_question_answers_as_it_does_unsandboxed(self, sandbox_home: Path) -> None:
         home = sandbox_home
         install(home)
-        copied(home, atlas_files())
+        tree = copied(home, atlas_files())
         env = {"HOME": str(home), "PATH": os.environ["PATH"]}
         direct = subprocess.run(
             [sys.executable, "-m", "atlas", "detect"], cwd=REPO, capture_output=True, check=True, env=env
         )
 
-        result = dispatch(home, f"ask {latest(home)} {word(['detect'])}")
+        result = dispatch(home, f"ask {tree.name} {word(['detect'])}")
 
         assert result.returncode == 0, result.stderr
         assert answered(result) == direct.stdout
@@ -1263,9 +1237,9 @@ class TestTheRealSandbox:
         )
         home = sandbox_home
         install(home)
-        copied(home, {**atlas_files(), "scripts/probes/read_core.py": probe})
+        tree = copied(home, {**atlas_files(), "scripts/probes/read_core.py": probe})
 
-        result = dispatch(home, f"probe {latest(home)} read_core.py {word([so_path])}")
+        result = dispatch(home, f"probe {tree.name} read_core.py {word([so_path])}")
 
         assert result.returncode == 0, result.stderr
         assert json.loads(answered(result)) == {"status": "answered", "unloadable": None}

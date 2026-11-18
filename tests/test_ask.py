@@ -24,13 +24,11 @@ import io
 import json
 import os
 import shlex
-import shutil
 import subprocess
 import sys
 import tarfile
-import tempfile
 import tomllib
-from collections.abc import Callable, Iterator
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -47,7 +45,18 @@ from tests.remote_target import (
     log_lines,
     ssh_calls,
 )
-from tests.remote_target_suite import DISPATCHER, FLOOR, REPO, ROOT, Entry, contents, isolated_module, snapshot
+from tests.remote_target_suite import (
+    DISPATCHER,
+    FLOOR,
+    REPO,
+    ROOT,
+    Entry,
+    contents,
+    install_dispatcher,
+    isolated_module,
+    sandbox_home,
+    snapshot,
+)
 
 pytestmark = pytest.mark.usefixtures(isolated_module.__name__)
 
@@ -56,7 +65,6 @@ _NEW_ADDRESS = "192.0.2.30"
 _ELSEWHERE = "192.0.2.99"
 _CONSOLE = "192.0.2.40"
 _SEEN_FROM = "198.51.100.6"
-_REAL_BWRAP = "/usr/bin/bwrap"
 _RETRODECK = Path("/var/lib/flatpak/app/net.retrodeck.retrodeck")
 
 # An atlas that says where it was imported from and what it was asked, writes
@@ -90,14 +98,6 @@ def write_tree(root: Path, files: dict[str, str]) -> Path:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(text, encoding="utf-8")
     return root
-
-
-def point_dispatcher_at(installed: Path, bwrap: Path) -> None:
-    """The installed dispatcher, naming *bwrap* for its sandbox instead of ``/usr/bin/bwrap``."""
-    source = installed.read_text(encoding="utf-8")
-    line = f'BWRAP = "{_REAL_BWRAP}"\n'
-    assert source.count(line) == 1
-    installed.write_text(source.replace(line, f"BWRAP = {str(bwrap)!r}\n"), encoding="utf-8")
 
 
 @dataclass
@@ -143,7 +143,7 @@ def there(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capfd: pytest.Capture
     monkeypatch.setattr(setup_remote_target, "build_host_name", lambda: "buildhost")
     assert setup_remote_target.main(["handheld", f"player@{_ADDRESS}"]) == 0
     capfd.readouterr()
-    point_dispatcher_at(target_home / ROOT / "dispatch.py", tools / "bwrap")
+    install_dispatcher(target_home, bwrap=str(tools / "bwrap"))
     tree = write_tree(tmp_path / "tree", _SAYING_ATLAS)
     monkeypatch.setattr(ask, "TREE", tree)
     config = build_home / ".config" / "emu-atlas-dev" / "ssh_config"
@@ -1006,7 +1006,7 @@ class TestTwoTargets:
         there.world.targets[_CONSOLE] = Target(home=str(console_home), client_address=_SEEN_FROM)
         there.save()
         assert setup_remote_target.main(["console", f"player@{_CONSOLE}"]) == 0
-        point_dispatcher_at(console_home / ROOT / "dispatch.py", there.tools / "bwrap")
+        install_dispatcher(console_home, bwrap=str(there.tools / "bwrap"))
         capfd.readouterr()
 
         targets = (("handheld", there.target_home, console_home), ("console", console_home, there.target_home))
@@ -1071,21 +1071,6 @@ class TestTheStatuses:
         assert "mise run ask --target" in guide
         assert "mise run probe --target" in guide
         assert "not-set-up" in guide
-
-
-@pytest.fixture
-def sandbox_home() -> Iterator[Path]:
-    """A home outside ``/tmp`` — the sandbox puts an empty ``/tmp`` of its own over it — or a skip saying why
-    the sandbox cannot be shown here."""
-    failure = dev_dispatch.sandbox_failure(_REAL_BWRAP, sys.executable)
-    if failure is not None:
-        pytest.skip(f"{_REAL_BWRAP} cannot start a sandbox here: {failure[1]}")
-    base = Path(tempfile.mkdtemp(prefix="emu-atlas-dev-test-", dir="/var/tmp"))
-    try:
-        (base / "home").mkdir()
-        yield base / "home"
-    finally:
-        shutil.rmtree(base)
 
 
 def _a_deployed_retrodeck() -> None:

@@ -1,4 +1,5 @@
-"""What both remote-target test modules share: the module's isolation, a snapshot of a tree, and the paths.
+"""What the remote-target test modules share: the isolation, a snapshot of a tree, the paths, the dispatcher
+installed with the ``bwrap`` it names, and a home the real sandbox can be shown in.
 
 Kept apart from ``tests/remote_target.py``, which every stand-in imports when it
 starts: this module imports ``pytest``, which a stand-in has no use for.
@@ -8,21 +9,25 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import socket
 import stat
+import sys
+import tempfile
 import tomllib
 from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
 
-from scripts import setup_remote_target
+from scripts import dev_dispatch, setup_remote_target
 from tests.remote_target import GUARDED, GUARDED_VARIABLE, guard_real_home
 
 REPO = setup_remote_target.REPO
 DISPATCHER = setup_remote_target.DISPATCHER
 INSTALL_SCRIPT = setup_remote_target.INSTALL_SCRIPT
 ROOT = Path(setup_remote_target.TARGET_ROOT)
+REAL_BWRAP = "/usr/bin/bwrap"
 FLOOR = tomllib.loads((REPO / "pyproject.toml").read_text(encoding="utf-8"))["project"]["requires-python"].lstrip(
     ">= "
 )
@@ -83,3 +88,36 @@ def isolated_module(tmp_path_factory: pytest.TempPathFactory) -> Iterator[None]:
         patch.setattr(socket, "getaddrinfo", numeric_only)
         yield
     assert touched == []
+
+
+def install_dispatcher(home: Path, *, bwrap: str = REAL_BWRAP, root: Path = ROOT) -> Path:
+    """The dispatcher, installed under *home* as the setup installs it, naming *bwrap* for its sandbox."""
+    installed = home / root / "dispatch.py"
+    installed.parent.mkdir(parents=True, exist_ok=True)
+    source = DISPATCHER.read_text(encoding="utf-8")
+    line = f'BWRAP = "{REAL_BWRAP}"\n'
+    assert source.count(line) == 1
+    installed.write_text(source.replace(line, f"BWRAP = {bwrap!r}\n"), encoding="utf-8")
+    return installed
+
+
+def sandbox_unavailable() -> str | None:
+    """Why the real sandbox cannot be shown here, or ``None`` where it starts: the dispatcher's own trial."""
+    failure = dev_dispatch.sandbox_failure(REAL_BWRAP, sys.executable)
+    return None if failure is None else f"{REAL_BWRAP} cannot start a sandbox here: {failure[1]}"
+
+
+@pytest.fixture
+def sandbox_home() -> Iterator[Path]:
+    """A home outside ``/tmp`` — the sandbox puts an empty ``/tmp`` of its own over it — beside a directory
+    ``outside``, or a skip saying why the sandbox cannot be shown here."""
+    unavailable = sandbox_unavailable()
+    if unavailable is not None:
+        pytest.skip(unavailable)
+    base = Path(tempfile.mkdtemp(prefix="emu-atlas-dev-test-", dir="/var/tmp"))
+    try:
+        (base / "home").mkdir()
+        (base / "outside").mkdir()
+        yield base / "home"
+    finally:
+        shutil.rmtree(base)
