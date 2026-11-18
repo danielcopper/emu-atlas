@@ -999,6 +999,24 @@ class TestTwoTargets:
             assert log_lines(there.world)[logged:] == [f"login {address} key"] * 2
             assert snapshot(other) == other_before
 
+    def test_a_failure_names_the_address_of_its_own_target(
+        self, there: There, capfd: pytest.CaptureFixture[str], tmp_path: Path
+    ) -> None:
+        """ssh reads each entry itself; the client's message reads the same entry back, not the next one."""
+        console_home = tmp_path / "console"
+        console_home.mkdir()
+        there.world.targets[_CONSOLE] = Target(home=str(console_home), client_address=_SEEN_FROM)
+        there.save()
+        assert setup_remote_target.main(["console", f"player@{_CONSOLE}"]) == 0
+        there.target().serving = False
+        there.save()
+        capfd.readouterr()
+
+        code, _, err = called(capfd, "ask", "--target", "handheld", "detect")
+
+        assert code == ask.NOT_ASKED
+        assert err.startswith(f"emu-atlas-dev: no SSH server answers at {_ADDRESS} port 22, where handheld's entry")
+
 
 class TestTheStatuses:
     def test_the_clients_own_are_none_atlas_or_the_dispatcher_ends_with(self) -> None:
