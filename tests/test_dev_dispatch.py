@@ -1119,7 +1119,7 @@ class TestTheDispatchersOwnCrash:
         assert stop.value.message == (
             "emu-atlas-dev: the run could not be started (Argument list too long); nothing ran."
         )
-        assert capsys.readouterr().out == f"{dev_dispatch.RUN_MARKER}\n"
+        assert capsys.readouterr().out == ""
 
 
 class TestACallerThatIsGone:
@@ -1180,7 +1180,7 @@ class TestTheSandboxCommandLine:
         argv = json.loads(record.read_text(encoding="utf-8"))
         command = argv[argv.index("--") + 1 :]
         assert command[:4] == [sys.executable, "-I", "-S", "-c"]
-        assert command[5:] == [str(tree), "module", "atlas", "detect"]
+        assert command[5:] == [dev_dispatch.RUN_MARKER, str(tree), "module", "atlas", "detect"]
 
 
 class TestTheRealSandbox:

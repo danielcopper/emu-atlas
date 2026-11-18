@@ -87,10 +87,11 @@ The dispatcher lets four requests through; everything else, a login among it, is
   file name, `[A-Za-z0-9_]+\.py`.
 
 `<tree>` is the id a copy answered with: a question runs from the tree its own copy made, held for as long as it runs,
-and from no other — never from `current`, which another client's copy may have moved on in between. Right before the run
-starts, `ask` and `probe` write one line on stdout, `emu-atlas-dev: the answer follows`; the run's own output comes
-after it. `<word>` is the argument list as a JSON array of strings, UTF-8, base64url-encoded: content paths carry
-blanks, quotes and parentheses, which words split on blanks cannot.
+and from no other — never from `current`, which another client's copy may have moved on in between. As its first act
+inside the sandbox, the run writes one line on stdout, `emu-atlas-dev: the answer follows`, and its own output comes
+after it: a sandbox or an interpreter that fails to start writes none. `<word>` is the argument list as a JSON array of
+strings, UTF-8, base64url-encoded: content paths carry blanks, quotes and parentheses, which words split on blanks
+cannot.
 
 A target set up before the copy answered with an id, or before the marker line, runs an older dispatcher: run the setup
 again, which installs this checkout's dispatcher through the key.
@@ -256,11 +257,11 @@ the dispatcher's, or for a failure of the client's past a usage error:
   of the client before it contacted anything or after the copy went through. Without `--target`: Python that could not
   be started here, or a crash of the client, after which whatever ran here printed above and its status is lost.
 - **7 `BROKE_OFF`** — the request ended without a status of the dispatcher's or the run's: the connection broke, the
-  dispatcher there did not run, or `ssh` failed before the login with a message no pattern knows, so that whether the
-  request reached the target is not known. After a copy, the target's current tree is that copy whole or the one before
-  it. A run that itself ends with 255, `ssh`'s own failure status, ends the call with 7 as well: once the run's marker
-  came the two cannot be told apart. So does a crash of the client during the copy or the question; the traceback names
-  where.
+  dispatcher or the run's sandbox there failed to start, or `ssh` failed before the login with a message no pattern
+  knows, so that whether the request reached the target is not known. After a copy, the target's current tree is that
+  copy whole or the one before it. A run that itself ends with 255, `ssh`'s own failure status, ends the call with 7 as
+  well: once the run's marker came the two cannot be told apart. So does a crash of the client during the copy or the
+  question; the traceback names where.
 
 An interrupt (Ctrl-C) ends the call with 130 and says where it found it.
 

@@ -53,8 +53,9 @@ PROBE_NOT_PUT = 2
 """What a probe script that crashed ends with: a question it could not put, never its own 1 for "does not hold"."""
 
 RUN_MARKER = "emu-atlas-dev: the answer follows"
-"""The line a question or a probe writes on stdout right before its run starts: the client takes nothing in front of
-it for the answer, so a shell that prints on stdout cannot land in front of one."""
+"""The line the bootstrap writes on stdout as its first act inside the sandbox: the client takes nothing in front of it
+for the answer, so a shell that prints on stdout cannot land in front of one, and a sandbox or interpreter that fails
+to start ends unmarked."""
 
 # Every question and probe runs in this sandbox: the file system read-only but
 # for a fresh /dev and /tmp, writable and gone with the run; a process view of
@@ -107,13 +108,14 @@ _FLOOR = re.compile(r"(\d+)\.(\d+)", re.ASCII)
 # for a question asked there: the tree the request names put on ``sys.path``
 # behind the standard library — ``-I`` keeps the working directory and every
 # PYTHON* variable out, ``-S`` the site-packages — and then the question as
-# ``python -m atlas`` or the probe script as ``python <script>``. A probe that
-# raises, at compile or import time as well, ends with PROBE_NOT_PUT and its
-# traceback rather than Python's 1.
+# ``python -m atlas`` or the probe script as ``python <script>``. On a target
+# it first writes RUN_MARKER, its first argument; asked here, that is empty.
 BOOTSTRAP = (
     "import runpy, sys\n"
-    "tree, kind, target = sys.argv[1:4]\n"
-    "sys.argv = [target] + sys.argv[4:]\n"
+    "marker, tree, kind, target = sys.argv[1:5]\n"
+    "if marker:\n"
+    "    sys.stdout.write(marker + '\\n'); sys.stdout.flush()\n"
+    "sys.argv = [target] + sys.argv[5:]\n"
     "sys.path.append(tree)\n"
     "if kind == 'module':\n"
     "    runpy.run_module(target, run_name='__main__', alter_sys=True)\n"
@@ -358,8 +360,7 @@ def run_held(tree: str, kind: Kind, target: str, arguments: list[str]) -> int:
                 CANNOT_RUN, "{}: the copied tree has no {}; nothing ran.".format(PREFIX, os.path.relpath(target, tree))
             )
     check_sandbox(BWRAP)
-    command = bootstrapped(sys.executable, tree, kind, target, arguments)
-    sys.stdout.write(RUN_MARKER + "\n")
+    command = bootstrapped(sys.executable, tree, kind, target, arguments, marker=RUN_MARKER)
     sys.stdout.flush()
     sys.stderr.flush()
     try:
@@ -382,9 +383,12 @@ def status_of(returncode: int) -> int:
     return returncode if returncode >= 0 else 128 - returncode
 
 
-def bootstrapped(python: str, tree: str, kind: Kind, target: str, arguments: list[str]) -> list[str]:
-    """The command line that runs the question or the probe script *target* of *tree* on *python*: :data:`BOOTSTRAP`."""
-    return [python, "-I", "-S", "-c", BOOTSTRAP, tree, kind, target] + arguments
+def bootstrapped(
+    python: str, tree: str, kind: Kind, target: str, arguments: list[str], *, marker: str = ""
+) -> list[str]:
+    """The command line that runs the question or the probe script *target* of *tree* on *python*: :data:`BOOTSTRAP`,
+    writing *marker* first where it is given."""
+    return [python, "-I", "-S", "-c", BOOTSTRAP, marker, tree, kind, target] + arguments
 
 
 def run_sandboxed(root: str, *, tree_id: str, kind: Kind, target: str, arguments: list[str]) -> int:

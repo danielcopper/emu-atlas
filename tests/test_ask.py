@@ -1091,9 +1091,9 @@ class TestTheAnswer:
         def an_older_dispatcher(_: str) -> None:
             installed = there.root / "dispatch.py"
             source = installed.read_text(encoding="utf-8")
-            line = '    sys.stdout.write(RUN_MARKER + "\\n")\n'
-            assert source.count(line) == 1
-            installed.write_text(source.replace(line, ""), encoding="utf-8")
+            call = "arguments, marker=RUN_MARKER)"
+            assert source.count(call) == 1
+            installed.write_text(source.replace(call, "arguments)"), encoding="utf-8")
 
         copy_then(there, monkeypatch, an_older_dispatcher)
 
@@ -1115,6 +1115,36 @@ class TestTheAnswer:
                 "emu-atlas-dev: handheld's dispatcher ran the request but wrote no marker ahead of its answer, so"
                 f" none was taken.\n{older}"
             )
+
+    def test_a_sandbox_that_fails_after_the_trial_ends_unmarked_and_broken_off(
+        self, there: There, capfd: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """The marker comes from inside the sandbox: a bwrap that passes the trial and then fails sends none."""
+        failing = tmp_path / "bwrap-after-the-trial"
+        failing.write_text(
+            f"#!{sys.executable} -I\n"
+            "import os, sys\n"
+            "if sys.argv[-2:] == ['-c', 'pass']:\n"
+            f"    os.execv({str(there.tools / 'bwrap')!r}, [{str(there.tools / 'bwrap')!r}] + sys.argv[1:])\n"
+            "sys.stderr.write('bwrap: Can\\'t mount proc on /newroot/proc: Operation not permitted\\n')\n"
+            "sys.exit(1)\n",
+            encoding="utf-8",
+        )
+        failing.chmod(0o755)
+        def a_sandbox_that_fails_after_the_trial(_: str) -> None:
+            install_dispatcher(there.target_home, bwrap=str(failing))
+
+        copy_then(there, monkeypatch, a_sandbox_that_fails_after_the_trial)
+
+        status, out, err = called(capfd, "probe", "--target", "handheld", "say.py")
+
+        assert status == ask.BROKE_OFF
+        assert out == ""
+        assert err == (
+            "bwrap: Can't mount proc on /newroot/proc: Operation not permitted\n"
+            "emu-atlas-dev: the probe say.py on handheld ended with 1 before its run started: the connection broke,"
+            " or the dispatcher or its sandbox there failed to start; what ssh and the target said is above.\n"
+        )
 
     def test_a_runs_own_255_after_the_marker_is_never_not_asked(
         self, there: There, capfd: pytest.CaptureFixture[str]

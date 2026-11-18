@@ -708,9 +708,8 @@ def _unmarked(status: int, stderr: str, target: Target, request: Request) -> int
         )
         return NOT_ASKED
     say(
-        f"{PREFIX}: {what_runs(request).capitalize()} ended on {target.name} with {status} before its run started,"
-        " without a word from its dispatcher: the connection broke, or the dispatcher there did not run; what ssh"
-        " said is above."
+        f"{PREFIX}: {what_runs(request)} on {target.name} ended with {status} before its run started: the connection"
+        " broke, or the dispatcher or its sandbox there failed to start; what ssh and the target said is above."
     )
     return BROKE_OFF
 
