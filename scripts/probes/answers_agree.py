@@ -14,8 +14,8 @@ is a disagreement as well: atlas's own answers part there.
 One line per question and kind says whether the two agree; where they do not,
 the line names the places in the answer where they part, as paths into its
 JSON, never the values there — a key that is no plain field name, which can be
-a path or a name off the device, is shown as ``<key>``, and so is every key of
-a ``data`` object. The probe ends with 0
+a path or a name off the device, is shown as ``<key>``, and so is every key
+anywhere below a ``data`` object. The probe ends with 0
 when every pair agrees, 1 when one does not, and 2 when a question could not
 be put: atlas refused it, answered with no JSON, or answered with a shape this
 probe cannot read. A question whose comparison crashes is one not put, with
