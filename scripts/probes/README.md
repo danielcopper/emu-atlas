@@ -18,7 +18,10 @@ What a probe script may do:
   or the library — since there `atlas` is importable in that process only, not in a child it starts.
 - **Report shapes, not values.** Its output describes one machine: say which question and which installation kind, and
   where answers part, rather than printing paths, titles or names off the device.
-- **End with 0, 1 or 2**: 0 for what it checks holding, 1 for not, 2 for a question it could not put. The dispatcher
-  ends with 3, 4 and 5 and the client with 6 and 7, so a probe's own status stays told apart from theirs.
+- **End with 0, 1 or 2**: 0 for what it checks holding, 1 for not, 2 for a question it could not put. The dispatcher's
+  failures and the client's past a usage error end with other statuses (`docs/remote-target.md`, "Asking a target"), so
+  a probe's own status stays told apart from theirs.
+- **Catch its own crash.** An uncaught exception ends Python with 1, which reads as "does not hold": catch it, print the
+  traceback on stderr, say on stdout that a question could not be put, and end with 2.
 
 What a probe returns is printed and never written into the tree, a test fixture, a commit, a pull request or an issue.

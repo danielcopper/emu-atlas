@@ -13,7 +13,8 @@ answers for it.
 One line per question and kind says whether the two agree; where they do not,
 the line names the places in the answer where they part, as paths into its
 JSON, never the values there. The probe ends with 0 when every pair agrees, 1
-when one does not, and 2 when a question could not be put at all.
+when one does not, and 2 when a question could not be put at all — a crash of
+the probe among them, with its traceback on stderr.
 
 atlas is asked in this process, through ``atlas.cli.run``: under the
 dispatcher's bootstrap ``atlas`` is importable from the copied tree in this
@@ -26,6 +27,7 @@ import contextlib
 import io
 import json
 import sys
+import traceback
 from typing import Any, Callable
 
 QUESTIONS = ("health", "systems", "rom-locations", "firmware-inventory")
@@ -37,6 +39,11 @@ SHOWN_PATHS = 5
 AGREE = 0
 DISAGREE = 1
 NOT_PUT = 2
+"""Also the status of a run that crashed: a crash puts no question to the end, and must not read as ``DISAGREE``,
+which an uncaught exception's status 1 would."""
+
+MISSING = object()
+"""What a labelled answer holds for a kind it has no entry of."""
 
 Asker = Callable[[list[str]], tuple[int, Any]]
 """Ask atlas the command line it is given: its exit status, and its answer parsed where it gave one."""
@@ -95,16 +102,22 @@ def compare_question(ask: Asker, question: str, kinds: list[str]) -> tuple[int, 
         return NOT_PUT, [f"{question}: could not be put to every installation (atlas ended with {status})"]
     worst, lines = AGREE, []
     for kind in kinds:
-        entry = next(item["answer"] for item in labelled if item["installation"]["kind"] == kind)
-        status, bare = ask([question, "--installation", kind])
-        if status != 0:
-            worst = NOT_PUT
-            lines.append(f"{question} {kind}: could not be put with --installation (atlas ended with {status})")
-            continue
-        paths = differences(entry, bare)
-        worst = max(worst, DISAGREE if paths else AGREE)
-        lines.append(verdict(question, kind, paths))
+        status, line = compare_kind(ask, question, kind, labelled)
+        worst = max(worst, status)
+        lines.append(line)
     return worst, lines
+
+
+def compare_kind(ask: Asker, question: str, kind: str, labelled: list[Any]) -> tuple[int, str]:
+    """*question* put with ``--installation`` *kind*, against that kind's entry of the *labelled* list."""
+    entry = next((item["answer"] for item in labelled if item["installation"]["kind"] == kind), MISSING)
+    if entry is MISSING:
+        return NOT_PUT, f"{question} {kind}: the answer put to every installation holds none of this kind"
+    status, bare = ask([question, "--installation", kind])
+    if status != 0:
+        return NOT_PUT, f"{question} {kind}: could not be put with --installation (atlas ended with {status})"
+    paths = differences(entry, bare)
+    return (DISAGREE if paths else AGREE), verdict(question, kind, paths)
 
 
 def compare(ask: Asker) -> tuple[int, list[str]]:
@@ -132,7 +145,12 @@ def main(argv: list[str]) -> int:
     if argv:
         print(f"answers_agree.py takes no arguments, not {argv}", file=sys.stderr)
         return NOT_PUT
-    status, lines = compare(ask_atlas)
+    try:
+        status, lines = compare(ask_atlas)
+    except Exception as error:
+        traceback.print_exc()
+        print(f"answers_agree: a question could not be put (crashed: {type(error).__name__}).")
+        return NOT_PUT
     for line in lines:
         print(line)
     summary = {AGREE: "every answer agrees", DISAGREE: "answers differ", NOT_PUT: "a question could not be put"}

@@ -2070,6 +2070,36 @@ class TestWhatReachesSshAndThePatterns:
         assert why.startswith("it did not say its version")
 
 
+class TestReadingAnEntryBack:
+    """``read_entry`` on a config the setup's own writer wrote, with more than one target in it."""
+
+    def test_each_entry_is_read_alone_among_others(self, tmp_path: Path) -> None:
+        directory = tmp_path / "config home with blanks"
+        key, known_hosts = directory / "id_ed25519", directory / "known_hosts"
+        handheld = setup_remote_target.Destination(
+            text=f"player@{_ADDRESS}", user="player", hostname=_ADDRESS, port="22", proxy_jump=None, proxy_command=None
+        )
+        relay = setup_remote_target.Destination(
+            text="relayed", user="other", hostname=_NEW_ADDRESS, port="2222", proxy_jump=None,
+            proxy_command="ssh -W %h:%p jumper@203.0.113.5",
+        )
+        text = ""
+        for name, destination in (("handheld", handheld), ("relay", relay)):
+            entry = setup_remote_target.config_entry(name, destination, key=key, known_hosts=known_hosts)
+            text = setup_remote_target.updated_config(text, name, entry, f"# {name}")
+        assert f'IdentityFile "{key}"' in text
+
+        assert setup_remote_target.read_entry(text, "handheld") == setup_remote_target.Destination(
+            text="handheld", user="player", hostname=_ADDRESS, port="22", proxy_jump=None, proxy_command=None
+        )
+        assert setup_remote_target.read_entry(text, "relay") == setup_remote_target.Destination(
+            text="relay", user="other", hostname=_NEW_ADDRESS, port="2222", proxy_jump=None,
+            proxy_command="ssh -W %h:%p jumper@203.0.113.5",
+        )
+        assert setup_remote_target.read_entry(text, "absent") is None
+        assert setup_remote_target.read_entry(text, "handheld relay") is None
+
+
 class TestTheTaskAndTheGuide:
     def test_the_task_hands_its_name_destination_and_print_flag_to_the_script(self) -> None:
         task = tomllib.loads((REPO / "mise.toml").read_text(encoding="utf-8"))["tasks"]["setup:remote-target"]

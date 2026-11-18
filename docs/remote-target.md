@@ -80,13 +80,20 @@ The dispatcher lets four requests through; everything else, a login among it, is
   sends to whichever login gets in; through a login of your own it reaches a plain shell and runs unchanged.
 - **`copy`** — an uncompressed tar stream of the tree on stdin, unpacked into a new directory under `trees/` with
   `tarfile`'s `data` filter, files and directories only, and made `current` with one rename once it arrived whole; the
-  older trees are removed after that.
-- **`ask <word>`** — one question: `python -m atlas <arguments>` from the current tree, in the sandbox.
-- **`probe <name> [<word>]`** — the current tree's `scripts/probes/<name>`, in the sandbox; `<name>` is a bare file
-  name, `[A-Za-z0-9_]+\.py`.
+  older trees are removed after that. It answers with the new tree's id, `tree-` and letters, digits and `_`, the one
+  line it writes on stdout.
+- **`ask <tree> <word>`** — one question: `python -m atlas <arguments>` from the tree `<tree>`, in the sandbox.
+- **`probe <tree> <name> [<word>]`** — the tree `<tree>`'s `scripts/probes/<name>`, in the sandbox; `<name>` is a bare
+  file name, `[A-Za-z0-9_]+\.py`.
 
-`<word>` is the argument list as a JSON array of strings, UTF-8, base64url-encoded: content paths carry blanks, quotes
-and parentheses, which words split on blanks cannot.
+`<tree>` is the id a copy answered with: a question runs from the tree its own copy made, held for as long as it runs,
+and from no other — never from `current`, which another client's copy may have moved on in between. Where that tree is
+gone, removed by a later copy, the question is refused with `TREE_GONE` and nothing runs. `<word>` is the argument list
+as a JSON array of strings, UTF-8, base64url-encoded: content paths carry blanks, quotes and parentheses, which words
+split on blanks cannot.
+
+A target set up before the copy answered with an id runs a dispatcher that refuses these forms of `ask` and `probe`: run
+the setup again, which installs the current one through the key.
 
 The setup request runs outside the sandbox: through it the key can run any code on the target with the user's rights,
 its own `authorized_keys` line among what it can rewrite. So `from=` is the only bound on the key, and the sandbox
@@ -109,11 +116,12 @@ the reason and the repair the setup names for the same failure, rather than run 
 
 **The run's lifetime.** The dispatcher waits for `bwrap` and ends the run when its connection is gone — when nothing
 reads its output any more — and the sandboxed program ends with `bwrap`. For as long as a question or a probe runs, the
-tree it runs from stays: a copy that lands meanwhile becomes `current` for the next request, and a later copy removes
-the older tree.
+tree it runs from stays: a copy that lands meanwhile becomes `current`, and a later copy removes the older tree once
+nothing runs from it. A tree no run holds is removed by the next copy, so a question sent after another client's copy
+finds its tree gone.
 
 **The interpreter.** Inside the sandbox the question runs on the interpreter the dispatcher runs on, `/usr/bin/python3`,
-with `-I` (no working directory on `sys.path`, no `PYTHON*` variable) and `-S` (no site-packages), and the current tree
+with `-I` (no working directory on `sys.path`, no `PYTHON*` variable) and `-S` (no site-packages), and the tree it names
 appended to `sys.path` behind the standard library: `atlas` is imported from the copied tree and nowhere else. The core
 probe keeps working inside, since atlas starts it as a child of that same interpreter. A tree whose manifest names a
 floor above the interpreter is refused with both versions named.
@@ -123,11 +131,13 @@ status is passed through unchanged, and a run ended by a signal answers 128 plus
 a run the dispatcher ended because its connection was gone among them:
 
 - **3 `REFUSED`** — the request is none of the four above, or its argument word is no JSON array of strings.
-- **4 `CANNOT_RUN`** — nothing ran: no tree copied yet, `current` naming a tree that is gone, a tree without a readable
-  manifest, an interpreter below the tree's floor, a probe the tree does not hold, no working sandbox, a `copy` on a
-  Python whose `tarfile` has no `data` filter, or an error reading the tree or starting the run.
+- **4 `CANNOT_RUN`** — nothing ran: a tree without a readable manifest, an interpreter below the tree's floor, a probe
+  the tree does not hold, no working sandbox, a `copy` on a Python whose `tarfile` has no `data` filter, or an error
+  reading the tree or starting the run.
 - **5 `COPY_FAILED`** — the copy could not start, did not arrive whole, or arrived but could not be made current; the
   current tree is as it was.
+- **8 `TREE_GONE`** — nothing ran: the tree the request names is not there, removed by a later copy or never copied. Ask
+  again; every call copies first. (8, not 6: the client ends with 6 and 7 of its own.)
 
 ## A target you cannot log into yet: `--print`
 
@@ -213,25 +223,35 @@ everything after it is the question, a `--target` of its own among it.
 (`ssh -F ~/.config/emu-atlas-dev/ssh_config`) — so with the restricted key alone, and nothing of your own SSH config —
 and sends a `copy` of the working tree as it stands, uncommitted edits and all: every file and directory under `atlas/`
 and `scripts/probes/`, without `__pycache__` and `*.pyc`, in a stable order, then `tree.json` with `pyproject.toml`'s
-floor. A link, or anything else that is no file or directory, is left out and named on stderr. Then it sends
-`ask <word>` or `probe <name> [<word>]`. The run's stdout arrives on stdout and its stderr on stderr, byte for byte, and
-its exit status is the command's. A note the copy writes on stderr — an older tree it could not remove — is shown there,
-and the question is still asked. `ssh` gives up on an address that takes no connection within 15 seconds.
+floor. A link, or anything else that is no file or directory, is left out and named on stderr. The copy answers with the
+id of the tree it made, and the client sends `ask <tree> <word>` or `probe <tree> <name> [<word>]` with that id, so the
+question runs from this copy and no other client's. The run's stdout arrives on stdout and its stderr on stderr, byte
+for byte, and its exit status is the command's. A note the copy writes on stderr — an older tree it could not remove —
+is shown there, and the question is still asked. `ssh` gives up on an address that takes no connection within 15
+seconds.
+
+**The target's shell.** sshd runs the dispatcher through the user's shell, and that shell's startup files may print. On
+stderr that passes on with the run's own stderr. On stdout it would land in front of every answer, so the copy's stdout
+is checked first: anything there beside the tree's id ends the call before a question is asked, shows what arrived, and
+asks for the startup files to be silent for a shell without a terminal. The copy is current there; nothing was asked. No
+id at all is what a dispatcher older than this client answers: run the setup again.
 
 What comes back describes one machine: it is printed here and written nowhere, the tree included.
 
-**The statuses.** atlas ends with 0 or 2; the dispatcher's 3, 4 and 5 are passed on with what it said and a line that
-names them as the dispatcher's. The client's own are none of those, and a probe script ends with 0, 1 or 2 so that its
-status is never taken for one of them:
+**The statuses.** atlas ends with 0 or 2; the dispatcher's 3, 4, 5 and 8 are passed on with what it said and a line that
+names them as the dispatcher's. The client's failures past a usage error are none of those; a usage error ends with 2,
+as atlas's does, before anything is contacted. A probe script ends with 0, 1 or 2, so that its status is never taken for
+the dispatcher's or the client's:
 
 - **2 `USAGE`** — the call could not be put, as for atlas: no question, no probe script, a script `scripts/probes/` does
   not hold or the dispatcher would not take, or a target name the setup would not accept. Nothing was contacted.
-- **6 `NOT_ASKED`** — nothing was asked and nothing was done on the target: no such target, a copy that could not be
-  built here, or an `ssh` that ended before the login (below).
+- **6 `NOT_ASKED`** — nothing was asked, and nothing was done on the target except a copy where one already went
+  through: no such target, a copy that could not be built here, an `ssh` that ended before the login (below), the target
+  shell's output or an older dispatcher found at the copy, or a crash of the client before it contacted anything.
 - **7 `BROKE_OFF`** — the request reached the target and ended without a status of the dispatcher's or the run's: the
   connection broke, or the dispatcher there did not run. After a copy, the target's current tree is that copy whole or
   the one before it. A run that itself ends with 255, `ssh`'s own failure status, ends the call with 7 as well: the two
-  cannot be told apart.
+  cannot be told apart. So does a crash of the client once it contacted the target; the traceback names where.
 
 Each failure before the login says what to do and ends with **nothing done on the target**, or, after a copy went
 through, that the question was not asked and the copy is current there:
