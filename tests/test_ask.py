@@ -1106,9 +1106,12 @@ class TestTheAnswer:
             f" dispatcher:\n    mise run setup:remote-target handheld player@{_ADDRESS}\n"
         )
         if probe == "say.py":
+            assert err.startswith("the probe said this on stderr\n")
             assert err.endswith(
-                f"{ask.SHELL_PRINTS}\n  It wrote no marker ahead of the run either.\n{older}"
-                "  The run was ended and no answer taken from it; the probe say.py gave none here.\n"
+                "emu-atlas-dev: no marker came from handheld, so what arrived on stdout cannot be told apart from what"
+                " its shell prints:\n"
+                f"    '{{\"file\": \"{(there.root / 'current').resolve() / 'atlas' / '__init__.py'}\", \"argv\": []}}'\n"
+                f"{older}  No answer was taken; the probe say.py gave none here.\n"
             )
         else:
             assert err == (
@@ -1167,6 +1170,32 @@ class TestTheAnswer:
         assert err.endswith(
             "emu-atlas-dev: ssh ended with 255 while the probe looks_like_ssh.py ran on handheld: the connection"
             " broke, or the run itself ended with 255; what it printed is above.\n"
+        )
+
+    def test_a_dispatchers_refusal_stands_beside_the_shells_output(
+        self, there: There, capfd: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The dispatcher refused before any run; the shell's output that came with it does not hide its status."""
+
+        def refuses_and_the_shell_prints(_: str) -> None:
+            (there.root / "dispatch.py").write_text(
+                "import sys\nsys.stderr.write('emu-atlas-dev: the tree is not here\\n')\nsys.exit(8)\n",
+                encoding="utf-8",
+            )
+            there.target().login_output = "You have new mail.\n"
+            there.save()
+
+        copy_then(there, monkeypatch, refuses_and_the_shell_prints)
+
+        status, out, err = called(capfd, "ask", "--target", "handheld", "detect")
+
+        assert status == dev_dispatch.TREE_GONE
+        assert out == ""
+        assert err == (
+            "emu-atlas-dev: the tree is not here\n"
+            "emu-atlas-dev: handheld wrote this on stdout as well:\n    'You have new mail.'\n"
+            f"{ask.SHELL_PRINTS}\n"
+            "emu-atlas-dev: that was handheld's dispatcher (8, TREE_GONE), not atlas or a probe.\n"
         )
 
     def test_a_dispatcher_that_refuses_the_question_after_taking_the_copy(
@@ -1228,6 +1257,50 @@ class TestTheAnswer:
             assert gone_when_reported == [True], processes_holding(token)
         finally:
             end_what_is_left(token)
+
+
+class TestWritingTheAnswerOut:
+    """An answer this process cannot write out whole ends the call with a status of the client's, never the run's 0."""
+
+    @pytest.mark.parametrize(
+        ("error", "said"),
+        [
+            (
+                BrokenPipeError(32, "Broken pipe"),
+                "emu-atlas-dev: what read this command's output stopped before the answer ended, so the rest of it was"
+                " not written; the run on handheld ended with 0.\n",
+            ),
+            (
+                OSError(28, "No space left on device"),
+                "emu-atlas-dev: the answer could not be written here (No space left on device), so what was written of"
+                " it is cut short; the run on handheld ended with 0.\n",
+            ),
+        ],
+        ids=["a reader that stopped", "a full disk"],
+    )
+    def test_a_failed_write_of_the_answer_ends_broken_off(
+        self,
+        there: There,
+        capfd: pytest.CaptureFixture[str],
+        monkeypatch: pytest.MonkeyPatch,
+        error: OSError,
+        said: str,
+    ) -> None:
+        real_write_all = ask.write_all
+        stdout = sys.stdout.fileno()
+
+        def stdout_fails(descriptor: int, data: bytes) -> None:
+            if descriptor == stdout:
+                raise error
+            real_write_all(descriptor, data)
+
+        monkeypatch.setattr(ask, "write_all", stdout_fails)
+
+        status, out, err = called(capfd, "ask", "--target", "handheld", "detect")
+
+        assert status == ask.BROKE_OFF
+        assert out == ""
+        assert err == "atlas said this on stderr\n" + said
 
 
 class TestTheCopysAnswer:
@@ -1292,7 +1365,7 @@ class TestWhatIsCaughtBeforeContact:
             "  Nothing was contacted.\n"
         )
 
-    def test_a_dispatcher_the_target_cannot_start(self, there: There, capfd: pytest.CaptureFixture[str]) -> None:
+    def test_an_interpreter_the_target_cannot_start(self, there: There, capfd: pytest.CaptureFixture[str]) -> None:
         keys = there.target_home / ".ssh" / "authorized_keys"
         text = keys.read_text(encoding="utf-8")
         assert text.count(sys.executable) == 1
@@ -1302,8 +1375,22 @@ class TestWhatIsCaughtBeforeContact:
 
         assert (status, out) == (ask.NOT_ASKED, "")
         assert err.endswith(
-            "emu-atlas-dev: handheld could not start its dispatcher (the shell there ended with 127): its interpreter"
-            " or the dispatcher may be gone, after a system update say; what ssh said is above.\n"
+            "emu-atlas-dev: handheld could not start the interpreter its dispatcher runs on (the shell there ended"
+            f" with 127): {sys.executable} may be gone or not executable, after a system update say; what ssh said is"
+            " above.\n"
+            f"  Run the setup again:\n    mise run setup:remote-target handheld player@{_ADDRESS}\n"
+            "  Nothing was done on handheld.\n"
+        )
+
+    def test_a_dispatcher_that_is_gone(self, there: There, capfd: pytest.CaptureFixture[str]) -> None:
+        (there.root / "dispatch.py").unlink()
+
+        status, out, err = called(capfd, "ask", "--target", "handheld", "detect")
+
+        assert (status, out) == (ask.NOT_ASKED, "")
+        assert f"can't open file '{there.root / 'dispatch.py'}'" in err
+        assert err.endswith(
+            "emu-atlas-dev: handheld's dispatcher is gone: its interpreter could not open it; what it said is above.\n"
             f"  Run the setup again:\n    mise run setup:remote-target handheld player@{_ADDRESS}\n"
             "  Nothing was done on handheld.\n"
         )
@@ -1387,6 +1474,15 @@ class TestThePhases:
         except ValueError:
             assert ask.crashed(phase) == ask.BROKE_OFF
             assert ask.interrupted(phase) == 128 + signal.SIGINT
+
+    def test_a_refusal_whose_message_cannot_be_written_still_ends_with_its_status(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        closed = open(tmp_path / "stderr", "w", encoding="utf-8")
+        closed.close()
+        monkeypatch.setattr(sys, "stderr", closed)
+
+        assert ask.main("ask", []) == ask.USAGE
 
     def test_python_that_cannot_be_started_here_ran_nothing(
         self, here: Path, capfd: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch

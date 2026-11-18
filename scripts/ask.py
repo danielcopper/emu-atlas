@@ -44,6 +44,7 @@ sys.path.insert(0, str(ROOT))
 # dispatcher answers each have one home, which this client reads.
 from scripts import dev_dispatch  # noqa: E402
 from scripts import setup_remote_target as setup  # noqa: E402
+from scripts.dev_target_install import DISPATCHER_NAME  # noqa: E402
 
 PREFIX = setup.PREFIX
 
@@ -97,6 +98,8 @@ SHELL_PRINTS = (
 COPY_CUT_OFF = "{target}'s current tree is this copy whole, or the one before it. Nothing was asked."
 COPY_WENT_THROUGH = "The copy went through; nothing was asked."
 
+# What the target's interpreter says for a dispatcher that is not there.
+_NO_DISPATCHER = re.compile(f"can't open file '[^']*/{re.escape(DISPATCHER_NAME)}'")
 _TREE_AT_THE_END = re.compile(f"({dev_dispatch.TREE_ID.pattern})\n\\Z", re.ASCII)
 _MARKER = (dev_dispatch.RUN_MARKER + "\n").encode("ascii")
 
@@ -230,7 +233,8 @@ def run_here(request: Request) -> int:
 
     Run the way the dispatcher runs it on a target — :data:`TREE` on
     ``sys.path`` behind the standard library, no site-packages, a probe's
-    crash ending with 2 — so a probe that works here works there.
+    crash ending with 2 — so a probe meets the same imports and crash handling
+    here as there; only the sandbox is missing here.
     """
     if request.mode == "ask":
         kind, target, arguments = "module", "atlas", list(request.words)
@@ -479,7 +483,11 @@ def pass_on(data: bytes) -> None:
 
 
 def say(message: str) -> None:
-    print(message, file=sys.stderr, flush=True)
+    """*message* on stderr; where stderr itself fails, nothing is left to tell, and the status still comes back."""
+    try:
+        print(message, file=sys.stderr, flush=True)
+    except (OSError, ValueError):
+        pass
 
 
 def dispatcher_status(status: int, name: str) -> str:
@@ -546,20 +554,27 @@ def copy_tree(target: Target, phase: Phase) -> str:
         if message is not None:
             raise Refusal(NOT_ASKED, f"{message}\n  Nothing was done on {target.name}.")
     pass_on(copied.stderr)
-    raise copy_failed(status, target)
+    raise copy_failed(status, copied.stderr.decode("utf-8", "replace"), target)
 
 
-def copy_failed(status: int, target: Target) -> Refusal:
-    """The refusal for a copy that ended with *status* and is no failure before the login."""
+def copy_failed(status: int, stderr: str, target: Target) -> Refusal:
+    """The refusal for a copy that ended with *status*, *stderr* said, and is no failure before the login."""
     if status in dev_dispatch.STATUSES:
         return Refusal(status, dispatcher_status(status, target.name) + "\n  Nothing was asked.")
+    line = setup_line(target.name, target.destination)
+    repair = f"  Run the setup again:\n{line}\n  Nothing was done on {target.name}."
     if status in (setup.NOT_FOUND, NOT_EXECUTABLE):
         return Refusal(
             NOT_ASKED,
-            f"{PREFIX}: {target.name} could not start its dispatcher (the shell there ended with {status}): its"
-            " interpreter or the dispatcher may be gone, after a system update say; what ssh said is above.\n"
-            f"  Run the setup again:\n{setup_line(target.name, target.destination)}\n"
-            f"  Nothing was done on {target.name}.",
+            f"{PREFIX}: {target.name} could not start the interpreter its dispatcher runs on (the shell there ended"
+            f" with {status}): {setup.TARGET_PYTHON} may be gone or not executable, after a system update say; what"
+            f" ssh said is above.\n{repair}",
+        )
+    if _NO_DISPATCHER.search(stderr):
+        return Refusal(
+            NOT_ASKED,
+            f"{PREFIX}: {target.name}'s dispatcher is gone: its interpreter could not open it; what it said is"
+            f" above.\n{repair}",
         )
     return Refusal(
         BROKE_OFF,
@@ -589,12 +604,14 @@ class Sink:
             self.failed = error
 
 
-@dataclass
+@dataclass(frozen=True)
 class Answer:
     """What came back on the request's stdout: what arrived ahead of the run's marker, and whether it came."""
 
     ahead: bytes
     marked: bool
+    write_failed: OSError | None = None
+    """Why passing the answer on to this process's stdout stopped, where it did."""
 
 
 def collect(pipe: IO[bytes], sink: Sink, kept: bytearray) -> None:
@@ -624,7 +641,7 @@ def read_answer(pipe: IO[bytes], sink: Sink) -> Answer:
     sink.write(rest)
     for chunk in iter(lambda: os.read(pipe.fileno(), 65536), b""):
         sink.write(chunk)
-    return Answer(b"", marked=True)
+    return Answer(b"", marked=True, write_failed=sink.failed)
 
 
 def ask_there(target: Target, request: Request, tree: str) -> int:
@@ -669,21 +686,56 @@ def not_asked(request: Request) -> str:
 def judge(status: int, stderr: str, target: Target, request: Request, answer: Answer) -> int:
     """This call's status for a request that ended with *status*: the run's own, the dispatcher's or the client's."""
     if answer.ahead:
-        older = "" if answer.marked else f"\n  It wrote no marker ahead of the run either.\n  {OLDER_DISPATCHER}\n" + (
-            setup_line(target.name, target.destination)
-        )
-        say(
-            f"{PREFIX}: {target.name} wrote this on stdout ahead of the run's answer:\n"
-            f"{shown(answer.ahead.decode('utf-8', 'replace'))}\n{SHELL_PRINTS}{older}\n"
-            f"  The run was ended and no answer taken from it; {what_runs(request)} gave none here."
-        )
-        return NOT_ASKED
+        return _output_ahead(status, target, request, answer)
     if status in dev_dispatch.STATUSES and status != dev_dispatch.COPY_FAILED:
         say(dispatcher_status(status, target.name))
         return status
     if answer.marked:
+        if answer.write_failed is not None:
+            return _not_written(answer.write_failed, status, target)
         return status if status != setup.SSH_FAILED else _broke_off(request, target)
     return _unmarked(status, stderr, target, request)
+
+
+def _output_ahead(status: int, target: Target, request: Request, answer: Answer) -> int:
+    """The status for a request with output on stdout where the run's answer was not: ahead of the marker, or with none.
+
+    With the marker, that output is the shell's, and the run is ended unanswered.
+    Without one, a status of the dispatcher's own stands, the output named
+    beside it; any other run's output cannot be told apart from the shell's.
+    """
+    arrived = shown(answer.ahead.decode("utf-8", "replace"))
+    if answer.marked:
+        say(
+            f"{PREFIX}: {target.name} wrote this on stdout ahead of the run's answer:\n{arrived}\n{SHELL_PRINTS}\n"
+            f"  The run was ended and no answer taken from it; {what_runs(request)} gave none here."
+        )
+        return NOT_ASKED
+    if status in dev_dispatch.STATUSES:
+        say(f"{PREFIX}: {target.name} wrote this on stdout as well:\n{arrived}\n{SHELL_PRINTS}")
+        say(dispatcher_status(status, target.name))
+        return status
+    say(
+        f"{PREFIX}: no marker came from {target.name}, so what arrived on stdout cannot be told apart from what its"
+        f" shell prints:\n{arrived}\n  {OLDER_DISPATCHER}\n{setup_line(target.name, target.destination)}\n"
+        f"  No answer was taken; {what_runs(request)} gave none here."
+    )
+    return NOT_ASKED
+
+
+def _not_written(error: OSError, status: int, target: Target) -> int:
+    """The status for an answer this process could not write out whole: never the run's own."""
+    if isinstance(error, BrokenPipeError):
+        say(
+            f"{PREFIX}: what read this command's output stopped before the answer ended, so the rest of it was not"
+            f" written; the run on {target.name} ended with {status}."
+        )
+    else:
+        say(
+            f"{PREFIX}: the answer could not be written here ({setup.reason(error)}), so what was written of it is cut"
+            f" short; the run on {target.name} ended with {status}."
+        )
+    return BROKE_OFF
 
 
 def _broke_off(request: Request, target: Target) -> int:
