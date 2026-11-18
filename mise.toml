@@ -49,6 +49,22 @@ description = "Re-record the projection of every single-key platform answer in t
 # move, so this runs by hand after reading that list, never as part of a gate.
 run = "python scripts/snapshot_platform_projection.py"
 
+[tasks."setup:remote-target"]
+description = "Set another machine up as a remote target, or repair it: the dispatcher and the build host's key's one authorized_keys line there, the key and the target's entry in ~/.config/emu-atlas-dev/ here (--print: a script to run on a target this machine cannot log into yet)"
+raw = true
+usage = '''
+arg "<name>" help="The name to give the target: letters, digits, '.', '_' and '-'."
+arg "<destination>" help="What your own ssh reaches the target as: user@address, or an alias from your SSH config."
+flag "--print" help="Log into nothing: print a script to run on the target, then run the setup again without --print."
+'''
+# `raw` because a login may ask for a password or about a host key on the
+# terminal. The arguments arrive through the usage spec's variables: without
+# one, mise appends them to the last line of a multi-line run. `--` so a name
+# or destination is never read as an option.
+run = '''
+exec python scripts/setup_remote_target.py ${usage_print:+--print} -- "$usage_name" "$usage_destination"
+'''
+
 [tasks.test-oldest]
 description = "Run the tests on the oldest supported interpreter (the floor `test` does not cover)"
 # By hand, not part of `test` or the gate: this one needs its own venv and, the first
