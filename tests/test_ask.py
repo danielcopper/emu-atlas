@@ -798,6 +798,20 @@ class TestTheDispatchersOwnStatuses:
         )
 
 
+def recording_popen(monkeypatch: pytest.MonkeyPatch) -> list[subprocess.Popen[bytes]]:
+    """Every process the client starts from now on, in order, as it ended: the last one is the question's ssh."""
+    started: list[subprocess.Popen[bytes]] = []
+    real_popen = subprocess.Popen
+
+    class Recording(real_popen[bytes]):
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            super().__init__(*args, **kwargs)
+            started.append(self)
+
+    monkeypatch.setattr(ask.subprocess, "Popen", Recording)
+    return started
+
+
 def copy_then(there: There, monkeypatch: pytest.MonkeyPatch, after: Callable[[str], None]) -> list[str]:
     """The client's copy as it is, with *after* run between the copy and the question; the ids the copies named."""
     real = ask.copy_tree
@@ -1136,11 +1150,13 @@ class TestTheAnswer:
             there.save()
 
         copy_then(there, monkeypatch, prints_now)
+        started = recording_popen(monkeypatch)
         try:
             began = time.monotonic()
             status, out, _ = called(capfd, "probe", "--target", "handheld", "linger.py", token)
             took = time.monotonic() - began
 
+            assert started[-1].returncode == -signal.SIGKILL
             assert (status, out) == (ask.NOT_ASKED, "")
             assert took < 15
             assert gone_within(token, 5), processes_holding(token)
@@ -1289,17 +1305,9 @@ class TestTheAnswer:
             gone_when_reported.append(gone_within(token, 30))
             return real_crashed(phase)
 
-        started: list[subprocess.Popen[bytes]] = []
-        real_popen = subprocess.Popen
-
-        class Recording(real_popen[bytes]):
-            def __init__(self, *args: Any, **kwargs: Any) -> None:
-                super().__init__(*args, **kwargs)
-                started.append(self)
-
         monkeypatch.setattr(ask, "read_answer", reads_then_crashes)
         monkeypatch.setattr(ask, "crashed", reports)
-        monkeypatch.setattr(ask.subprocess, "Popen", Recording)
+        started = recording_popen(monkeypatch)
         try:
             status, _, err = called(capfd, "probe", "--target", "handheld", "linger.py", token)
 
@@ -1741,6 +1749,17 @@ class TestTheFirstProbe:
             "systems retrodeck: differ at .options.<key>, .options.<key>, .options.core_option, .options.<key>" in lines
         )
         assert "Game" not in " ".join(lines) and "Title" not in " ".join(lines) and "europe" not in " ".join(lines)
+
+    def test_every_key_below_a_data_object_is_not_printed(self) -> None:
+        """A mapping under a data key can be keyed by names off the device too, lowercase identifiers among them."""
+        labelled = {"caveats": [{"code": "x", "data": {"saves": {"mario_kart": 1, "zelda": 1}}}]}
+        bare = {"caveats": [{"code": "x", "data": {"saves": {"mario_kart": 2, "zelda": 2}}}]}
+
+        status, lines = answers_agree.compare(self._one_retrodeck(labelled, bare))
+
+        assert status == answers_agree.DISAGREE
+        assert "systems retrodeck: differ at .caveats[0].data.<key>.<key>, .caveats[0].data.<key>.<key>" in lines
+        assert "mario" not in " ".join(lines) and "zelda" not in " ".join(lines)
 
     def test_every_key_of_a_data_object_is_not_printed(self) -> None:
         """A caveat's data can be keyed by a name off the device, a lowercase one among them."""

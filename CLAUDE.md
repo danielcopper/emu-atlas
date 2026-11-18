@@ -155,7 +155,7 @@ measures them — so a clean Sonar page does not mean a green gate.
     report that it needs a run on a machine that has that deployment before it merges, whether or not a test skipped: a
     tripwire can pass over a missing build without a skip.
   - Stop only your own processes, by PID; never `pkill` or `killall`.
-  - No device values or ROM titles in committed text; describe data shapes.
+  - No device values or ROM titles in committed text, pull requests or issues; describe data shapes.
 
 ## Asking a set-up installation
 

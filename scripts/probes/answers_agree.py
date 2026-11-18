@@ -53,7 +53,7 @@ NOT_PUT = 2
 
 FIELD_NAME = re.compile(r"[a-z][a-z0-9_]*", re.ASCII)
 """A key printed as it is in a path: a plain field name of the contract. Any other key stands as ``<key>``, and so
-does every key of a ``data`` object, whose keys a caveat can take from the device."""
+does every key anywhere below a ``data`` object, whose keys a caveat can take from the device."""
 
 UNREADABLE = "an answer put to every installation with a shape this probe cannot read"
 
@@ -129,7 +129,7 @@ def differences(left: Any, right: Any, path: str = "") -> list[str]:
 
 def _dict_differences(left: dict[str, Any], right: dict[str, Any], path: str) -> list[str]:
     found: list[str] = []
-    in_data = path.endswith(".data")
+    in_data = any(part.split("[")[0] == "data" for part in path.split("."))
     for key in sorted(set(left) | set(right)):
         place = f"{path}.{shown_key(key, in_data=in_data)}"
         if key in left and key in right:
