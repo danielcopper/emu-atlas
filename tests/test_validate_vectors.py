@@ -1430,6 +1430,26 @@ def _conflict_projection() -> dict[str, Any]:
     return projection
 
 
+def _shared_catalogue(*, entry_system: Any = None, code: str = "system-unanimous", candidates: int = 2) -> Vector:
+    """A catalogue answer several named systems give alike (#784 D62, D65): its entries name no system."""
+    resolution = {
+        "status": "unanimous",
+        "system": None,
+        "relation": None,
+        "candidates": [{"system": _pair(key), "status": "declared"} for key in ("sfc", "snes")[:candidates]],
+        "translation": _projection(),
+    }
+    return _base_catalogue(
+        entries=[_emulator(system=entry_system)], caveats=[{"code": code, "data": {}}], resolution=resolution
+    )
+
+
+def _with_caveats(vector: Vector, caveats: list[dict[str, Any]]) -> Vector:
+    """*vector*'s catalogue answer with *caveats* in place of its own."""
+    vector["expected"]["catalogue"]["caveats"] = caveats
+    return vector
+
+
 # The cause a translation states for its one unknown pair (ScreenScraper 6).
 _UNMAPPED_SS6 = {"code": "platform-unmapped", "data": {"source": "screenscraper", "key": "6"}}
 AMBIGUOUS = [{"system": _pair("sfc"), "status": "declared"}, {"system": _pair("snes"), "status": "absent"}]
@@ -1447,19 +1467,40 @@ RESOLUTION_CASES = [
     case(_base_catalogue(resolution={**_resolution(), "system": "gb"}),
          "resolution.system must be a {source, key} object", id="resolution-system-not-a-pair"),
     case(_base_catalogue(resolution={**_resolution(), "candidates": AMBIGUOUS}),
-         "candidates lists two or more systems, exactly where the status is ambiguous",
+         "candidates lists two or more systems, exactly where the status is ambiguous or unanimous",
          id="resolution-candidates-beside-a-system"),
     case(_unresolved("sfc"),
-         "candidates lists two or more systems, exactly where the status is ambiguous", id="resolution-one-candidate"),
+         "candidates lists two or more systems, exactly where the status is ambiguous or unanimous", id="resolution-one-candidate"),
     case(_unresolved("sfc", "snes", status="unknown", code="system-unknown"),
-         "candidates lists two or more systems, exactly where the status is ambiguous",
+         "candidates lists two or more systems, exactly where the status is ambiguous or unanimous",
          id="resolution-candidates-beside-unknown"),
     case(_unresolved(status="ambiguous"),
-         "candidates lists two or more systems, exactly where the status is ambiguous",
+         "candidates lists two or more systems, exactly where the status is ambiguous or unanimous",
          id="resolution-ambiguous-without-candidates"),
     case(_unresolved("sfc", "snes", code="system-unknown"),
          "resolution is ambiguous and the answer does not state system-ambiguous",
          id="resolution-candidates-without-their-caveat"),
+    case(_shared_catalogue(code="system-ambiguous"),
+         "resolution is unanimous and the answer does not state system-unanimous",
+         id="resolution-unanimous-without-its-caveat"),
+    case(_with_caveats(_shared_catalogue(), [{"code": "system-unanimous", "data": {}}, {"code": "system-ambiguous", "data": {}}]),
+         "resolution is unanimous and the answer also states system-ambiguous",
+         id="resolution-unanimous-beside-system-ambiguous"),
+    case(_with_caveats(_unresolved("sfc", "snes"), [{"code": "system-ambiguous", "data": {}}, {"code": "system-unanimous", "data": {}}]),
+         "resolution is ambiguous and the answer states system-unanimous",
+         id="resolution-ambiguous-beside-system-unanimous"),
+    case(_shared_catalogue(candidates=1),
+         "candidates lists two or more systems, exactly where the status is ambiguous or unanimous",
+         id="resolution-unanimous-with-one-candidate"),
+    case(_shared_catalogue(entry_system=_pair("sfc")),
+         "an emulator names no system exactly in an answer whose resolution is unanimous",
+         id="resolution-unanimous-entry-naming-a-system"),
+    case(_base_catalogue(entries=[_emulator(system=None)]),
+         "an emulator names no system exactly in an answer whose resolution is unanimous",
+         id="resolution-resolved-entry-naming-no-system"),
+    case(_base_launchable(installers=[{"emulator": "RPCS3", "entry": _installer_entry(system=None)}]),
+         "an emulator names no system exactly in an answer whose resolution is unanimous",
+         id="resolution-resolved-installer-entry-naming-no-system"),
     case(_base_catalogue(entries=[], resolution={**_resolution(), "status": "unknown", "system": None, "relation": None,
                                                  "translation": _projection("unknown", caveats=[_UNMAPPED_SS6])}),
          "resolution is unknown and the answer does not state system-unknown", id="resolution-none-without-why"),
@@ -2644,6 +2685,20 @@ ACCEPTED_CASES = [
     pytest.param(_base_firmware(cores=[_unchecked_option_core("by-name-then-content")]),
                  id="an-unchecked-option-without-identity-on-a-content-recognising-route"),
     pytest.param(_base_launchable(installers=[]), id="a-needs-installation-verdict-nothing-here-installs"),
+    # Several named systems that answer alike: the shared answer, whose entries
+    # name no system, beside the candidates (#784 D62, D65).
+    pytest.param(_shared_catalogue(), id="a-shared-catalogue-answer-names-no-system-on-its-entries"),
+    # The installers of a shared needs-installation verdict: their entries
+    # name no system either. No packaged install-first record covers two
+    # systems one pair names, so only this shape reaches the branch.
+    pytest.param(
+        _base_launchable(
+            installers=[{"emulator": "RPCS3", "entry": _installer_entry(system=None)}],
+            caveats=[{"code": "system-unanimous", "data": {}}],
+            resolution=_shared_catalogue()["expected"]["catalogue"]["resolution"],
+        ),
+        id="a-shared-needs-installation-verdict-whose-installers-name-no-system",
+    ),
     pytest.param(_base_launchable(verdict="unknown", installers=None), id="no-installers-off-their-verdict"),
     pytest.param(_launchable_boot(boots={"file": BOOT_FILE, "disc_root": "/roms/ps3/Game.ps3"}),
                  id="a-launchable-entry-boots-a-file-from-its-disc"),
@@ -2866,8 +2921,10 @@ class TestTheVocabularyIsOneVocabulary:
         assert validate_vectors.UNRESOLVED_SYSTEM_CODES == {
             atlas.CAVEAT_SYSTEM_UNKNOWN,
             atlas.CAVEAT_SYSTEM_AMBIGUOUS,
+            atlas.CAVEAT_SYSTEM_UNANIMOUS,
             atlas.CAVEAT_SYSTEM_PAIRS_CONFLICT,
         }
+        assert validate_vectors.RESOLUTION_STATUS_REASONS[atlas.RESOLUTION_UNANIMOUS] == atlas.CAVEAT_SYSTEM_UNANIMOUS
         assert atlas.SYSTEM_SENTINELS == (validate_vectors.UNKNOWN_SYSTEM,)
 
     def test_the_validator_knows_no_code_atlas_cannot_emit(self):

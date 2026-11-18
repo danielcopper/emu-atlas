@@ -665,45 +665,91 @@ hold.
 
 ```python
 answer = inst.emulators_for(("emudeck", "sneshd"))
-answer.resolution.status       # 'resolved' — or 'unknown', 'ambiguous', 'conflict' where no single system was named
+answer.resolution.status       # 'resolved' — or 'unknown', 'ambiguous', 'unanimous', 'conflict' where no single system was named
 answer.resolution.system       # ('esde', 'snes') — the system the answer is about, as this installation names it
 answer.resolution.relation     # 'broadMatch' — sneshd is a part of the SNES; 'exactMatch' for a name read live
-answer.resolution.candidates   # () — filled only where the pairs named several systems
+answer.resolution.candidates   # () — filled only where the pairs named several systems, alike or not
 answer.resolution.translation  # the table's answer for the pairs that went through it; None for a name read live
 ```
 
 Where the pairs name one system the installation holds, the question answers for it and `resolution.status` is
-`resolved`. Where they name none, several, or disagree, the question answers its own empty or unknown form,
-`resolution.system` is `None`, and the status says which, each beside the caveat that states the reason: `unknown` with
-`system-unknown` once per asked pair, or per system the table reached, that names nothing here (data: `source`, `key`),
-`ambiguous` with `system-ambiguous` when several systems the installation holds answer — atlas picks none, and
-`candidates` lists each with its status here — and `conflict` with `system-pairs-conflict` when the pairs name different
-systems. Branch on the status, not on the caveat codes: `resolved` means the installation holds the system, on every
-route. One question asks about a name's standing itself: `platform_ids` keeps a name the installation does not hold, an
-own name or a system the table reached, as the system it spells, with `status` `absent` or `disabled` — `absent` for one
-the catalogue declares in a form ES-DE skips — a `resolved` resolution and `system-unknown` beside it, because telling
-"disabled here" from "an unknown name" is what it is for; its candidates carry `disabled` and `absent` as well, where
-every other question's are `declared`. Every other question answers a name the installation does not hold, read live or
-reached through the table, as naming no system here: the status is `unknown` with `system-unknown` beside it, the
-emulator and ROM-folder questions included, and RetroDECK's `gamelist_selections` refuses it (below). An own pair it
-does not hold, asked beside others, is an unknown pair and decides nothing. The installation does not hold a system on
-RetroDECK and EmuDeck where the catalogue, read in full, does not declare it, or declares it without an `<extension>`
-list or a `<command>`, which ES-DE skips wholesale and which the questions that list systems do not count as declared
-either — a `<command>` with no text is still one, so a system whose commands are all blank is held, and its catalogue
-and launch answers say why nothing starts with `launch-resolution-unsupported` (while EmuDeck's bundled layer is sealed
-the undeclared system, or a declaration of the skipped one that ES-DE loads, may sit there, and the sealed statement is
-the whole claim; where a layer does not parse, the catalogue in force is empty but nothing that layer meant to declare
-was read, so `catalogue-invalid` is the whole claim, and an empty firmware answer states `firmware-declaration-unknown`,
-a look that failed), and on a bare RetroArch where no installed core names it — by a libretro database name its `.info`
-declares, or by the pair atlas packages for a core that declares none. A system named by a cited pair is held where a
-core it is cited for is installed, on every arrangement. A declaration ES-DE skips shadows nothing: where the custom
-`es_systems.xml` declares a system without an `<extension>` list or a `<command>` and the bundled file declares it in
-full, the bundled declaration is the system and every answer is the bundled one's — ES-DE reads the custom file first
-and keeps a later declaration out only for a system it loaded; under `<loadExclusive/>` the bundled file is not read, so
-the skipped custom declaration stays the system and it is not held. An unknown name is never answered as a system the
-catalogue lists nothing for. A pair the table cannot place rides along with its own caveat (`platform-unmapped`,
-`platform-excluded`, `platform-source-unknown`) and does not decide anything; a stated version the table does not hold
-is `platform-source-version-differs` in the translation.
+`resolved`. Where they name none, disagree, or name several that answer differently, the question answers its own empty
+or unknown form, `resolution.system` is `None`, and the status says which, each beside the caveat that states the
+reason: `unknown` with `system-unknown` once per asked pair, or per system the table reached, that names nothing here
+(data: `source`, `key`), `ambiguous` with `system-ambiguous` when several systems the installation holds answer and
+either their answers differ or the question is `platform_ids`, which asks about the name's standing and asks none of
+them — atlas picks none, and `candidates` lists each with its status here — and `conflict` with `system-pairs-conflict`
+when the pairs name different systems. Branch on the status, not on the caveat codes: `resolved` means the installation
+holds the system, on every route.
+
+**Several systems that answer alike answer together.** Where the pairs name several systems the installation holds, each
+is asked as if it had been named alone, and where every one of them gives the same answer to the question asked, that
+shared answer is the answer: `resolution.status` is `unanimous`, `system-unanimous` stands where `system-ambiguous`
+would (data: the parallel `sources` and `keys` of the candidates), `resolution.system` is `None` and `candidates` still
+lists them all — atlas picks none, it found nothing to pick between. Read a `unanimous` answer as you read a `resolved`
+one, except that it names no system: an entry's `system` is `None` (`null`), and a caveat that names a candidate's own
+system is stated once per candidate, in the order `candidates` lists them. Keep sending the same pairs — the answer is
+about them, not about one of the systems, and a later question with the same pairs is answered by the same rule.
+
+"The same" is the serialized answer with `resolution` aside, caveats included, each candidate's own pair set aside where
+its answer states it: an entry's `system`, and the `source` and `key` of a caveat's or a refusal's data where every
+candidate's statement at that place names that candidate's own system (#784 D70). A statement that names one sibling in
+every candidate's answer — a firmware verdict recorded for the system the core files its firmware under — is compared as
+it stands and stated once. Everything else must match, and so must the command each entry launches, which the catalogue
+answer does not serialize. Order counts where an answer promises one: `emulators_for` lists its entries in launch
+priority, so the same entries in another order are a different answer and stay `ambiguous`; `launch_command` compares
+the entry that would run (or the one `label` names), its `declared_index` included, and its command, so siblings that
+share their first entry share a command even where their lists differ; `launchable` compares that entry and the rest of
+its answer — the accepted tokens, the alternatives, the installers; `firmware_for_system` promises no order of its
+cores, compares them as a set and lists the shared answer's by core file name, an emulator without one after them by its
+`emulator`. A firmware requirement a standalone firmware card files under the asked system is compared as it stands, so
+candidates that differ only there stay `ambiguous`; a card applies only to the systems it lists and every packaged card
+lists one, so no two siblings carry such a requirement. Two siblings with folders of their own are `ambiguous` on
+`rom_location`; on a bare RetroArch, which has no catalogue to read, every candidate answers the ROM folder question
+alike. Prose no serializer writes — such as a caveat's or a refusal's `message`, an answer's `sources`, a `provenance`,
+a save redirect's `citation` — never decides whether the candidates agree; where they differ the shared answer states
+each distinct value once, in candidate order, and where they are equal that value (#784 D67 c).
+
+An entry of a shared answer answers its own questions — `savefile_location`, `savestate_location`,
+`texture_pack_location`, `mod_location` — by the same rule: each candidate's entry at its place is asked, and where they
+all give the same answer (a stated absence of savestates included) that is the answer. Where they all refuse for the
+same reason, the entry refuses with that reason — as it stands where it names no system (#784 D71) — and a refusal whose
+data names the entry's system — `standalone-unsupported`, `standalone-variant-unestablished`, `core-file-foreign` —
+names every candidate instead, as the parallel `sources` and `keys` in candidate order in place of `source` and `key`
+(#784 D69). Where they answer differently the entry refuses with the `Unresolved` code `system-ambiguous`, the word the
+caveat uses, its `data` naming the candidates as `sources` and `keys`. A difference is never an exception and never one
+candidate's answer. `save_portability` asks no shared entry: each candidate's answer weighs that candidate's own
+entries, and the answers are compared like any other.
+
+The rule is the same on every installation and for every question that answers about a system — `emulators_for`,
+`launch_command`, `launchable`, `firmware_for_system`, `rom_location`, `savefile_location` asked with a system, and
+`save_portability`; `platform_ids` asks about a name's standing and keeps answering several systems `ambiguous`.
+
+`platform_ids` keeps a name the installation does not hold, an own name or a system the table reached, as the system it
+spells, with `status` `absent` or `disabled` — `absent` for one the catalogue declares in a form ES-DE skips — a
+`resolved` resolution and `system-unknown` beside it, because telling "disabled here" from "an unknown name" is what it
+is for; its candidates carry `disabled` and `absent` as well, where every other question's are `declared`. Every other
+question answers a name the installation does not hold, read live or reached through the table, as naming no system
+here: the status is `unknown` with `system-unknown` beside it, the emulator and ROM-folder questions included, and
+RetroDECK's `gamelist_selections` refuses it (below). An own pair it does not hold, asked beside others, is an unknown
+pair and decides nothing. The installation does not hold a system on RetroDECK and EmuDeck where the catalogue, read in
+full, does not declare it, or declares it without an `<extension>` list or a `<command>`, which ES-DE skips wholesale
+and which the questions that list systems do not count as declared either — a `<command>` with no text is still one, so
+a system whose commands are all blank is held, and its catalogue and launch answers say why nothing starts with
+`launch-resolution-unsupported` (while EmuDeck's bundled layer is sealed the undeclared system, or a declaration of the
+skipped one that ES-DE loads, may sit there, and the sealed statement is the whole claim; where a layer does not parse,
+the catalogue in force is empty but nothing that layer meant to declare was read, so `catalogue-invalid` is the whole
+claim, and an empty firmware answer states `firmware-declaration-unknown`, a look that failed), and on a bare RetroArch
+where no installed core names it — by a libretro database name its `.info` declares, or by the pair atlas packages for a
+core that declares none. A system named by a cited pair is held where a core it is cited for is installed, on every
+arrangement. A declaration ES-DE skips shadows nothing: where the custom `es_systems.xml` declares a system without an
+`<extension>` list or a `<command>` and the bundled file declares it in full, the bundled declaration is the system and
+every answer is the bundled one's — ES-DE reads the custom file first and keeps a later declaration out only for a
+system it loaded; under `<loadExclusive/>` the bundled file is not read, so the skipped custom declaration stays the
+system and it is not held. An unknown name is never answered as a system the catalogue lists nothing for. A pair the
+table cannot place rides along with its own caveat (`platform-unmapped`, `platform-excluded`, `platform-source-unknown`)
+and does not decide anything; a stated version the table does not hold is `platform-source-version-differs` in the
+translation.
 
 Two questions take a system without answering about it. `savefile_location` uses it to key the core's recorded file set:
 its placement carries no `resolution`, so the same caveats lead the placement's own, and so does
@@ -718,11 +764,14 @@ sgb). Where two held entries state different files, the file set is unknown and 
 A system that was asked and keys no record answers the file set unknown, and `save-record-unrecorded` names the core and
 the system as asked, as `source` and `key` or, where several pairs were asked, the parallel `sources` and `keys` — a key
 the record does not list (gbh, a system added by hand), a name that reaches no ES-DE name (a bare RetroArch's DICE), a
-cited pair or RetroDECK's own name. Pairs that name no single system state why in the resolution's own caveat, not here.
-The files every system of a record agrees on answer only a question that names no system. RetroDECK's
-`gamelist_selections` answers about a whole gamelist and has no caveats to state them in, so an argument that names no
-single system, or a name the catalogue does not declare, raises `ValueError`, as a malformed one does; what else a
-resolved system carries — a version not applied, a pair the table does not hold — its answer does not carry.
+cited pair or RetroDECK's own name. Pairs that name several systems key the record once per candidate, and where the
+placements all agree the placement is that one, the resolution's statements, `system-unanimous` among them, leading its
+caveats; where every candidate refuses alike, that refusal, which carries no resolution statement; otherwise no record
+is keyed and the resolution's own caveat states why, not this one. The files every system of a record agrees on answer
+only a question that names no system. RetroDECK's `gamelist_selections` answers about a whole gamelist and has no
+caveats to state them in, so an argument that names no single system, or a name the catalogue does not declare, raises
+`ValueError`, as a malformed one does; what else a resolved system carries — a version not applied, a pair the table
+does not hold — its answer does not carry.
 
 Every answer field that names a system is a `{source, key}` pair — `entries[].system`, `systems()`, a firmware
 requirement's `system` (or `_unknown`, where nothing names the system of the core that declared it) — and caveat data
@@ -1536,10 +1585,13 @@ that code name several and a client must not have to test the type first. The sa
 `firmware-declaration-unread.declared`, `firmware-directory-holds-no-image.paths`,
 `firmware-scan-incomplete.unreadable`, `files` (on `core-without-systemname` and `system-assignment-derived`),
 `system-assignment-may-hide-cores.cores`, the parallel `sources` and `keys` naming several systems or pairs (on
-`firmware-core-substitute`, `system-ambiguous` and `system-pairs-conflict`, as `file-set-across-systems` and
-`save-record-ambiguous` and `save-record-partial` name them on the save side and `platform-parts-unestablished` on the
-platform side) and `database` on both `core-without-systemname` and `system-assignment-derived`. Order is contractual:
-it is the order the answer states, and two caveats naming the same names in different orders are two statements.
+`firmware-core-substitute`, `system-ambiguous`, `system-unanimous` and `system-pairs-conflict`, as
+`file-set-across-systems` and `save-record-ambiguous` and `save-record-partial` name them on the save side and
+`platform-parts-unestablished` on the platform side, and on the refusals `standalone-unsupported`,
+`standalone-variant-unestablished` and `core-file-foreign` an entry of a shared answer states for every candidate in
+place of `source` and `key`, #784 D69) and `database` on both `core-without-systemname` and `system-assignment-derived`.
+Order is contractual: it is the order the answer states, and two caveats naming the same names in different orders are
+two statements.
 
 An empty list and an absent key are different answers, and which a pair gives is fixed. `[]` says this answer states no
 names under that key; whether none exist, none were read, or a listing failed is the code's business and the message's,
@@ -2550,7 +2602,7 @@ Windows build under Proton, or a flatpak the table names no app id for (EmuDeck 
 PCSX2 and RPCS3 as AppImages, so none is established for them) — refuses with `standalone-variant-unestablished` and the
 variant in `data`, which is a different instruction from "this emulator is not covered".
 
-Four ways this question answers with `Unresolved` instead of a directory, and each is a different instruction — the rows
+Five ways this question answers with `Unresolved` instead of a directory, and each is a different instruction — the rows
 that read a configuration add two more, below the table:
 
 | Code                               | Meaning                                                                                                             |
@@ -2559,14 +2611,15 @@ that read a configuration add two more, below the table:
 | `standalone-unsupported`           | a standalone emulator whose directory is named only in its own config, so no card covers it                         |
 | `standalone-variant-unestablished` | the card covers it, but nothing establishes which tree the launch's binary reads (EmuDeck; `data.variant` names it) |
 | `texture-wiring-unestablished`     | atlas carries no texture wiring for this core                                                                       |
+| `system-ambiguous`                 | an entry of a shared answer whose candidates' entries answer differently (`data.sources`, `data.keys`)              |
 
-The last is a statement about atlas, never about the emulator. It does **not** say the emulator has no texture-pack
-feature; most cores are simply outside the packaged knowledge. Where the directory is a configuration value (PCSX2,
-DuckStation), the config read itself can refuse the way the save routes' reads do: a settings file that exists and
-cannot be read is `emulator-config-unreadable`, and one that reads fine but states an absolute directory only the
-emulator's sandbox can spell is `emulator-config-path-untranslatable` with the stated value in `data.path` — a
-sandbox-spelled value is translated to its host spelling where the map knows one, refused where it does not, and never
-stated verbatim as if this host could read it.
+`texture-wiring-unestablished` is a statement about atlas, never about the emulator. It does **not** say the emulator
+has no texture-pack feature; most cores are simply outside the packaged knowledge. Where the directory is a
+configuration value (PCSX2, DuckStation), the config read itself can refuse the way the save routes' reads do: a
+settings file that exists and cannot be read is `emulator-config-unreadable`, and one that reads fine but states an
+absolute directory only the emulator's sandbox can spell is `emulator-config-path-untranslatable` with the stated value
+in `data.path` — a sandbox-spelled value is translated to its host spelling where the map knows one, refused where it
+does not, and never stated verbatim as if this host could read it.
 
 Three caveats are this question's own:
 
@@ -2648,7 +2701,7 @@ of that emulator make. Where no `settings.ini` exists on either candidate, the a
 and says so with `core-mode-unestablished` — the same word the save route uses, so the two never disagree about what is
 unknown.
 
-Four ways this question answers with `Unresolved` instead of a directory, and the row that reads a configuration adds
+Five ways this question answers with `Unresolved` instead of a directory, and the row that reads a configuration adds
 two more, below the table:
 
 | Code                               | Meaning                                                                                                            |
@@ -2657,6 +2710,7 @@ two more, below the table:
 | `standalone-unsupported`           | a standalone emulator whose mod directory is named only in its own config (MAME's `pluginspath`)                   |
 | `standalone-variant-unestablished` | the card covers it, but which tree the launch's binary reads is not established (EmuDeck; `data.variant` names it) |
 | `mod-wiring-unestablished`         | atlas carries no mod wiring for this core — a statement about atlas, never about the emulator                      |
+| `system-ambiguous`                 | an entry of a shared answer whose candidates' entries answer differently (`data.sources`, `data.keys`)             |
 
 Where the tree hangs off a configuration value (DuckStation), the config read itself can refuse with the texture
 question's own two codes: a `settings.ini` that exists and cannot be read is `emulator-config-unreadable` — refused
@@ -2987,8 +3041,9 @@ else:
 
 Always handle the `Unresolved` branch: standalone emulators (DuckStation, PCSX2-SA, …) are catalogued but outside the
 resolver's coverage, and pretending otherwise is exactly what atlas refuses to do. The entry route refuses on one more
-code than that — `core-not-installed`, when the catalogue names a libretro core this installation does not have — so
-match on the code rather than assuming which refusal you got.
+code than that — `core-not-installed`, when the catalogue names a libretro core this installation does not have — and an
+entry of a shared answer on one more, `system-ambiguous`, where its candidates' entries answer differently; so match on
+the code rather than assuming which refusal you got.
 
 `standalone-unsupported` is one word on both routes: the placement route answers it as the `Unresolved` code above, and
 the firmware route as a caveat on a core whose `declaration` is `"unsupported"`. Both say the same thing — the emulator

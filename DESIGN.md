@@ -459,25 +459,30 @@ short form of a pair in the first of them. A pair in an own source is read live 
 as spelled; a pair in any other source of the platform table below goes through the table into the own sources, exact
 matches first, then the systems the pairs are a part of, then the systems they are wider than, and never a related one.
 Several pairs are intersected the way the platform questions intersect them. Where that names one system the
-installation holds, the question answers for it; where it names several or none, or the pairs conflict, the question
-answers its empty or unknown form and a caveat says why, naming the candidates where there are several — atlas picks
-none. The first tier that names any system decides, held here or not; a later tier is never tried. A system the
-installation does not hold, read live or reached through the table, is no system here (#784 D53) — a system atlas names
-by a cited pair is held only where a core it is cited for is installed, and one an ES-DE catalogue declares without an
-`<extension>` list or a `<command>` is not held, because ES-DE skips it wholesale (#784 D58); such a declaration in the
-custom file shadows nothing, so a bundled declaration of the same name that ES-DE loads is the system (#784 D59) — and
-the unknown form states as much about the catalogue as the resolved form would; the one exception is `platform_ids`, the
-question about a name's standing itself, which keeps such a name as the system it spells with its status `absent` or
-`disabled` — `absent` for a skipped one, which `systems()` and `rom_locations()` do not list either, and no question
-that lists systems counts as declared (#784 D61). An answer about a system states the resolution beside it, and the
-resolution states how it ended — resolved, unknown, ambiguous or conflict — so a client branches on that rather than on
-caveat codes. `savefile_location` takes a system only to key a core's recorded file set, so what resolving it said leads
-its placement's caveats instead, and RetroDECK's `gamelist_selections`, whose answer has no caveats, refuses a system
-that does not resolve to one. Every answer field that names a system is a `{source, key}` pair. The source decides the
-route, so there is no fallback between them: a client whose vocabulary comes from another source sends pairs, and one
-that read the installation's catalogue, or reuses a system an answer named, sends the name. `atlas/data/system_ids.json`
-still lists the system names one catalogue declares (RetroDECK 0.10.9b), pinned by a test that parses that build's file;
-#797 replaces it with the table.
+installation holds, the question answers for it; where it names several, the question asks each as if it had been named
+alone and answers the one answer they all give, naming no system (#784 D62–D65) — `platform_ids`, which answers about
+the asked name's standing, asks none; where they answer differently, where it names none, or where the pairs conflict,
+the question answers its empty or unknown form and a caveat says why, naming the candidates where there are several —
+atlas picks none either way. An entry of such a shared answer asks its own placement questions of every candidate's
+entry the same way: where they refuse alike it refuses with their reason — naming every candidate where the refusal
+names the entry's system, as it stands where it names none — and where they differ with `system-ambiguous` (#784 D66,
+D67, D69, D71). The first tier that names any system decides, held here or not; a later tier is never tried. A system
+the installation does not hold, read live or reached through the table, is no system here (#784 D53) — a system atlas
+names by a cited pair is held only where a core it is cited for is installed, and one an ES-DE catalogue declares
+without an `<extension>` list or a `<command>` is not held, because ES-DE skips it wholesale (#784 D58); such a
+declaration in the custom file shadows nothing, so a bundled declaration of the same name that ES-DE loads is the system
+(#784 D59) — and the unknown form states as much about the catalogue as the resolved form would; the one exception is
+`platform_ids`, the question about a name's standing itself, which keeps such a name as the system it spells with its
+status `absent` or `disabled` — `absent` for a skipped one, which `systems()` and `rom_locations()` do not list either,
+and no question that lists systems counts as declared (#784 D61). An answer about a system states the resolution beside
+it, and the resolution states how it ended — resolved, unknown, ambiguous, unanimous or conflict — so a client branches
+on that rather than on caveat codes. `savefile_location` takes a system only to key a core's recorded file set, so what
+resolving it said leads its placement's caveats instead, and RetroDECK's `gamelist_selections`, whose answer has no
+caveats, refuses a system that does not resolve to one. Every answer field that names a system is a `{source, key}`
+pair. The source decides the route, so there is no fallback between them: a client whose vocabulary comes from another
+source sends pairs, and one that read the installation's catalogue, or reuses a system an answer named, sends the name.
+`atlas/data/system_ids.json` still lists the system names one catalogue declares (RetroDECK 0.10.9b), pinned by a test
+that parses that build's file; #797 replaces it with the table.
 
 _Settled (issue #784, cut #785):_ **one cited table maps the keys of every included source onto one another, and atlas
 adds no vocabulary of its own.** Its unit is a _row_: one system at the finest distinction any source makes — the common
@@ -667,13 +672,13 @@ catalogue-launches-core) are re-run against the deployed `es_systems.xml`.
   the platform table where the `systemname` map holds none, so the second vocabulary is mapped by the table rather than
   by a hand-kept list of the same size.
 - **An empty answer says which kind of empty it is.** `system-unknown` means nothing here covers that system — a name
-  the installation's catalogue does not declare, or pairs that name none of its systems; pairs naming several or
-  conflicting say so with `system-ambiguous` and `system-pairs-conflict` instead. Where the subject _is_ covered, an
-  empty requirement list has three further reasons and each carries its own code, because each is a different
-  instruction: `no-firmware-declaration` — every declaration source was read and none names a file, so the absence is
-  established; `no-firmware-requirement` — firmware is declared here and none of it became a requirement (refused, or
-  outside the enumeration its own core performs), so the per-emulator entries say which file went where; and
-  `firmware-declaration-unknown` — what is declared could not be established at all, because the enumeration did not
+  the installation's catalogue does not declare, or pairs that name none of its systems; pairs naming several that
+  answer differently, or conflicting ones, say so with `system-ambiguous` and `system-pairs-conflict` instead. Where the
+  subject _is_ covered, an empty requirement list has three further reasons and each carries its own code, because each
+  is a different instruction: `no-firmware-declaration` — every declaration source was read and none names a file, so
+  the absence is established; `no-firmware-requirement` — firmware is declared here and none of it became a requirement
+  (refused, or outside the enumeration its own core performs), so the per-emulator entries say which file went where;
+  and `firmware-declaration-unknown` — what is declared could not be established at all, because the enumeration did not
   happen or nothing in it could be read. One code for several of these would read as the mildest of them: "nothing
   needed" where the right instruction is "you asked in the wrong vocabulary", or worse, where the truth is that atlas
   never got to look. That last one is the rule behind the split: a claim about the machine requires that the enumeration

@@ -42,14 +42,14 @@ dictionary literal whose every key is a string constant, stores into it under
 string-literal keys alone, and uses it nowhere else. :func:`_from_variable` is
 that rule.
 
-The reach is measured, not assumed: of the 341 construction sites this walk's
-own definitions find, 316 are read whole, 8 are read in part, and 18 cannot be
-read at all. The 341 and the 316 were counted when this was last updated and
-grow with the package, held by nothing here; the 26 behind the other two
+The reach is measured, not assumed: of the 441 construction sites this walk's
+own definitions find, 414 are read whole, 9 are read in part, and 18 cannot be
+read at all. The 441 and the 414 were counted when this was last updated and
+grow with the package, held by nothing here; the 27 behind the other two
 numbers are the ones that matter, and :data:`BLIND_SITES` pins them. Eight
-shapes account for those 26, in two groups. Written at the call: the argument
+shapes account for those 27, in two groups. Written at the call: the argument
 is a conditional expression (5, ``{"core_so": x} if x is not None else {}``), a
-dictionary literal holding a ``**`` entry (3, ``{"core": core, "reason":
+dictionary literal holding a ``**`` entry (4, ``{"core": core, "reason":
 reason, **facts}``), a starred call (1, ``Caveat(CODE, *_per_user_state(...))``),
 or a call's result (6, ``_vita3k_refusal_data(card, config_path, build, ...)``,
 which adds ``build`` only where a release was read).
@@ -81,7 +81,7 @@ only the corpus end can see — which is the reason the one parameter that did
 carry a card token under ``core`` was also named ``core``.
 
 A hollow pass is made visible by pinning: :data:`BLIND_SITES` is the reviewed
-census of those 26, keyed by the function that holds them, and
+census of those 27, keyed by the function that holds them, and
 :func:`test_the_blind_sites_are_the_reviewed_ones` fails when the walk's census
 differs. A new construction site the walk cannot read therefore fails loudly and
 gets reviewed, rather than quietly shrinking what the rule covers. The census is
@@ -89,7 +89,7 @@ keyed by function rather than by line so that editing a module does not churn
 it.
 
 **The corpus end** reads what answers actually carry, whatever built them, which
-is what covers the 26 sites the source end does not read whole: the keys, and
+is what covers the 27 sites the source end does not read whole: the keys, and
 for the identity keys the values as well. What separates ``core`` from ``token``
 there is the packaged card set itself — a ``core`` value is never one of those
 tokens, and a ``token`` value is always one — and neither of those two is a rule
@@ -226,11 +226,16 @@ _called_name = reference._called_name  # pyright: ignore[reportPrivateUsage]
 _NESTED_SCOPES = (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda, ast.ClassDef)
 
 # The reviewed census of construction sites this walk cannot read whole, as
-# {(module, function): how many}. Each entry was read and is one of the seven
+# {(module, function): how many}. Each entry was read and is one of the eight
 # shapes the module docstring names; the corpus end is what covers whatever they
 # hide. A mismatch here is not a failure of the rule — it means the source end's
 # reach moved and wants re-reading.
 BLIND_SITES: dict[tuple[str, str], int] = {
+    # The refusal an entry of a shared answer states where every candidate's
+    # entry refuses for its own system (#784 D69): ``{**rest, "sources": …,
+    # "keys": …}``, where ``rest`` is the candidates' refusal, built at its own
+    # literal site and read whole there, minus its ``source`` and ``key``.
+    ("_shared_answer.py", "_shared_refusal"): 1,
     ("firmware.py", "_declaration_unknown"): 1,
     ("firmware.py", "_image_by_header"): 3,
     ("firmware.py", "_no_declaration"): 1,
