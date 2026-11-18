@@ -2240,5 +2240,5 @@ class TestTheTaskAndTheGuide:
 
         guide = (REPO / "docs" / "remote-target.md").read_text(encoding="utf-8")
 
-        for name in ("REFUSED", "CANNOT_RUN", "COPY_FAILED"):
-            assert f"- **{getattr(dev_dispatch, name)} `{name}`** — " in guide, name
+        for status, name in dev_dispatch.STATUSES.items():
+            assert f"- **{status} `{name}`** — " in guide, name

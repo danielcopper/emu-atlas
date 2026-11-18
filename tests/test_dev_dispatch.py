@@ -359,8 +359,11 @@ class TestTheRefusals:
         )
 
     def test_its_statuses_are_none_atlas_uses_and_differ(self) -> None:
-        statuses = {dev_dispatch.REFUSED, dev_dispatch.CANNOT_RUN, dev_dispatch.COPY_FAILED, dev_dispatch.TREE_GONE}
-        assert len(statuses) == 4
+        statuses = set(dev_dispatch.STATUSES)
+        assert statuses == {
+            dev_dispatch.REFUSED, dev_dispatch.CANNOT_RUN, dev_dispatch.COPY_FAILED, dev_dispatch.TREE_GONE
+        }
+        assert all(getattr(dev_dispatch, name) == status for status, name in dev_dispatch.STATUSES.items())
         assert statuses.isdisjoint({0, 1, 2})
 
 
@@ -1113,7 +1116,9 @@ class TestTheDispatchersOwnCrash:
             dev_dispatch.run_held(str(tree), "module", "atlas", [])
 
         assert stop.value.status == dev_dispatch.CANNOT_RUN
-        assert stop.value.message == "emu-atlas-dev: the run could not be started (Argument list too long); nothing ran."
+        assert stop.value.message == (
+            "emu-atlas-dev: the run could not be started (Argument list too long); nothing ran."
+        )
         assert capsys.readouterr().out == f"{dev_dispatch.RUN_MARKER}\n"
 
 

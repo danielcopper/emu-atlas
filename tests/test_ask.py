@@ -1454,8 +1454,7 @@ class TestTheRealMise:
 
 class TestTheStatuses:
     def test_the_clients_own_are_none_atlas_or_the_dispatcher_ends_with(self) -> None:
-        dispatcher = {dev_dispatch.REFUSED, dev_dispatch.CANNOT_RUN, dev_dispatch.COPY_FAILED, dev_dispatch.TREE_GONE}
-        assert len(dispatcher) == 4
+        dispatcher = set(dev_dispatch.STATUSES)
         assert ask.USAGE == 2
         assert {ask.NOT_ASKED, ask.BROKE_OFF}.isdisjoint({0, 1, 2} | dispatcher)
         assert ask.NOT_ASKED != ask.BROKE_OFF
@@ -1466,7 +1465,6 @@ class TestTheStatuses:
 
         for name in ("USAGE", "NOT_ASKED", "BROKE_OFF"):
             assert f"- **{getattr(ask, name)} `{name}`** — " in guide, name
-        assert f"- **{dev_dispatch.TREE_GONE} `TREE_GONE`** — " in guide
 
     def test_the_guide_has_the_section_the_client_points_to(self) -> None:
         guide = (REPO / "docs" / "remote-target.md").read_text(encoding="utf-8")
