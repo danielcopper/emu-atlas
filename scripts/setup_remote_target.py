@@ -28,7 +28,7 @@ import sys
 import tempfile
 import tomllib
 from dataclasses import dataclass
-from typing import Literal
+from typing import Final, Literal
 
 REPO = pathlib.Path(__file__).resolve().parent.parent
 DISPATCHER = REPO / "scripts" / "dev_dispatch.py"
@@ -100,14 +100,14 @@ _NO_SERVER = re.compile(
 # Where ssh names the host a failure is about: a refused login as user@host, a
 # connection as "connect to host <host> port", a name and a changed key by it.
 _NAMED_HOSTS = (
-    re.compile(r"\S+@(\S+): Permission denied \("),
+    re.compile(r"\S@([^\s@]+): Permission denied \("),
     re.compile(r"connect to host (\S+) port"),
     _UNRESOLVED,
     re.compile(r"Host key for (\S+) has changed"),
 )
 
 _NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]*")
-_FLOOR = re.compile(r">=\s*([0-9]+\.[0-9]+)")
+_FLOOR = re.compile(r">=\s*(\d+\.\d+)", re.ASCII)
 
 _CONFIG_HEADER = (
     "# emu-atlas's own SSH config for remote targets, which setup:remote-target writes:\n"
@@ -126,6 +126,9 @@ Where = Literal["target", "hop", "either"]
 
 HandOver = Literal["refused", "forced command", "hop"]
 """Why the key's login gives way to the user's own (:func:`hand_over`)."""
+
+FORCED_COMMAND: Final = "forced command"
+"""The key was taken, but its forced command ran no install."""
 
 
 class SetupError(Exception):
@@ -165,13 +168,19 @@ def run(command: list[str], stdin: str | None = None) -> subprocess.CompletedPro
     as it is is not sent at all — and what comes back is read with replacement:
     a byte the target's login files print that is no UTF-8 does not end the run
     after the install ran.
+
+    *command* is an argument list, never a shell line, and nothing from outside
+    reaches it as an option: ``ssh``'s destination follows ``--``
+    (:func:`ssh_resolve`, :func:`setup_login`), ``ssh-keygen``'s comment is
+    built from the sanitized host name, and ``ip``'s address is the numeric one
+    ``getaddrinfo`` returned.
     """
     try:
         data = None if stdin is None else stdin.encode("utf-8")
     except UnicodeEncodeError as error:
         raise SetupError(f"{PREFIX}: what the setup would send to {command[0]} is no UTF-8: {error}.") from error
     try:
-        result = subprocess.run(command, input=data, capture_output=True, check=False)
+        result = subprocess.run(command, input=data, capture_output=True, check=False)  # NOSONAR S8705: argument list, no shell; destinations follow "--"
     except FileNotFoundError as error:
         raise SetupError(f"{PREFIX}: the setup needs {command[0]}, and this machine has none on its PATH.") from error
     return subprocess.CompletedProcess(
@@ -243,7 +252,7 @@ def setup_request() -> list[str]:
 
 def ssh_resolve(destination: str, port: str | None = None) -> dict[str, list[str]]:
     """``ssh -G``'s answer for *destination*: each key with every value it printed."""
-    result = run(["ssh", "-G", *(["-p", port] if port else []), destination])
+    result = run(["ssh", "-G", *(["-p", port] if port else []), "--", destination])
     if result.returncode != 0:
         raise SetupError(f"{PREFIX}: ssh could not read its configuration for {destination}:\n{result.stderr.rstrip()}")
     answer: dict[str, list[str]] = {}
@@ -783,7 +792,7 @@ def hand_over(result: subprocess.CompletedProcess[str], *, name: str, destinatio
     if installed_from(result) is not None or STARTED in result.stdout.splitlines():
         return None
     if result.returncode != SSH_FAILED:
-        return "forced command"
+        return FORCED_COMMAND
     where = failed_where(result.stderr, name=name, destination=destination)
     if where == "target" and _KEY_REFUSED.search(result.stderr):
         return "refused"
@@ -819,7 +828,7 @@ class Plan:
 
 _HANDING_OVER: dict[HandOver, str] = {
     "refused": "refused this machine's key",
-    "forced command": "took this machine's key, but its forced command ran no install",
+    FORCED_COMMAND: "took this machine's key, but its forced command ran no install",
     "hop": "could not be reached with this machine's key: a hop on the way stopped the login",
 }
 
@@ -833,7 +842,7 @@ def log_in_and_install(
     *scratch*, which only a finished install puts in place.
     """
     trial_known_hosts = scratch / KNOWN_HOSTS_NAME
-    trial_known_hosts.write_text(recorded, encoding="utf-8")
+    trial_known_hosts.write_text(recorded, encoding="utf-8")  # NOSONAR S2083: fixed name in this run's temp dir; text is content
     host_key_recorded = is_recorded(recorded, host_key_alias(plan.name))
     if not host_key_recorded:
         print(
@@ -878,7 +887,7 @@ def log_in_and_install(
             key_refused=handed_over == "refused",
             known_hosts=(plan.known_hosts, trial_known_hosts),
         )
-        if handed_over == "forced command" and key_result is not None:
+        if handed_over == FORCED_COMMAND and key_result is not None:
             message += (
                 f"\n  {plan.name} accepted this machine's key, but its forced command failed"
                 f" (ssh ended with {key_result.returncode}):\n{key_result.stderr.rstrip()}"
@@ -965,7 +974,7 @@ def set_up_message(name: str, result: subprocess.CompletedProcess[str]) -> str:
             " there is not known."
         )
     message += f"  Its {TARGET_PYTHON} is Python {version}."
-    numbers = tuple(int(part) for part in re.findall(r"[0-9]+", version)[:2])
+    numbers = tuple(int(part) for part in re.findall(r"\d+", version, re.ASCII)[:2])
     if numbers and numbers < ZSTD_IN_STDLIB:
         message += (
             " Below 3.14 its standard library has no zstd codec: the answers read out of a zstd AppImage"

@@ -58,7 +58,7 @@ SANDBOX_OPTIONS = (
     "--proc",
     "/proc",
     "--tmpfs",
-    "/tmp",
+    "/tmp",  # NOSONAR S5443: the sandbox's own fresh tmpfs, a bwrap argument; nothing writes to the host's /tmp
     "--unshare-net",
     "--unshare-pid",
     "--die-with-parent",
@@ -80,9 +80,9 @@ MAY = (
     "  and run a probe script of the copied tree (probe <name> [<word>])."
 )
 
-_PROBE_NAME = re.compile(r"[A-Za-z0-9_]+\.py")
+_PROBE_NAME = re.compile(r"\w+\.py", re.ASCII)
 _WORD = re.compile(r"[A-Za-z0-9_-]*={0,2}")
-_FLOOR = re.compile(r"([0-9]+)\.([0-9]+)")
+_FLOOR = re.compile(r"(\d+)\.(\d+)", re.ASCII)
 
 # What the sandboxed interpreter runs: the current tree put on ``sys.path``
 # behind the standard library — ``-I`` keeps the working directory and every
@@ -142,7 +142,7 @@ def decode(word: str, request: str) -> list[str]:
     try:
         data = base64.urlsafe_b64decode((bare + "=" * (-len(bare) % 4)).encode("ascii"))
         value = json.loads(data.decode("utf-8"))
-    except (binascii.Error, ValueError):
+    except ValueError:  # binascii.Error among them
         raise not_a_list from None
     if not isinstance(value, list) or not all(isinstance(item, str) and "\x00" not in item for item in value):
         raise not_a_list

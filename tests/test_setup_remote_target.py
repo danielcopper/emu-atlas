@@ -795,7 +795,7 @@ class TestWhatTheTargetLacks:
 
     def test_the_floor_is_the_packages_own(self) -> None:
         pyproject = tomllib.loads((REPO / "pyproject.toml").read_text(encoding="utf-8"))
-        assert f">={setup_remote_target.python_floor()}" == pyproject["project"]["requires-python"]
+        assert pyproject["project"]["requires-python"] == f">={setup_remote_target.python_floor()}"
         assert setup_remote_target.python_floor() == FLOOR
 
     def test_no_python_at_all_is_refused(
@@ -1972,6 +1972,77 @@ class TestTheRealHomeIsOutOfReach:
         assert result.returncode != 0
         assert f"a stand-in reached the guarded {decoy / 'key'}" in result.stderr
         assert list(decoy.iterdir()) == []
+
+
+class TestWhatReachesSshAndThePatterns:
+    """What the setup hands ``ssh``, and what its patterns take: ASCII digits only, hosts as ssh names them."""
+
+    def test_ssh_reads_its_configuration_with_the_destination_after_a_double_dash(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A hop from the user's SSH config reaches ``ssh -G`` too, unchecked for a leading ``-``."""
+        commands: list[list[str]] = []
+
+        def recording_run(command: list[str], stdin: str | None = None) -> subprocess.CompletedProcess[str]:
+            commands.append(command)
+            return subprocess.CompletedProcess(command, 0, "hostname 192.0.2.20\nuser player\n", "")
+
+        monkeypatch.setattr(setup_remote_target, "run", recording_run)
+
+        setup_remote_target.ssh_resolve("-oProxyCommand=touch pwned", "2222")
+
+        assert commands == [["ssh", "-G", "-p", "2222", "--", "-oProxyCommand=touch pwned"]]
+
+    @pytest.mark.parametrize(
+        ("stderr", "where"),
+        [
+            ("player@192.0.2.20: Permission denied (publickey).", "target"),
+            ("jumper@203.0.113.5: Permission denied (publickey).", "hop"),
+            ("player@2001:db8::20: Permission denied (publickey,password).", "target"),
+            ("a@b@192.0.2.20: Permission denied (publickey).", "target"),
+            ("a@@192.0.2.20: Permission denied (publickey).", "target"),
+            ("@192.0.2.20: Permission denied (publickey).", "either"),
+            ("player@192.0.2.20 Permission denied (publickey).", "either"),
+        ],
+    )
+    def test_a_refused_login_is_placed_on_the_host_ssh_names(self, stderr: str, where: str) -> None:
+        hostname = "2001:db8::20" if "2001:" in stderr else "192.0.2.20"
+        destination = setup_remote_target.Destination(
+            text="handheld", user="player", hostname=hostname, port="22", proxy_jump="jumper@203.0.113.5", proxy_command=None
+        )
+
+        assert setup_remote_target.failed_where(stderr, name="handheld", destination=destination) == where
+
+    def test_a_floor_written_with_a_non_ascii_digit_is_refused(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        pyproject = tmp_path / "pyproject.toml"
+        pyproject.write_text('[project]\nrequires-python = ">=\u0663.12"\n', encoding="utf-8")
+        monkeypatch.setattr(setup_remote_target, "PYPROJECT", pyproject)
+
+        with pytest.raises(setup_remote_target.SetupError, match="is not of the form"):
+            setup_remote_target.python_floor()
+
+    def test_a_version_written_with_a_non_ascii_digit_is_not_read_as_one(self) -> None:
+        result = subprocess.CompletedProcess(
+            [], 0, f"{setup_remote_target.PYTHON_FOUND}\u0663.13.0\n{setup_remote_target.INSTALLED}{_SEEN_FROM}\n", ""
+        )
+
+        message = setup_remote_target.set_up_message("handheld", result)
+
+        assert "no zstd codec" not in message
+
+    def test_the_install_reads_no_non_ascii_digit_as_a_version(self, tmp_path: Path) -> None:
+        from scripts import dev_target_install
+
+        python = tmp_path / "python3"
+        python.write_text(f"#!{sys.executable} -I\nimport sys\nsys.stdout.write('3.1\\u0662.0')\n", encoding="utf-8")
+        python.chmod(0o755)
+
+        version, why = dev_target_install.python_version(str(python))
+
+        assert version is None
+        assert why.startswith("it did not say its version")
 
 
 class TestTheTaskAndTheGuide:

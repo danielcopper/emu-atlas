@@ -662,8 +662,10 @@ class TestTheCopy:
         monkeypatch.delattr(tarfile, "data_filter")
         have = ".".join(str(part) for part in sys.version_info[:3])
 
+        root, stream = str(tmp_path), io.BytesIO(tar({"atlas/__init__.py": b"\n"}))
+
         with pytest.raises(dev_dispatch.Stop) as stopped:
-            dev_dispatch.copy(str(tmp_path), io.BytesIO(tar({"atlas/__init__.py": b"\n"})))
+            dev_dispatch.copy(root, stream)
 
         assert stopped.value.status == dev_dispatch.CANNOT_RUN
         assert f"this target's Python, {have}, has no tarfile data filter" in stopped.value.message
@@ -681,8 +683,11 @@ class TestTheCopy:
 
         monkeypatch.setattr(dev_dispatch, "unpack", failing)
 
-        with pytest.raises(type(error) if isinstance(error, KeyboardInterrupt) else dev_dispatch.Stop) as raised:
-            dev_dispatch.take(str(tmp_path), io.BytesIO(b""))
+        root, stream = str(tmp_path), io.BytesIO(b"")
+        expected = type(error) if isinstance(error, KeyboardInterrupt) else dev_dispatch.Stop
+
+        with pytest.raises(expected) as raised:
+            dev_dispatch.take(root, stream)
 
         if isinstance(raised.value, dev_dispatch.Stop):
             assert raised.value.status == dev_dispatch.COPY_FAILED
@@ -697,8 +702,10 @@ class TestTheCopy:
 
         monkeypatch.setattr(tarfile.TarFile, "utime", no_time)
 
+        stream, destination = io.BytesIO(tar({"atlas/__init__.py": b"\n"})), str(tmp_path)
+
         with pytest.raises(tarfile.ExtractError, match="could not change modification time"):
-            dev_dispatch.unpack(io.BytesIO(tar({"atlas/__init__.py": b"\n"})), str(tmp_path))
+            dev_dispatch.unpack(stream, destination)
 
     def test_installed_elsewhere_it_takes_its_root_from_where_it_lies(self, home: Path) -> None:
         elsewhere = install(home, root=Path("other"))
@@ -1102,6 +1109,24 @@ def _a_core_that_answers_here() -> str:
         if machine.read_core(str(core)).status == CORE_READ_ANSWERED:
             return str(core)
     pytest.skip(f"none of the first deployed cores at {DEPLOYED_CORES} loads here, sandbox or not")
+
+
+class TestNonAsciiDigitsAndLetters:
+    """The dispatcher's patterns take ASCII digits and letters only, as they always did."""
+
+    @pytest.mark.parametrize("name", ["\u00e9t\u00e9.py", "\u0663.py"], ids=["a letter", "a digit"])
+    def test_a_probe_name_with_a_non_ascii_character_is_refused(self, home: Path, name: str) -> None:
+        install(home)
+
+        assert dispatch(home, f"probe {name}").returncode == dev_dispatch.REFUSED
+
+    def test_a_floor_with_a_non_ascii_digit_is_no_floor(self, home: Path) -> None:
+        install(home)
+
+        result = dispatch(home, "copy", tar({"atlas/__init__.py": b"\n"}, manifest='{"requires_python": "\u0663.12"}'.encode()))
+
+        assert result.returncode == dev_dispatch.COPY_FAILED
+        assert "states no Python floor: no requires_python of the form X.Y" in result.stderr.decode()
 
 
 class TestTheOldSyntax:

@@ -45,7 +45,7 @@ DISPATCHER_SOURCE = ""  # @DISPATCHER@
 
 _ADDRESS = re.compile(r"[0-9A-Fa-f.:]+")
 _UNSAFE_IN_OPTION = re.compile(r'["\\\x00-\x1f\x7f]')
-_VERSION = re.compile(r"([0-9]+)\.([0-9]+)\.([0-9]+)")
+_VERSION = re.compile(r"(\d+)\.(\d+)\.(\d+)", re.ASCII)
 _VERSION_PROBE = "import sys; sys.stdout.write('%d.%d.%d' % sys.version_info[:3])"
 
 DISPATCHER_NAME = "dispatch.py"
