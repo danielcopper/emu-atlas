@@ -79,7 +79,9 @@ MAY = (
     "  and run a probe script of the copied tree (probe <name> [<word>])."
 )
 
-_PROBE_NAME = re.compile(r"\w+\.py", re.ASCII)
+# A probe script's name: a bare file name in the tree's scripts/probes/. The
+# build host's client (scripts/ask.py) checks a name against this same pattern.
+PROBE_NAME = re.compile(r"\w+\.py", re.ASCII)
 _WORD = re.compile(r"[A-Za-z0-9_-]*={0,2}")
 _FLOOR = re.compile(r"(\d+)\.(\d+)", re.ASCII)
 
@@ -522,7 +524,7 @@ def dispatch(request: str, root: str) -> int:
         return copy(root, sys.stdin.buffer)
     if len(words) == 2 and words[0] == "ask":
         return run_sandboxed(root, "module", "atlas", decode(words[1], request))
-    if len(words) in (2, 3) and words[0] == "probe" and _PROBE_NAME.fullmatch(words[1]):
+    if len(words) in (2, 3) and words[0] == "probe" and PROBE_NAME.fullmatch(words[1]):
         arguments = decode(words[2], request) if len(words) == 3 else []
         return run_sandboxed(root, "path", words[1], arguments)
     raise refused(request)
