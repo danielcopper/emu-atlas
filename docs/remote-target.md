@@ -33,13 +33,13 @@ the setup reads with `ssh -G` and never writes. `<name>` is yours to choose — 
    above the package's Python floor (`requires-python` in `pyproject.toml`), and `/usr/bin/bwrap` able to start the
    sandbox every probe runs in.
 5. **It installs on the target**, under `~/.local/lib/emu-atlas-dev/`: `dispatch.py`, the dispatcher. The copies of the
-   tree arrive later beside it, in `trees/`, with `current` naming the one in use; no copy reaches the dispatcher. It
-   rebuilds `~/.ssh/authorized_keys` with one line for the key, a comment above it naming the build host and the time,
-   and every other line byte for byte; a rebuilt file that came out short, or without the new line last, is not put in
-   place. A symlinked `authorized_keys` is written through: the file it names is replaced, and the link stays. The
-   install is the script `scripts/dev_target_install.py`, sent with its values and the dispatcher filled in, and run by
-   the target's `/usr/bin/python3`. Once both files are in place it closes `~/.ssh` to others (mode 700), as sshd wants
-   it.
+   tree arrive later beside it, in `trees/`, with `current` naming the latest; a question runs from the tree its own
+   copy made, and no copy reaches the dispatcher. It rebuilds `~/.ssh/authorized_keys` with one line for the key, a
+   comment above it naming the build host and the time, and every other line byte for byte; a rebuilt file that came out
+   short, or without the new line last, is not put in place. A symlinked `authorized_keys` is written through: the file
+   it names is replaced, and the link stays. The install is the script `scripts/dev_target_install.py`, sent with its
+   values and the dispatcher filled in, and run by the target's `/usr/bin/python3`. Once both files are in place it
+   closes `~/.ssh` to others (mode 700), as sshd wants it.
 6. **It writes the target into this tool's own SSH config**, `~/.config/emu-atlas-dev/ssh_config`: the address, port,
    user and jump host or proxy command the destination resolved to, the build host's key and nothing else, and the
    known-hosts file. Your `~/.ssh/config` serves the setup's own login only; the entry is written to be read with this
@@ -87,13 +87,13 @@ The dispatcher lets four requests through; everything else, a login among it, is
   file name, `[A-Za-z0-9_]+\.py`.
 
 `<tree>` is the id a copy answered with: a question runs from the tree its own copy made, held for as long as it runs,
-and from no other — never from `current`, which another client's copy may have moved on in between. Where that tree is
-gone, removed by a later copy, the question is refused with `TREE_GONE` and nothing runs. `<word>` is the argument list
-as a JSON array of strings, UTF-8, base64url-encoded: content paths carry blanks, quotes and parentheses, which words
-split on blanks cannot.
+and from no other — never from `current`, which another client's copy may have moved on in between. Right before the run
+starts, `ask` and `probe` write one line on stdout, `emu-atlas-dev: the answer follows`; the run's own output comes
+after it. `<word>` is the argument list as a JSON array of strings, UTF-8, base64url-encoded: content paths carry
+blanks, quotes and parentheses, which words split on blanks cannot.
 
-A target set up before the copy answered with an id runs a dispatcher that refuses these forms of `ask` and `probe`: run
-the setup again, which installs the current one through the key.
+A target set up before the copy answered with an id, or before the marker line, runs an older dispatcher: run the setup
+again, which installs this checkout's dispatcher through the key.
 
 The setup request runs outside the sandbox: through it the key can run any code on the target with the user's rights,
 its own `authorized_keys` line among what it can rewrite. So `from=` is the only bound on the key, and the sandbox
@@ -117,8 +117,7 @@ the reason and the repair the setup names for the same failure, rather than run 
 **The run's lifetime.** The dispatcher waits for `bwrap` and ends the run when its connection is gone — when nothing
 reads its output any more — and the sandboxed program ends with `bwrap`. For as long as a question or a probe runs, the
 tree it runs from stays: a copy that lands meanwhile becomes `current`, and a later copy removes the older tree once
-nothing runs from it. A tree no run holds is removed by the next copy, so a question sent after another client's copy
-finds its tree gone.
+nothing runs from it.
 
 **The interpreter.** Inside the sandbox the question runs on the interpreter the dispatcher runs on, `/usr/bin/python3`,
 with `-I` (no working directory on `sys.path`, no `PYTHON*` variable) and `-S` (no site-packages), and the tree it names
@@ -132,12 +131,15 @@ a run the dispatcher ended because its connection was gone among them:
 
 - **3 `REFUSED`** — the request is none of the four above, or its argument word is no JSON array of strings.
 - **4 `CANNOT_RUN`** — nothing ran: a tree without a readable manifest, an interpreter below the tree's floor, a probe
-  the tree does not hold, no working sandbox, a `copy` on a Python whose `tarfile` has no `data` filter, or an error
-  reading the tree or starting the run.
+  the tree does not hold, no working sandbox, a run that could not be started, a `copy` on a Python whose `tarfile` has
+  no `data` filter, an error reading the tree, or an exception of the dispatcher's own, its traceback on stderr.
 - **5 `COPY_FAILED`** — the copy could not start, did not arrive whole, or arrived but could not be made current; the
   current tree is as it was.
 - **8 `TREE_GONE`** — nothing ran: the tree the request names is not there, removed by a later copy or never copied. Ask
-  again; every call copies first. (8, not 6: the client ends with 6 and 7 of its own.)
+  again; every call copies first.
+
+A probe script that raises — at compile and import time as well — ends with 2, a question it could not put, with its
+traceback on stderr: the bootstrap that runs it turns its crash into that, here as on a target.
 
 ## A target you cannot log into yet: `--print`
 
@@ -166,15 +168,15 @@ the build host cannot know.
 Each refusal says what to do next and ends with whether anything was changed. These end it with **nothing changed, here
 or on the target**:
 
-| What the setup meets                        | What to do                                                                                                                                                 |
-| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| a name this machine cannot resolve          | give the target's address, or a name the network resolves                                                                                                  |
-| no SSH server answering                     | check the address, and that the target runs an SSH server                                                                                                  |
-| no login accepted                           | `--print`, as above — behind a jump host or proxy command, a login of yours on the target                                                                  |
-| a host key that is not the recorded one     | another machine may answer at that address; if the target was reinstalled, remove its record                                                               |
-| the key refused (after `--print`)           | the address the printed script restricted the key to; run it again with the right one                                                                      |
-| a target lacking `/usr/bin/python3`         | install Python at or above the floor there; the message names the floor, and the version found where there is one                                          |
-| a target lacking a working `/usr/bin/bwrap` | install bubblewrap there — or, where one runs but starts no sandbox, allow unprivileged user namespaces; the message says which, quoting what `bwrap` said |
+| What the setup meets                        | What to do                                                                                                                                                                                      |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| a name this machine cannot resolve          | give the target's address, or a name the network resolves                                                                                                                                       |
+| no SSH server answering                     | check the address, and that the target runs an SSH server                                                                                                                                       |
+| no login accepted                           | `--print`, as above — behind a jump host or proxy command, a login of yours on the target                                                                                                       |
+| a host key that is not the recorded one     | another machine may answer at that address; if the target was reinstalled, remove its record                                                                                                    |
+| the key refused (after `--print`)           | the address the printed script restricted the key to; run it again with the right one                                                                                                           |
+| a target lacking `/usr/bin/python3`         | install Python at or above the floor there; the message names the floor, and the version found where there is one                                                                               |
+| a target lacking a working `/usr/bin/bwrap` | install bubblewrap there; where there is one that did not start or started no sandbox, the message also names unprivileged user namespaces, and quotes what `bwrap` said where it said anything |
 
 When `ssh` names a jump host on the way as the one that failed — a name this machine cannot resolve, a host key your own
 files record differently, a login it refused, no server answering — the message names the hop, and the setup leaves your
@@ -215,9 +217,10 @@ mise run ask --target handheld -- save-portability gba --source <a> --target <b>
 ```
 
 `<question>` is what `python -m atlas` takes, word for word; `<script>` is a file name in `scripts/probes/`, whose
-`README.md` says what a probe script may do. Without `--target` both run here, on this tree's interpreter with this
-tree's `atlas`, and nothing else changes. `--target <name>` (or `--target=<name>`) counts only as the first argument:
-everything after it is the question, a `--target` of its own among it.
+`README.md` says what a probe script may do. Without `--target` both run here, on this interpreter with this tree's
+`atlas`, through the dispatcher's own bootstrap — as they run on a target, without the sandbox — and nothing else
+changes. `--target <name>` (or `--target=<name>`) counts only as the first argument: everything after it is the
+question, a `--target` of its own among it.
 
 **Every call copies first.** With `--target`, the client reads the target's entry from this tool's SSH config alone
 (`ssh -F ~/.config/emu-atlas-dev/ssh_config`) — so with the restricted key alone, and nothing of your own SSH config —
@@ -225,36 +228,44 @@ and sends a `copy` of the working tree as it stands, uncommitted edits and all: 
 and `scripts/probes/`, without `__pycache__` and `*.pyc`, in a stable order, then `tree.json` with `pyproject.toml`'s
 floor. A link, or anything else that is no file or directory, is left out and named on stderr. The copy answers with the
 id of the tree it made, and the client sends `ask <tree> <word>` or `probe <tree> <name> [<word>]` with that id, so the
-question runs from this copy and no other client's. The run's stdout arrives on stdout and its stderr on stderr, byte
-for byte, and its exit status is the command's. A note the copy writes on stderr — an older tree it could not remove —
-is shown there, and the question is still asked. `ssh` gives up on an address that takes no connection within 15
-seconds.
+question runs from this copy and no other client's. What the run writes after the dispatcher's marker arrives on stdout
+and its stderr on stderr, byte for byte, and its exit status is the command's. A note the copy writes on stderr — an
+older tree it could not remove — is shown there, and the question is still asked. `ssh` gives up on an address that
+takes no connection within 15 seconds.
 
 **The target's shell.** sshd runs the dispatcher through the user's shell, and that shell's startup files may print. On
-stderr that passes on with the run's own stderr. On stdout it would land in front of every answer, so the copy's stdout
-is checked first: anything there beside the tree's id ends the call before a question is asked, shows what arrived, and
-asks for the startup files to be silent for a shell without a terminal. The copy is current there; nothing was asked. No
-id at all is what a dispatcher older than this client answers: run the setup again.
+stderr that passes on with the run's own stderr. On stdout it would land in front of the answer, so nothing on stdout
+counts but the tree's id at the copy and what follows the marker at the question. Anything else there — ahead of the id
+or glued to it, or ahead of the marker — ends the call without an answer, shows what arrived, each line escaped, and
+asks for the startup files to be silent for a shell without a terminal; the copy went through. No id at all, or no
+marker, is what a dispatcher older than this client answers: run the setup again.
 
-What comes back describes one machine: it is printed here and written nowhere, the tree included.
+What comes back is printed here and written nowhere, the tree included.
 
 **The statuses.** atlas ends with 0 or 2; the dispatcher's 3, 4, 5 and 8 are passed on with what it said and a line that
 names them as the dispatcher's. The client's failures past a usage error are none of those; a usage error ends with 2,
 as atlas's does, before anything is contacted. A probe script ends with 0, 1 or 2, so that its status is never taken for
-the dispatcher's or the client's:
+the dispatcher's, or for a failure of the client's past a usage error:
 
 - **2 `USAGE`** — the call could not be put, as for atlas: no question, no probe script, a script `scripts/probes/` does
   not hold or the dispatcher would not take, or a target name the setup would not accept. Nothing was contacted.
-- **6 `NOT_ASKED`** — nothing was asked, and nothing was done on the target except a copy where one already went
-  through: no such target, a copy that could not be built here, an `ssh` that ended before the login (below), the target
-  shell's output or an older dispatcher found at the copy, or a crash of the client before it contacted anything.
-- **7 `BROKE_OFF`** — the request reached the target and ended without a status of the dispatcher's or the run's: the
-  connection broke, or the dispatcher there did not run. After a copy, the target's current tree is that copy whole or
-  the one before it. A run that itself ends with 255, `ssh`'s own failure status, ends the call with 7 as well: the two
-  cannot be told apart. So does a crash of the client once it contacted the target; the traceback names where.
+- **6 `NOT_ASKED`** — no answer was taken, and nothing was done on the target but a copy where one went through: no such
+  target, an entry without an address, no key for targets here, no `ssh` or one that could not be started, a copy that
+  could not be built here, an `ssh` that ended before the login (below), a dispatcher the target cannot start, the
+  target shell's output or an older dispatcher (the run, if it started, ended before its answer was taken), or a crash
+  of the client before it contacted anything or after the copy went through. Without `--target`: Python that could not
+  be started here, or a crash of the client, after which whatever ran here printed above and its status is lost.
+- **7 `BROKE_OFF`** — the request ended without a status of the dispatcher's or the run's: the connection broke, the
+  dispatcher there did not run, or `ssh` failed before the login with a message no pattern knows, so that whether the
+  request reached the target is not known. After a copy, the target's current tree is that copy whole or the one before
+  it. A run that itself ends with 255, `ssh`'s own failure status, ends the call with 7 as well: once the run's marker
+  came the two cannot be told apart. So does a crash of the client during the copy or the question; the traceback names
+  where.
+
+An interrupt (Ctrl-C) ends the call with 130 and says where it found it.
 
 Each failure before the login says what to do and ends with **nothing done on the target**, or, after a copy went
-through, that the question was not asked and the copy is current there:
+through, that the question was not asked:
 
 | What the call meets                     | What to do                                                                                |
 | --------------------------------------- | ----------------------------------------------------------------------------------------- |
@@ -265,9 +276,6 @@ through, that the question was not asked and the copy is current there:
 | no record of the target's host key      | run the setup again: it shows the fingerprint and records it                              |
 | the build host's key refused            | run the setup again: the address the target sees this machine at may have changed         |
 | a hop on the way that fails             | as the setup words it: check that hop with your own `ssh`                                 |
-
-The failures are told apart by the setup's own reading of `ssh`'s stderr (`ssh_failure` in
-`scripts/setup_remote_target.py`), so the two cannot drift apart.
 
 ## A device that is also a romm-tender target
 

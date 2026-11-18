@@ -159,13 +159,11 @@ measures them — so a clean Sonar page does not mean a green gate.
 
 ## Asking a set-up installation
 
-A machine with RetroDECK installed and never started answers `not-set-up` to every question, so nothing on it states
-what atlas says on a set-up installation with content, firmware and saves. A change that alters such an answer is
-checked on one, from the build host: `mise run ask --target <name> -- <question>` puts one question to a target set up
-with `mise run setup:remote-target`, and `mise run probe --target <name> <script>` runs a probe script there
-(`docs/remote-target.md`, `scripts/probes/README.md`). What comes back describes one machine: it never goes into the
-tree, a commit, a pull request or an issue — describe its shape. The live round that saves in a game stays at the
-device. An agent asks a target only when its brief says so.
+A machine with RetroDECK installed and never started answers `not-set-up`, so nothing on it states what atlas says on a
+set-up installation with content, firmware and saves. A change that alters such an answer is checked on one from the
+build host — by the lead, or by an agent whose brief says so: `mise run ask --target <name> -- <question>`, or
+`mise run probe --target <name> <script>` (`docs/remote-target.md`). What comes back describes one machine, and the
+agent rule on device values holds for it. The live round that saves in a game stays at the device.
 
 ## Pitfalls
 
@@ -179,6 +177,5 @@ device. An agent asks a target only when its brief says so.
   description of its format — every input key, the question each query key asks, and how an expected block is asserted —
   so read it before writing or editing a vector; `tests/test_vectors_readme.py` fails when the validator accepts an
   input key the README does not name.
-- Live verification against a set-up installation is the final check for resolver changes — this machine's where it has
-  one, otherwise a target asked as "Asking a set-up installation" says; fixtures prove logic, the machine proves
-  reality.
+- Live verification is the final check for resolver changes (see "Asking a set-up installation"); fixtures prove logic,
+  the machine proves reality.
