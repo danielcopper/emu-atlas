@@ -201,14 +201,13 @@ because `from=` bounds the build host's address, not the target's.
 ```bash
 mise run ask [--target <name>] -- <question>
 mise run probe [--target <name>] <script> [arguments]
+mise run ask --target handheld -- save-portability gba --source <a> --target <b>   # the second --target: the question's
 ```
 
 `<question>` is what `python -m atlas` takes, word for word; `<script>` is a file name in `scripts/probes/`, whose
 `README.md` says what a probe script may do. Without `--target` both run here, on this tree's interpreter with this
 tree's `atlas`, and nothing else changes. `--target <name>` (or `--target=<name>`) counts only as the first argument:
-everything after it is the question, so
-`mise run ask --target handheld -- save-portability gba --source <a> --target
-<b>` keeps the question's own `--target`.
+everything after it is the question, a `--target` of its own among it.
 
 **Every call copies first.** With `--target`, the client reads the target's entry from this tool's SSH config alone
 (`ssh -F ~/.config/emu-atlas-dev/ssh_config`) — so with the restricted key alone, and nothing of your own SSH config —
