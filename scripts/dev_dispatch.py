@@ -21,7 +21,6 @@ check that refuses it by naming both versions instead of dying on a
 from __future__ import annotations
 
 import base64
-import binascii
 import contextlib
 import fcntl
 import json
@@ -142,7 +141,7 @@ def decode(word: str, request: str) -> list[str]:
     try:
         data = base64.urlsafe_b64decode((bare + "=" * (-len(bare) % 4)).encode("ascii"))
         value = json.loads(data.decode("utf-8"))
-    except ValueError:  # binascii.Error among them
+    except ValueError:  # base64's own error is one as well
         raise not_a_list from None
     if not isinstance(value, list) or not all(isinstance(item, str) and "\x00" not in item for item in value):
         raise not_a_list
