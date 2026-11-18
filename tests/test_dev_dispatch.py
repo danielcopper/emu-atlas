@@ -51,6 +51,9 @@ from tests.remote_target_suite import (
     ROOT,
     contents,
     isolated_module,
+    end_what_is_left,
+    gone_within,
+    processes_holding,
     sandbox_home,
     snapshot,
 )
@@ -171,46 +174,6 @@ def a_probe_running_while_a_copy_lands(home: Path, go: Path) -> None:
     assert out == b"first\n"
     third = copied(home, {"marker.txt": b"third\n"})
     assert sorted(path.name for path in (home / ROOT / "trees").iterdir()) == [third.name]
-
-
-def processes_holding(token: str) -> list[int]:
-    """The processes on this machine whose command line holds *token*.
-
-    A process in the middle of an ``execve`` reads as an empty command line, so
-    a scan can miss one that is still starting — the ``bwrap`` stand-in becoming
-    the probe's interpreter, or ``bwrap`` starting it. Wait for a line the probe
-    writes before scanning for it.
-    """
-    found = []
-    for name in os.listdir("/proc"):
-        if not name.isdigit() or int(name) == os.getpid():
-            continue
-        try:
-            command_line = Path("/proc", name, "cmdline").read_bytes()
-        except OSError:
-            continue
-        if token.encode() in command_line:
-            found.append(int(name))
-    return found
-
-
-def end_what_is_left(token: str) -> None:
-    """Kill, by its pid, every process of this test's that still holds *token*: nothing outlives a failed test."""
-    for pid in processes_holding(token):
-        try:
-            os.kill(pid, signal.SIGKILL)
-        except ProcessLookupError:
-            continue
-
-
-def gone_within(token: str, seconds: float) -> bool:
-    """Whether every process holding *token* has ended within *seconds*."""
-    deadline = time.monotonic() + seconds
-    while processes_holding(token):
-        if time.monotonic() > deadline:
-            return False
-        time.sleep(0.05)
-    return True
 
 
 def a_probe_whose_caller_hangs_up(home: Path) -> None:
@@ -1064,6 +1027,94 @@ class TestTheTreeARequestNames:
             str(first / "atlas" / "__init__.py"),
             str(second / "atlas" / "__init__.py"),
         ]
+
+
+class TestTheLockOnTheTree:
+    """``_lock_tree``: only a tree id becomes a path, and a tree a copy removes while the lock is awaited is gone."""
+
+    def test_a_tree_removed_between_opening_it_and_locking_it_runs_nowhere(
+        self, home: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The race TREE_GONE exists for: a copy took the exclusive lock first and set the tree aside."""
+        install(home)
+        tree = copied(home, _SAYING_ATLAS)
+        real_flock = dev_dispatch.fcntl.flock
+        removed: list[str] = []
+
+        def a_copy_gets_there_first(descriptor: int, operation: int) -> None:
+            if operation == dev_dispatch.fcntl.LOCK_SH and not removed:
+                aside = tree.with_name(".removing-" + tree.name)
+                tree.rename(aside)
+                removed.append(str(aside))
+            real_flock(descriptor, operation)
+
+        def no_sandbox_may_start(*_: object) -> None:
+            raise AssertionError("a run started from a tree that is gone")
+
+        monkeypatch.setattr(dev_dispatch.fcntl, "flock", a_copy_gets_there_first)
+        monkeypatch.setattr(dev_dispatch, "run_held", no_sandbox_may_start)
+
+        with pytest.raises(dev_dispatch.Stop) as stop:
+            dev_dispatch.run_sandboxed(
+                str(home / ROOT), tree_id=tree.name, kind="module", target="atlas", arguments=[]
+            )
+
+        assert removed
+        assert stop.value.status == dev_dispatch.TREE_GONE
+        assert stop.value.message == (
+            f"emu-atlas-dev: the tree {tree.name} is not here: a later copy replaced it, or it was never copied;"
+            " nothing ran.\n  Ask again: every call copies first."
+        )
+
+    @pytest.mark.parametrize("tree_id", ["../trees", "/etc", "current", "tree-é"])
+    def test_nothing_but_a_tree_id_becomes_a_path(self, home: Path, tree_id: str) -> None:
+        install(home)
+
+        with pytest.raises(ValueError, match="is no tree id"):
+            dev_dispatch.run_sandboxed(str(home / ROOT), tree_id=tree_id, kind="module", target="atlas", arguments=[])
+
+    def test_a_non_ascii_tree_id_is_refused(self, home: Path) -> None:
+        install(home)
+
+        result = dispatch(home, f"ask tree-\u00e9 {word([])}")
+
+        assert result.returncode == dev_dispatch.REFUSED
+
+
+class TestTheDispatchersOwnCrash:
+    def test_an_exception_of_its_own_ends_with_cannot_run_not_python_s_1(
+        self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        def crashes(request: str, root: str) -> int:
+            raise RuntimeError("an unforeseen state")
+
+        monkeypatch.setattr(dev_dispatch, "dispatch", crashes)
+
+        status = dev_dispatch.main()
+
+        err = capsys.readouterr().err
+        assert status == dev_dispatch.CANNOT_RUN
+        assert "RuntimeError: an unforeseen state\n" in err
+        assert err.endswith("emu-atlas-dev: the dispatcher failed (the traceback is above).\n")
+
+    def test_a_run_that_cannot_be_started_after_the_trial_is_no_missing_sandbox(
+        self, home: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        install(home)
+        tree = copied(home, _SAYING_ATLAS)
+
+        def too_long(*_: object, **__: object) -> object:
+            raise OSError(errno.E2BIG, "Argument list too long")
+
+        monkeypatch.setattr(dev_dispatch, "check_sandbox", lambda bwrap: None)
+        monkeypatch.setattr(dev_dispatch.subprocess, "Popen", too_long)
+
+        with pytest.raises(dev_dispatch.Stop) as stop:
+            dev_dispatch.run_held(str(tree), "module", "atlas", [])
+
+        assert stop.value.status == dev_dispatch.CANNOT_RUN
+        assert stop.value.message == "emu-atlas-dev: the run could not be started (Argument list too long); nothing ran."
+        assert capsys.readouterr().out == f"{dev_dispatch.RUN_MARKER}\n"
 
 
 class TestACallerThatIsGone:

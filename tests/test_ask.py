@@ -24,14 +24,17 @@ import io
 import json
 import os
 import shlex
+import shutil
+import signal
 import subprocess
 import sys
 import tarfile
 import tomllib
+import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import IO, Any, get_args
 
 import pytest
 
@@ -52,8 +55,11 @@ from tests.remote_target_suite import (
     ROOT,
     Entry,
     contents,
+    end_what_is_left,
+    gone_within,
     install_dispatcher,
     isolated_module,
+    processes_holding,
     sandbox_home,
     snapshot,
 )
@@ -998,9 +1004,9 @@ class TestACrashOfTheClient:
 class TestTwoTargets:
     """Each target's question reaches its own entry's address, and only that target's home changes."""
 
-    def test_each_question_reaches_its_own_target(
-        self, there: There, capfd: pytest.CaptureFixture[str], tmp_path: Path
-    ) -> None:
+    @staticmethod
+    def a_second_target(there: There, capfd: pytest.CaptureFixture[str], tmp_path: Path) -> Path:
+        """``console`` set up beside ``handheld`` with the real setup, its dispatcher naming the bwrap stand-in."""
         console_home = tmp_path / "console"
         console_home.mkdir()
         there.world.targets[_CONSOLE] = Target(home=str(console_home), client_address=_SEEN_FROM)
@@ -1008,6 +1014,12 @@ class TestTwoTargets:
         assert setup_remote_target.main(["console", f"player@{_CONSOLE}"]) == 0
         install_dispatcher(console_home, bwrap=str(there.tools / "bwrap"))
         capfd.readouterr()
+        return console_home
+
+    def test_each_question_reaches_its_own_target(
+        self, there: There, capfd: pytest.CaptureFixture[str], tmp_path: Path
+    ) -> None:
+        console_home = self.a_second_target(there, capfd, tmp_path)
 
         targets = (("handheld", there.target_home, console_home), ("console", console_home, there.target_home))
         for name, home, other in targets:
@@ -1026,19 +1038,418 @@ class TestTwoTargets:
         self, there: There, capfd: pytest.CaptureFixture[str], tmp_path: Path
     ) -> None:
         """ssh reads each entry itself; the client's message reads the same entry back, not the next one."""
-        console_home = tmp_path / "console"
-        console_home.mkdir()
-        there.world.targets[_CONSOLE] = Target(home=str(console_home), client_address=_SEEN_FROM)
-        there.save()
-        assert setup_remote_target.main(["console", f"player@{_CONSOLE}"]) == 0
+        self.a_second_target(there, capfd, tmp_path)
         there.target().serving = False
         there.save()
-        capfd.readouterr()
 
         code, _, err = called(capfd, "ask", "--target", "handheld", "detect")
 
         assert code == ask.NOT_ASKED
         assert err.startswith(f"emu-atlas-dev: no SSH server answers at {_ADDRESS} port 22, where handheld's entry")
+
+
+def a_target_for(destination: setup_remote_target.Destination, tmp_path: Path) -> ask.Target:
+    return ask.Target(destination, tmp_path / "ssh_config")
+
+
+_HANDHELD = setup_remote_target.Destination(
+    text="handheld", user="player", hostname=_ADDRESS, port="22", proxy_jump=None, proxy_command=None
+)
+
+
+class TestTheAnswer:
+    """The run's answer is what follows the dispatcher's marker, and nothing ahead of it."""
+
+    def test_output_ahead_of_the_marker_ends_the_call_and_no_answer_is_taken(
+        self, there: There, capfd: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The copy's stdout was clean; the shell prints only on the question's connection."""
+
+        def prints_now(_: str) -> None:
+            there.target().login_output = "You have new mail.\n"
+            there.save()
+
+        copy_then(there, monkeypatch, prints_now)
+
+        status, out, err = called(capfd, "ask", "--target", "handheld", "detect")
+
+        assert status == ask.NOT_ASKED
+        assert out == ""
+        assert err.endswith(
+            "emu-atlas-dev: handheld wrote this on stdout ahead of the run's answer:\n"
+            "    'You have new mail.'\n"
+            f"{ask.SHELL_PRINTS}\n"
+            "  The run was ended and no answer taken from it; the question gave none here.\n"
+        )
+
+    @pytest.mark.parametrize("probe", ["say.py", "quiet.py"], ids=["with an answer", "with none"])
+    def test_a_dispatcher_that_writes_no_marker_is_older_than_the_client(
+        self, there: There, capfd: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch, probe: str
+    ) -> None:
+        write_tree(there.tree, {"scripts/probes/quiet.py": ""})
+
+        def an_older_dispatcher(_: str) -> None:
+            installed = there.root / "dispatch.py"
+            source = installed.read_text(encoding="utf-8")
+            line = '    sys.stdout.write(RUN_MARKER + "\\n")\n'
+            assert source.count(line) == 1
+            installed.write_text(source.replace(line, ""), encoding="utf-8")
+
+        copy_then(there, monkeypatch, an_older_dispatcher)
+
+        status, out, err = called(capfd, "probe", "--target", "handheld", probe)
+
+        assert status == ask.NOT_ASKED
+        assert out == ""
+        older = (
+            "  The dispatcher there is older than this client; run the setup again, which installs this checkout's"
+            f" dispatcher:\n    mise run setup:remote-target handheld player@{_ADDRESS}\n"
+        )
+        if probe == "say.py":
+            assert err.endswith(
+                f"{ask.SHELL_PRINTS}\n  It wrote no marker ahead of the run either.\n{older}"
+                "  The run was ended and no answer taken from it; the probe say.py gave none here.\n"
+            )
+        else:
+            assert err == (
+                "emu-atlas-dev: handheld's dispatcher ran the request but wrote no marker ahead of its answer, so"
+                f" none was taken.\n{older}"
+            )
+
+    def test_a_runs_own_255_after_the_marker_is_never_not_asked(
+        self, there: There, capfd: pytest.CaptureFixture[str]
+    ) -> None:
+        """What the run writes on stderr can read like ssh's own failure; once the run started, it is the run's."""
+        write_tree(
+            there.tree,
+            {
+                "scripts/probes/looks_like_ssh.py": (
+                    "import sys\n"
+                    "sys.stderr.write('ssh: connect to host 192.0.2.20 port 22: Connection refused\\n')\n"
+                    "sys.exit(255)\n"
+                )
+            },
+        )
+
+        status, _, err = called(capfd, "probe", "--target", "handheld", "looks_like_ssh.py")
+
+        assert status == ask.BROKE_OFF
+        assert err.endswith(
+            "emu-atlas-dev: ssh ended with 255 while the probe looks_like_ssh.py ran on handheld: the connection"
+            " broke, or the run itself ended with 255; what it printed is above.\n"
+        )
+
+    def test_a_dispatcher_that_refuses_the_question_after_taking_the_copy(
+        self, there: There, capfd: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def a_dispatcher_of_another_kind(_: str) -> None:
+            (there.root / "dispatch.py").write_text(
+                "import os, sys\n"
+                "sys.stderr.write('emu-atlas-dev: refused: %s\\n' % os.environ['SSH_ORIGINAL_COMMAND'].split()[0])\n"
+                "sys.exit(3)\n",
+                encoding="utf-8",
+            )
+
+        copy_then(there, monkeypatch, a_dispatcher_of_another_kind)
+
+        status, out, err = called(capfd, "probe", "--target", "handheld", "say.py")
+
+        assert status == dev_dispatch.REFUSED
+        assert out == ""
+        assert err == (
+            "emu-atlas-dev: refused: probe\n"
+            "emu-atlas-dev: that was handheld's dispatcher (3, REFUSED), not atlas or a probe.\n"
+            f"  {ask.OTHER_DISPATCHER}\n    mise run setup:remote-target handheld <destination>\n"
+        )
+
+    def test_a_crash_while_asking_ends_the_run_on_the_target(
+        self, there: There, capfd: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        token = uuid.uuid4().hex
+        write_tree(
+            there.tree,
+            {"scripts/probes/linger.py": "import sys, time\nprint('started', flush=True)\ntime.sleep(600)\n"},
+        )
+
+        def reads_then_crashes(pipe: IO[bytes], sink: ask.Sink) -> ask.Answer:
+            for line in iter(pipe.readline, b""):
+                if line == b"started\n":
+                    raise ValueError("an unforeseen value")
+            raise AssertionError("the probe never started")
+
+        monkeypatch.setattr(ask, "read_answer", reads_then_crashes)
+        try:
+            status, _, err = called(capfd, "probe", "--target", "handheld", "linger.py", token)
+
+            assert status == ask.BROKE_OFF
+            assert err.endswith(
+                "emu-atlas-dev: this client failed while asking the target (the traceback is above). What the run"
+                " printed is above; its status is lost.\n"
+            )
+            assert gone_within(token, 30), processes_holding(token)
+        finally:
+            end_what_is_left(token)
+
+
+class TestTheCopysAnswer:
+    """``tree_named``: the copy's id at the end of what arrived on its stdout, and nothing else there."""
+
+    @pytest.mark.parametrize(
+        ("stdout", "arrived", "older"),
+        [
+            (b"Welcome back.tree-abc_1\n", "    'Welcome back.'", False),
+            (b"\ntree-abc_1\n", "    (only blank space: '\\n')", False),
+            (b"\x1b]0;a title\x07tree-abc_1\n", "    '\\x1b]0;a title\\x07'", False),
+            (b"tree-abc_1\nafter the id\n", "    'tree-abc_1'\n    'after the id'", False),
+            (b"no id at all\n", "    'no id at all'", True),
+        ],
+        ids=["glued to the id", "a blank line", "an escape", "after the id", "no id"],
+    )
+    def test_anything_beside_the_id_is_shown_escaped_and_older_only_without_one(
+        self, tmp_path: Path, stdout: bytes, arrived: str, older: bool
+    ) -> None:
+        with pytest.raises(ask.Refusal) as refusal:
+            ask.tree_named(stdout, a_target_for(_HANDHELD, tmp_path))
+
+        assert refusal.value.status == ask.NOT_ASKED
+        message = refusal.value.message
+        assert message.startswith(
+            f"emu-atlas-dev: handheld wrote this on stdout beside its dispatcher's answer to the copy:\n{arrived}\n"
+        )
+        assert ("It named no tree either." in message) is older
+        assert message.endswith(f"  {ask.COPY_WENT_THROUGH}")
+
+    def test_the_id_alone_is_the_tree(self, tmp_path: Path) -> None:
+        assert ask.tree_named(b"tree-abc_1\n", a_target_for(_HANDHELD, tmp_path)) == "tree-abc_1"
+
+
+class TestWhatIsCaughtBeforeContact:
+    def test_a_missing_key_for_targets(self, there: There, capfd: pytest.CaptureFixture[str]) -> None:
+        key = there.config.with_name("id_ed25519")
+        key.unlink()
+        logins = len(ssh_calls(there.world))
+
+        status, out, err = called(capfd, "ask", "--target", "handheld", "detect")
+
+        assert (status, out) == (ask.NOT_ASKED, "")
+        assert err == (
+            f"emu-atlas-dev: this machine's key for targets, {key}, is not there, so handheld could not take it.\n"
+            "  Run the setup again, which makes a new one and puts it on handheld:\n"
+            f"    mise run setup:remote-target handheld player@{_ADDRESS}\n"
+            "  Nothing was contacted.\n"
+        )
+        assert len(ssh_calls(there.world)) == logins
+
+    def test_an_entry_that_names_no_address(self, there: There, capfd: pytest.CaptureFixture[str]) -> None:
+        text = there.config.read_text(encoding="utf-8")
+        there.config.write_text(text.replace(f"    HostName {_ADDRESS}\n", ""), encoding="utf-8")
+
+        status, _, err = called(capfd, "ask", "--target", "handheld", "detect")
+
+        assert status == ask.NOT_ASKED
+        assert err == (
+            f"emu-atlas-dev: the entry for handheld names no HostName or no User in {there.config}.\n"
+            "  Run the setup again:\n    mise run setup:remote-target handheld <destination>\n"
+            "  Nothing was contacted.\n"
+        )
+
+    def test_a_dispatcher_the_target_cannot_start(self, there: There, capfd: pytest.CaptureFixture[str]) -> None:
+        keys = there.target_home / ".ssh" / "authorized_keys"
+        text = keys.read_text(encoding="utf-8")
+        assert text.count(sys.executable) == 1
+        keys.write_text(text.replace(sys.executable, str(there.target_home / "no-python3")), encoding="utf-8")
+
+        status, out, err = called(capfd, "ask", "--target", "handheld", "detect")
+
+        assert (status, out) == (ask.NOT_ASKED, "")
+        assert err.endswith(
+            "emu-atlas-dev: handheld could not start its dispatcher (the shell there ended with 127): its interpreter"
+            " or the dispatcher may be gone, after a system update say; what ssh said is above.\n"
+            f"  Run the setup again:\n    mise run setup:remote-target handheld player@{_ADDRESS}\n"
+            "  Nothing was done on handheld.\n"
+        )
+
+    def test_a_proxy_command_entry_names_no_destination_of_its_own(
+        self, there: There, capfd: pytest.CaptureFixture[str]
+    ) -> None:
+        """A ProxyCommand read back makes the target one behind a hop: the repair line cannot name its address."""
+        text = there.config.read_text(encoding="utf-8")
+        there.config.write_text(
+            text.replace("    Port 22\n", "    Port 22\n    ProxyCommand nc %h %p\n"), encoding="utf-8"
+        )
+        there.target().client_address = "198.51.100.7"
+        there.save()
+
+        status, _, err = called(capfd, "ask", "--target", "handheld", "detect")
+
+        assert status == ask.NOT_ASKED
+        assert "  Run the setup again:\n    mise run setup:remote-target handheld <destination>\n" in err
+
+
+class TestThePhases:
+    def test_every_phase_has_its_end(self) -> None:
+        assert set(ask.PHASES) == set(get_args(ask.PhaseName))
+
+    @pytest.mark.parametrize(
+        ("name", "phase", "after"),
+        [
+            ("build_copy", "before anything was contacted", "Nothing was contacted."),
+            ("run_ssh", "while copying to the target",
+             "handheld's current tree is this copy whole, or the one before it. Nothing was asked."),
+            ("tree_named", "after the copy went through", "The copy went through; nothing was asked."),
+            ("read_answer", "while asking the target", "The run on handheld ends with its connection."),
+        ],
+    )
+    def test_an_interrupt_says_where_it_found_the_call(
+        self,
+        there: There,
+        capfd: pytest.CaptureFixture[str],
+        monkeypatch: pytest.MonkeyPatch,
+        name: str,
+        phase: str,
+        after: str,
+    ) -> None:
+        def interrupted(*_: object) -> object:
+            raise KeyboardInterrupt
+
+        monkeypatch.setattr(ask, name, interrupted)
+
+        status, _, err = called(capfd, "ask", "--target", "handheld", "detect")
+
+        assert status == 128 + signal.SIGINT
+        assert err.endswith(f"emu-atlas-dev: interrupted {phase}. {after}\n")
+
+    def test_an_interrupt_here(
+        self, here: Path, capfd: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def interrupted(*_: object) -> object:
+            raise KeyboardInterrupt
+
+        monkeypatch.setattr(dev_dispatch, "status_of", interrupted)
+
+        status, _, err = called(capfd, "ask", "detect")
+
+        assert status == 128 + signal.SIGINT
+        assert err.endswith("emu-atlas-dev: interrupted while running here. The run here was interrupted as well.\n")
+
+    def test_a_crash_whose_report_fails_still_ends_with_the_clients_status(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def broken(*_: object, **__: object) -> None:
+            raise OSError(5, "Input/output error")
+
+        phase = ask.Phase()
+        phase.now = ask.ASKING
+        monkeypatch.setattr(ask.traceback, "print_exc", broken)
+        monkeypatch.setattr(ask, "say", broken)
+
+        try:
+            raise ValueError("the crash")
+        except ValueError:
+            assert ask.crashed(phase) == ask.BROKE_OFF
+            assert ask.interrupted(phase) == 128 + signal.SIGINT
+
+    def test_python_that_cannot_be_started_here_ran_nothing(
+        self, here: Path, capfd: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(ask.sys, "executable", str(here / "no-python"))
+
+        status, out, err = called(capfd, "ask", "detect")
+
+        assert (status, out) == (ask.NOT_ASKED, "")
+        assert err == (
+            f"emu-atlas-dev: {here / 'no-python'} could not be started: No such file or directory. Nothing ran.\n"
+        )
+
+
+class TestWritingItAll:
+    def test_a_write_that_takes_part_or_finds_the_pipe_full_goes_on(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        reading, writing = os.pipe()
+        real_write = os.write
+        calls: list[int] = []
+
+        def one_byte_at_a_time(descriptor: int, data: bytes | memoryview) -> int:
+            calls.append(len(data))
+            if len(calls) == 2:
+                raise BlockingIOError(11, "Resource temporarily unavailable")
+            return real_write(descriptor, bytes(data[:1]))
+
+        monkeypatch.setattr(ask.os, "write", one_byte_at_a_time)
+        try:
+            ask.write_all(writing, b"all of it")
+            monkeypatch.setattr(ask.os, "write", real_write)
+            os.close(writing)
+            assert os.read(reading, 100) == b"all of it"
+        finally:
+            os.close(reading)
+        assert len(calls) == len(b"all of it") + 1
+
+
+class TestTheDoubleDash:
+    @pytest.mark.parametrize(
+        ("argv", "expected"),
+        [
+            (["--target", "deck", "--", "q", "--", "x"], ("deck", ["q", "--", "x"])),
+            (["--", "--", "q"], (None, ["--", "q"])),
+            (["q", "--", "x"], (None, ["q", "--", "x"])),
+            (["--target=deck", "q", "--"], ("deck", ["q", "--"])),
+        ],
+    )
+    def test_only_the_first_double_dash_is_taken_away(
+        self, argv: list[str], expected: tuple[str | None, list[str]]
+    ) -> None:
+        assert ask.split_target(argv) == expected
+
+
+_MISE = shutil.which("mise")
+
+
+class TestTheRealMise:
+    """The task lines as mise itself runs them, against a scratch config holding the repository's two tasks."""
+
+    @pytest.mark.skipif(_MISE is None, reason="no mise on this machine's PATH")
+    def test_mise_hands_the_script_its_words_and_leaves_a_later_target_to_the_question(self, tmp_path: Path) -> None:
+        assert _MISE is not None
+        tasks = tomllib.loads((REPO / "mise.toml").read_text(encoding="utf-8"))["tasks"]
+        project = tmp_path / "project"
+        bin_dir = tmp_path / "bin"
+        project.mkdir()
+        bin_dir.mkdir()
+        record = tmp_path / "argv.json"
+        config = "".join(
+            f"[tasks.{name}]\nraw = {str(tasks[name]['raw']).lower()}\nrun = {json.dumps(tasks[name]['run'])}\n\n"
+            for name in ("ask", "probe")
+        )
+        (project / "mise.toml").write_text(config, encoding="utf-8")
+        python = bin_dir / "python"
+        python.write_text(
+            f"#!{sys.executable} -I\nimport json, sys\nopen({str(record)!r}, 'w').write(json.dumps(sys.argv[1:]))\n",
+            encoding="utf-8",
+        )
+        python.chmod(0o755)
+        isolated = {name: str(tmp_path / name.lower()) for name in (
+            "MISE_DATA_DIR", "MISE_CONFIG_DIR", "MISE_CACHE_DIR", "MISE_STATE_DIR"
+        )}
+        env = {
+            "PATH": f"{bin_dir}{os.pathsep}/usr/bin{os.pathsep}/bin",
+            "HOME": str(tmp_path / "home"),
+            "MISE_TRUSTED_CONFIG_PATHS": str(project),
+            "MISE_OFFLINE": "1",
+            "MISE_GLOBAL_CONFIG_FILE": str(tmp_path / "no-global.toml"),
+            **isolated,
+        }
+        argv = ["--target", "deck", "--", "save-portability", "gba", "--source", "a", "--target", "b", "--content",
+                "/x/Some Game (USA).chd"]
+
+        ran = subprocess.run(
+            [_MISE, "run", "ask", *argv], cwd=project, env=env, capture_output=True, text=True, check=False
+        )
+
+        assert ran.returncode == 0, ran.stderr
+        recorded = json.loads(record.read_text(encoding="utf-8"))
+        assert recorded == ["scripts/ask.py", "ask", "--target", "deck", "save-portability", "gba", "--source", "a",
+                            "--target", "b", "--content", "/x/Some Game (USA).chd"]
+        assert ask.split_target(recorded[2:]) == ("deck", recorded[4:])
 
 
 class TestTheStatuses:

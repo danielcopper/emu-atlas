@@ -124,7 +124,7 @@ class PhaseEnd(NamedTuple):
     after_an_interrupt: str
 
 
-_PHASES: dict[PhaseName, PhaseEnd] = {
+PHASES: dict[PhaseName, PhaseEnd] = {
     BEFORE_CONTACT: PhaseEnd(NOT_ASKED, "Nothing was contacted.", "Nothing was contacted."),
     HERE: PhaseEnd(
         NOT_ASKED,
@@ -168,7 +168,7 @@ class Phase:
 
     @property
     def end(self) -> PhaseEnd:
-        return _PHASES[self.now]
+        return PHASES[self.now]
 
 
 def usage(message: str) -> Refusal:
@@ -647,8 +647,13 @@ def ask_there(target: Target, request: Request, tree: str) -> int:
         status = dev_dispatch.status_of(process.wait())
         errors.join()
     except BaseException:
+        # The run ends with its connection: ssh gone and both pipes closed, the
+        # dispatcher sees its output hang up.
         process.kill()
         process.wait()
+        for pipe in (process.stdout, process.stderr):
+            if pipe is not None:
+                pipe.close()
         raise
     return judge(status, bytes(said).decode("utf-8", "replace"), target, request, answer)
 

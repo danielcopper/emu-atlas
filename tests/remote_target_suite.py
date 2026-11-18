@@ -10,10 +10,12 @@ from __future__ import annotations
 import json
 import os
 import shutil
+import signal
 import socket
 import stat
 import sys
 import tempfile
+import time
 import tomllib
 from collections.abc import Iterator
 from pathlib import Path
@@ -121,3 +123,43 @@ def sandbox_home() -> Iterator[Path]:
         yield base / "home"
     finally:
         shutil.rmtree(base)
+
+
+def processes_holding(token: str) -> list[int]:
+    """The processes on this machine whose command line holds *token*.
+
+    A process in the middle of an ``execve`` reads as an empty command line, so
+    a scan can miss one that is still starting — the ``bwrap`` stand-in becoming
+    the probe's interpreter, or ``bwrap`` starting it. Wait for a line the probe
+    writes before scanning for it.
+    """
+    found = []
+    for name in os.listdir("/proc"):
+        if not name.isdigit() or int(name) == os.getpid():
+            continue
+        try:
+            command_line = Path("/proc", name, "cmdline").read_bytes()
+        except OSError:
+            continue
+        if token.encode() in command_line:
+            found.append(int(name))
+    return found
+
+
+def end_what_is_left(token: str) -> None:
+    """Kill, by its pid, every process of this test's that still holds *token*: nothing outlives a failed test."""
+    for pid in processes_holding(token):
+        try:
+            os.kill(pid, signal.SIGKILL)
+        except ProcessLookupError:
+            continue
+
+
+def gone_within(token: str, seconds: float) -> bool:
+    """Whether every process holding *token* has ended within *seconds*."""
+    deadline = time.monotonic() + seconds
+    while processes_holding(token):
+        if time.monotonic() > deadline:
+            return False
+        time.sleep(0.05)
+    return True

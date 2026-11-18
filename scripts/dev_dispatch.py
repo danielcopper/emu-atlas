@@ -383,7 +383,7 @@ def status_of(returncode: int) -> int:
 
 
 def bootstrapped(python: str, tree: str, kind: Kind, target: str, arguments: list[str]) -> list[str]:
-    """The command line that runs the question or the probe script *target* of *tree* on *python* (:data:`BOOTSTRAP`)."""
+    """The command line that runs the question or the probe script *target* of *tree* on *python*: :data:`BOOTSTRAP`."""
     return [python, "-I", "-S", "-c", BOOTSTRAP, tree, kind, target] + arguments
 
 
