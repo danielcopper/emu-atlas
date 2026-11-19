@@ -6,8 +6,9 @@ and names it in the key's ``authorized_keys`` line, run as
 the key's holder asked for and hands that request over in
 ``SSH_ORIGINAL_COMMAND``; the request alone decides. It is split on blanks and
 never handed to a shell. Four requests pass — the setup request
-(``<interpreter> -I -``), ``copy``, ``ask <word>`` and ``probe <name> [<word>]``
-— and everything else, an empty request (a login) among it, is refused with
+(``<interpreter> -I -``), ``copy``, ``ask <tree> <word>`` and
+``probe <tree> <name> [<word>]``, where ``<tree>`` is what the copy answered —
+and everything else, an empty request (a login) among it, is refused with
 :data:`REFUSED`. What each request does, the exit statuses, and what the setup
 request lets the key do: docs/remote-target.md, "What the key may do on the
 target".
@@ -33,14 +34,28 @@ import sys
 import tarfile
 import tempfile
 import threading
-from typing import IO, Iterator, Literal
+import traceback
+from typing import IO, Final, Iterator, Literal
 
 # The dispatcher's own exit statuses, none of which atlas uses (it ends with 0
 # or 2); docs/remote-target.md lists what each one covers. A question's or a
-# probe's own status is passed through.
+# probe's own status is passed through. TREE_GONE is 8 because the build host's
+# client (scripts/ask.py) ends with 6 and 7 of its own.
 REFUSED = 3
 CANNOT_RUN = 4
 COPY_FAILED = 5
+TREE_GONE = 8
+
+STATUSES = {REFUSED: "REFUSED", CANNOT_RUN: "CANNOT_RUN", COPY_FAILED: "COPY_FAILED", TREE_GONE: "TREE_GONE"}
+"""Every status of the dispatcher's own, by its name: the one list the client and the tests read."""
+
+PROBE_NOT_PUT = 2
+"""What a probe script that crashed ends with: a question it could not put, never its own 1 for "does not hold"."""
+
+RUN_MARKER = "emu-atlas-dev: the answer follows"
+"""The line the bootstrap writes on stdout as its first act inside the sandbox: the client takes nothing in front of it
+for the answer, so a shell that prints on stdout cannot land in front of one, and a sandbox or interpreter that fails
+to start ends unmarked."""
 
 # Every question and probe runs in this sandbox: the file system read-only but
 # for a fresh /dev and /tmp, writable and gone with the run; a process view of
@@ -75,27 +90,44 @@ PROBES = os.path.join("scripts", "probes")
 COULD_NOT_START = "{}: the copy could not start ({}); the current tree is as it was."
 
 MAY = (
-    "  This key may only run the setup, copy a tree (copy), ask atlas a question (ask <word>)\n"
-    "  and run a probe script of the copied tree (probe <name> [<word>])."
+    "  This key may only run the setup, copy a tree (copy), ask atlas a question (ask <tree> <word>)\n"
+    "  and run a probe script (probe <tree> <name> [<word>]), <tree> being what the copy answered."
 )
 
-_PROBE_NAME = re.compile(r"\w+\.py", re.ASCII)
+# A probe script's name: a bare file name in the tree's scripts/probes/. The
+# build host's client (scripts/ask.py) checks a name against this same pattern.
+PROBE_NAME = re.compile(r"\w+\.py", re.ASCII)
+# A copied tree's id, the name of its directory under trees/: what a copy
+# answers on stdout, and what a question names to run from exactly that tree.
+TREE_PREFIX = "tree-"
+TREE_ID = re.compile(re.escape(TREE_PREFIX) + r"\w+", re.ASCII)
 _WORD = re.compile(r"[A-Za-z0-9_-]*={0,2}")
 _FLOOR = re.compile(r"(\d+)\.(\d+)", re.ASCII)
 
-# What the sandboxed interpreter runs: the current tree put on ``sys.path``
+# What the sandboxed interpreter runs, and what the build host's client runs
+# for a question asked there: the tree the request names put on ``sys.path``
 # behind the standard library — ``-I`` keeps the working directory and every
 # PYTHON* variable out, ``-S`` the site-packages — and then the question as
-# ``python -m atlas`` or the probe script as ``python <script>``.
+# ``python -m atlas`` or the probe script as ``python <script>``. On a target
+# it first writes RUN_MARKER, its first argument; asked here, that is empty.
 BOOTSTRAP = (
     "import runpy, sys\n"
-    "tree, kind, target = sys.argv[1:4]\n"
-    "sys.argv = [target] + sys.argv[4:]\n"
+    "marker, tree, kind, target = sys.argv[1:5]\n"
+    "if marker:\n"
+    "    sys.stdout.write(marker + '\\n'); sys.stdout.flush()\n"
+    "sys.argv = [target] + sys.argv[5:]\n"
     "sys.path.append(tree)\n"
     "if kind == 'module':\n"
     "    runpy.run_module(target, run_name='__main__', alter_sys=True)\n"
     "else:\n"
-    "    runpy.run_path(target, run_name='__main__')\n"
+    "    try:\n"
+    "        runpy.run_path(target, run_name='__main__')\n"
+    "    except Exception:\n"
+    "        import os, traceback\n"
+    "        traceback.print_exc()\n"
+    "        sys.stderr.write('emu-atlas-dev: the probe %s crashed (the traceback is above): a question it could not'\n"
+    "                         ' put.\\n' % os.path.basename(target))\n"
+    "        sys.exit(" + str(PROBE_NOT_PUT) + ")\n"
 )
 
 Kind = Literal["module", "path"]
@@ -152,16 +184,6 @@ def version_text(version: tuple[int, ...]) -> str:
     return ".".join(str(part) for part in version)
 
 
-def current_tree(root: str) -> str:
-    link = os.path.join(root, CURRENT)
-    if not os.path.lexists(link):
-        raise Stop(CANNOT_RUN, "{}: no tree has been copied here yet: copy first.".format(PREFIX))
-    tree = os.path.realpath(link)
-    if not os.path.isdir(tree):
-        raise Stop(CANNOT_RUN, "{}: {} names {}, which is not there: copy again.".format(PREFIX, CURRENT, tree))
-    return tree
-
-
 def read_floor(tree: str) -> tuple[tuple[int, int] | None, str]:
     """The Python floor *tree*'s manifest states, or ``None`` and why it states none readably."""
     try:
@@ -183,7 +205,8 @@ def tree_floor(tree: str) -> tuple[int, int]:
     if floor is None:
         raise Stop(
             CANNOT_RUN,
-            "{}: the copied tree states no Python floor ({}: {}): copy first.".format(PREFIX, MANIFEST, why),
+            "{}: the copied tree states no Python floor ({}: {}); nothing ran.\n"
+            "  Ask again: every call copies first.".format(PREFIX, MANIFEST, why),
         )
     return floor
 
@@ -199,30 +222,64 @@ def check_floor(floor: tuple[int, int]) -> None:
         )
 
 
-def sandbox_failure(bwrap: str, python: str) -> str | None:
-    """Why *bwrap* cannot start the sandbox here with *python* in it; ``None`` where it can.
+SandboxFailure = Literal["missing", "not executable", "did not start", "failed"]
+"""How a ``bwrap`` fails the trial: none there, not executable, not started, or unable to start a sandbox."""
 
-    The one trial both this dispatcher and the setup's install script run.
+SANDBOX_MISSING: Final = "missing"
+SANDBOX_NOT_EXECUTABLE: Final = "not executable"
+SANDBOX_DID_NOT_START: Final = "did not start"
+SANDBOX_FAILED: Final = "failed"
+
+
+def sandbox_failure(bwrap: str, python: str) -> tuple[SandboxFailure, str] | None:
+    """How *bwrap* fails to start the sandbox here with *python* in it, and why; ``None`` where it can.
+
+    The one trial both this dispatcher and the setup's install script run. The
+    kind, not the wording of the reason, decides the repair (:func:`sandbox_repair`).
     """
     if not os.path.lexists(bwrap):
-        return "there is none"
+        return SANDBOX_MISSING, "there is none"
     if not os.access(bwrap, os.X_OK):
-        return "it is not executable"
+        return SANDBOX_NOT_EXECUTABLE, "it is not executable"
     trial = sandboxed(bwrap, [python, "-I", "-S", "-c", "pass"])
     try:
         result = subprocess.run(trial, stdin=subprocess.DEVNULL, capture_output=True, check=False)
     except OSError as error:
-        return "it did not start: {}".format(reason(error))
+        return SANDBOX_DID_NOT_START, "it did not start: {}".format(reason(error))
     if result.returncode != 0:
-        return "it said: {}".format(result.stderr.decode("utf-8", "replace").strip() or result.returncode)
+        said = result.stderr.decode("utf-8", "replace").strip() or result.returncode
+        return SANDBOX_FAILED, "it said: {}".format(said)
     return None
+
+
+def sandbox_repair(kind: SandboxFailure) -> str:
+    """What makes a ``bwrap`` that failed the trial as *kind* start the sandbox; the setup's install says the same.
+
+    A missing or not executable one is installed. Where one is there but did
+    not start or started no sandbox, a kernel that forbids unprivileged user
+    namespaces is named beside a reinstall, the reason quoting what ``bwrap``
+    said where it said anything.
+    """
+    if kind in (SANDBOX_MISSING, SANDBOX_NOT_EXECUTABLE):
+        return "install bubblewrap"
+    return "install bubblewrap, or allow unprivileged user namespaces"
+
+
+def no_sandbox(bwrap: str, kind: SandboxFailure, why: str) -> Stop:
+    """The refusal for a *bwrap* that starts no sandbox: what it is, that nothing ran, and the repair."""
+    return Stop(
+        CANNOT_RUN,
+        "{}: no sandbox at {} — {}; nothing ran.\n  To repair: {} on this target.".format(
+            PREFIX, bwrap, why, sandbox_repair(kind)
+        ),
+    )
 
 
 def check_sandbox(bwrap: str) -> None:
     """Refuse unless *bwrap* starts a sandbox here: nothing runs unsandboxed, ever."""
     failure = sandbox_failure(bwrap, sys.executable)
     if failure is not None:
-        raise Stop(CANNOT_RUN, "{}: no sandbox at {} — {}; nothing ran.".format(PREFIX, bwrap, failure))
+        raise no_sandbox(bwrap, failure[0], failure[1])
 
 
 def _locked_if_same(descriptor: int, tree: str) -> bool:
@@ -240,35 +297,45 @@ def _locked_if_same(descriptor: int, tree: str) -> bool:
     return same
 
 
-def _lock_current(root: str) -> tuple[str, int]:
-    """The current tree, and a descriptor of its directory holding a shared lock on it.
-
-    Only a tree a copy removed between resolving ``current`` and taking the
-    lock is met by resolving again; any other error ends the request.
-    """
-    for _ in range(3):
-        tree = current_tree(root)
-        try:
-            descriptor = os.open(tree, os.O_RDONLY | os.O_DIRECTORY)
-        except (FileNotFoundError, NotADirectoryError):
-            continue
-        if _locked_if_same(descriptor, tree):
-            return tree, descriptor
-    raise Stop(
-        CANNOT_RUN, "{}: copies kept replacing the current tree while this one started; nothing ran.".format(PREFIX)
+def tree_gone(tree_id: str) -> Stop:
+    return Stop(
+        TREE_GONE,
+        "{}: the tree {} is not here: a later copy replaced it, or it was never copied; nothing ran.\n"
+        "  Ask again: every call copies first.".format(PREFIX, tree_id),
     )
 
 
+def _lock_tree(root: str, *, tree_id: str) -> tuple[str, int]:
+    """The tree *tree_id*, and a descriptor of its directory holding a shared lock on it.
+
+    *tree_id* is a :data:`TREE_ID`, checked here as well as in :func:`dispatch`:
+    nothing else may become a path under ``trees/``. A tree a copy removed —
+    before this request, or between opening it and taking the lock — is
+    refused with :data:`TREE_GONE`; no other tree stands in for it. Any other
+    error ends the request.
+    """
+    if not TREE_ID.fullmatch(tree_id):
+        raise ValueError("{!r} is no tree id".format(tree_id))
+    tree = os.path.join(root, TREES, tree_id)
+    try:
+        descriptor = os.open(tree, os.O_RDONLY | os.O_DIRECTORY)
+    except (FileNotFoundError, NotADirectoryError):
+        raise tree_gone(tree_id) from None
+    if not _locked_if_same(descriptor, tree):
+        raise tree_gone(tree_id)
+    return tree, descriptor
+
+
 @contextlib.contextmanager
-def held_tree(root: str) -> Iterator[str]:
-    """The current tree, held for as long as the block runs: a copy removes no held tree (:func:`remove_others`).
+def held_tree(root: str, *, tree_id: str) -> Iterator[str]:
+    """The tree *tree_id*, held for as long as the block runs: a copy removes no held tree (:func:`remove_others`).
 
     The lock lives on a descriptor of the tree's directory that this process
     keeps, and a sandboxed program must not inherit: a directory descriptor
     opened outside the sandbox writes through its read-only view. That is why
     the dispatcher waits for ``bwrap`` rather than becoming it.
     """
-    tree, descriptor = _lock_current(root)
+    tree, descriptor = _lock_tree(root, tree_id=tree_id)
     try:
         yield tree
     finally:
@@ -299,28 +366,40 @@ def run_held(tree: str, kind: Kind, target: str, arguments: list[str]) -> int:
                 CANNOT_RUN, "{}: the copied tree has no {}; nothing ran.".format(PREFIX, os.path.relpath(target, tree))
             )
     check_sandbox(BWRAP)
-    command = [sys.executable, "-I", "-S", "-c", BOOTSTRAP, tree, kind, target] + arguments
+    command = bootstrapped(sys.executable, tree, kind, target, arguments, marker=RUN_MARKER)
     sys.stdout.flush()
     sys.stderr.flush()
     try:
         process = subprocess.Popen(sandboxed(BWRAP, command))
     except OSError as error:
-        raise Stop(CANNOT_RUN, "{}: no sandbox at {} — it did not start: {}; nothing ran.".format(
-            PREFIX, BWRAP, reason(error)
-        ))
+        # The trial just started bwrap, so this is no missing sandbox: an
+        # argument list too long, or no process to be had.
+        raise Stop(CANNOT_RUN, "{}: the run could not be started ({}); nothing ran.".format(PREFIX, reason(error)))
     try:
         threading.Thread(target=end_on_hang_up, args=(process, sys.stdout.fileno()), daemon=True).start()
     except RuntimeError as error:
         process.kill()
         process.wait()
         raise Stop(CANNOT_RUN, "{}: could not watch the connection ({}); the run was ended.".format(PREFIX, error))
-    status = process.wait()
-    return status if status >= 0 else 128 - status
+    return status_of(process.wait())
 
 
-def run_sandboxed(root: str, kind: Kind, target: str, arguments: list[str]) -> int:
-    """Run the question or the probe script *target* of the current tree in the sandbox; its own status."""
-    with held_tree(root) as tree:
+def status_of(returncode: int) -> int:
+    """A process's exit status as a shell gives it: 128 plus the signal's number for one a signal ended."""
+    return returncode if returncode >= 0 else 128 - returncode
+
+
+def bootstrapped(
+    python: str, tree: str, kind: Kind, target: str, arguments: list[str], *, marker: str = ""
+) -> list[str]:
+    """The command line that runs the question or the probe script *target* of *tree* on *python*: :data:`BOOTSTRAP`,
+    writing *marker* first where it is given."""
+    return [python, "-I", "-S", "-c", BOOTSTRAP, marker, tree, kind, target] + arguments
+
+
+def run_sandboxed(root: str, *, tree_id: str, kind: Kind, target: str, arguments: list[str]) -> int:
+    """Run the question or the probe script *target* of the tree *tree_id* in the sandbox; its own status."""
+    with held_tree(root, tree_id=tree_id) as tree:
         return run_held(tree, kind, target, arguments)
 
 
@@ -432,7 +511,7 @@ def take(root: str, stream: IO[bytes]) -> str:
     for the next copy to remove.
     """
     try:
-        tree = tempfile.mkdtemp(prefix="tree-", dir=os.path.join(root, TREES))
+        tree = tempfile.mkdtemp(prefix=TREE_PREFIX, dir=os.path.join(root, TREES))
     except OSError as error:
         raise Stop(
             COPY_FAILED, COULD_NOT_START.format(PREFIX, error)
@@ -463,7 +542,12 @@ def take(root: str, stream: IO[bytes]) -> str:
 
 
 def copy(root: str, stream: IO[bytes]) -> int:
-    """Take the tree on *stream*; a copy that does not arrive whole leaves the current one as it was."""
+    """Take the tree on *stream* and answer its id on stdout; a copy that does not arrive whole leaves the current
+    one as it was.
+
+    The id, the one line this request writes on stdout, is what a question
+    names to run from this tree and no other (:func:`held_tree`).
+    """
     if not hasattr(tarfile, "data_filter"):
         raise Stop(
             CANNOT_RUN,
@@ -486,6 +570,7 @@ def copy(root: str, stream: IO[bytes]) -> int:
         notes = remove_others(trees, tree)
     for note in notes:
         sys.stderr.write("{}: the copy is current, but {}.\n".format(PREFIX, note))
+    sys.stdout.write(os.path.basename(tree) + "\n")
     return 0
 
 
@@ -496,11 +581,14 @@ def dispatch(request: str, root: str) -> int:
         os.execv(sys.executable, [sys.executable, "-I", "-"])
     if words == ["copy"]:
         return copy(root, sys.stdin.buffer)
-    if len(words) == 2 and words[0] == "ask":
-        return run_sandboxed(root, "module", "atlas", decode(words[1], request))
-    if len(words) in (2, 3) and words[0] == "probe" and _PROBE_NAME.fullmatch(words[1]):
-        arguments = decode(words[2], request) if len(words) == 3 else []
-        return run_sandboxed(root, "path", words[1], arguments)
+    if len(words) < 3 or not TREE_ID.fullmatch(words[1]):
+        raise refused(request)
+    if len(words) == 3 and words[0] == "ask":
+        arguments = decode(words[2], request)
+        return run_sandboxed(root, tree_id=words[1], kind="module", target="atlas", arguments=arguments)
+    if len(words) in (3, 4) and words[0] == "probe" and PROBE_NAME.fullmatch(words[2]):
+        arguments = decode(words[3], request) if len(words) == 4 else []
+        return run_sandboxed(root, tree_id=words[1], kind="path", target=words[2], arguments=arguments)
     raise refused(request)
 
 
@@ -513,6 +601,12 @@ def main() -> int:
         return stop.status
     except OSError as error:
         sys.stderr.write("{}: {}; nothing was changed.\n".format(PREFIX, error))
+        return CANNOT_RUN
+    except Exception:
+        # An exception of the dispatcher's own ends with a status of its own,
+        # never Python's 1.
+        traceback.print_exc()
+        sys.stderr.write("{}: the dispatcher failed (the traceback is above).\n".format(PREFIX))
         return CANNOT_RUN
 
 

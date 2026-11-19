@@ -114,6 +114,8 @@ mise run contract    # regenerate and format docs/contract-reference.md from thi
 mise run matrix      # regenerate and format docs/research/coverage-matrix.md from this tree
 mise run snapshot-platforms  # re-record every single-key platform answer; by hand, once each moved key is meant
 mise run setup:remote-target <name> <destination>  # set another machine up as a remote target (docs/remote-target.md)
+mise run ask [--target <name>] -- <question>       # one question to atlas, here or on a set-up target
+mise run probe [--target <name>] <script> [args]   # a probe script of scripts/probes/, here or on a set-up target
 ```
 
 `mise run complexity` moves the first complexity measurement to before the push; the Sonar gate on the pull request is
@@ -136,7 +138,8 @@ measures them — so a clean Sonar page does not mean a green gate.
   deployment, a few core probes skip for reasons of the core or the interpreter rather than of the deployment, and
   `pytest -rs` lists each with its reason. The EmuDeck tripwires and the checks of standalone Flathub builds go
   unchecked without those installations, and the canary deploys neither. Several tripwires judge only the builds and
-  cores present and name none they passed over, so a pass does not say everything pinned was checked.
+  cores present and name none they passed over, so a pass does not say everything pinned was checked. Nor does the gate
+  ask a set-up installation: see "Asking a set-up installation".
 - **Review checks**: `basedpyright <files>`, `deno fmt --check <files>`
 - **Worktree task**: `mise run worktree-new` (a global mise task from the owner's dotfiles, not in this repository)
 - **Agent rules**:
@@ -152,7 +155,16 @@ measures them — so a clean Sonar page does not mean a green gate.
     report that it needs a run on a machine that has that deployment before it merges, whether or not a test skipped: a
     tripwire can pass over a missing build without a skip.
   - Stop only your own processes, by PID; never `pkill` or `killall`.
-  - No device values or ROM titles in committed text; describe data shapes.
+  - No device values or ROM titles in committed text, pull requests or issues; describe data shapes.
+
+## Asking a set-up installation
+
+A machine with RetroDECK installed and never started answers `not-set-up`, so nothing on it states what atlas says on a
+set-up installation with content, firmware and saves. A change that alters such an answer is checked on one from the
+build host — by the maintainer, or by an agent whose brief says so: `mise run ask --target <name> -- <question>`, or
+`mise run probe --target <name> <script>` (`docs/remote-target.md`). What comes back describes one machine: like any
+device value it stays out of the tree, commits, pull requests and issues, a traceback among it — describe its shape. The
+live round that saves in a game stays at the device.
 
 ## Pitfalls
 
@@ -166,5 +178,5 @@ measures them — so a clean Sonar page does not mean a green gate.
   description of its format — every input key, the question each query key asks, and how an expected block is asserted —
   so read it before writing or editing a vector; `tests/test_vectors_readme.py` fails when the validator accepts an
   input key the README does not name.
-- Live verification against the real RetroDECK installation on this machine is the final check for resolver changes;
-  fixtures prove logic, the machine proves reality.
+- Live verification is the final check for resolver changes (see "Asking a set-up installation"); fixtures prove logic,
+  the machine proves reality.

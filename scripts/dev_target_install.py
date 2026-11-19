@@ -106,21 +106,23 @@ def check_python(python: str, floor_text: str) -> str:
     return text
 
 
-def dispatcher_function(name: str) -> Callable[..., object]:
-    """A function of the dispatcher this script installs, read from its source rather than written twice."""
+def dispatcher_functions(*names: str) -> list[Callable[..., object]]:
+    """Functions of the dispatcher this script installs, read from its source rather than written twice.
+
+    The source is run once for all of them.
+    """
     namespace: dict[str, object] = {"__name__": "emu_atlas_dev_dispatch"}
     exec(compile(DISPATCHER_SOURCE, DISPATCHER_NAME, "exec"), namespace)
-    return cast("Callable[..., object]", namespace[name])
+    return [cast("Callable[..., object]", namespace[name]) for name in names]
 
 
 def check_sandbox(bwrap: str, python: str) -> None:
     """Refuse unless *bwrap* starts the dispatcher's sandbox here, with *python* in it: the dispatcher's own trial."""
-    failure = dispatcher_function("sandbox_failure")(bwrap, python)
+    sandbox_failure, sandbox_repair = dispatcher_functions("sandbox_failure", "sandbox_repair")
+    failure = cast("tuple[str, str] | None", sandbox_failure(bwrap, python))
     if failure is not None:
-        repair = "install bubblewrap"
-        if failure not in ("there is none", "it is not executable"):
-            repair += ", or allow unprivileged user namespaces"
-        raise lacks("a {} that starts a sandbox — {}; {}".format(bwrap, failure, repair))
+        kind, why = failure
+        raise lacks("a {} that starts a sandbox — {}; {}".format(bwrap, why, sandbox_repair(kind)))
 
 
 def from_address(argv: list[str]) -> str:
@@ -323,9 +325,10 @@ def build_and_move(home: str, dispatcher: str, keys: str, line: bytes, comment_l
 def install(home: str, address: str) -> None:
     """The dispatcher and the key's line, each built beside its place and moved there last.
 
-    An install that does not finish takes back what it can (:meth:`Progress.undo`)
-    and ends with a STOPPED or FAILED line that names what it leaves, so the
-    build host can pass that on.
+    An install that refuses to go on or fails with an error takes back what it
+    can (:meth:`Progress.undo`) and ends with a STOPPED or FAILED line that
+    names what it leaves, so the build host can pass that on. One that is
+    killed takes back nothing and ends with neither.
     """
     root = os.path.join(home, value("target_root"))
     dispatcher = os.path.join(root, DISPATCHER_NAME)
@@ -426,8 +429,9 @@ def main(argv: list[str]) -> int:
             sys.stderr.write("emu-atlas-dev-setup: nothing was changed.\n")
         return 1
     except Exception as error:
-        # Raised before the install: the install and what follows it end
-        # with a Stop of their own, so nothing was written.
+        # Raised before the install: the install and the line that reports it
+        # end with a Stop of their own, and the fingerprints shown after it
+        # catch their own errors, so nothing was written.
         marker = VALUES.get("failed", "emu-atlas-dev-setup: failed: ")
         sys.stderr.write("{}{}; nothing was changed.\n".format(marker, error))
         return 1

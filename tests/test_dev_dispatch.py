@@ -30,26 +30,37 @@ import errno
 import io
 import json
 import os
-import shutil
 import signal
 import subprocess
 import sys
 import tarfile
-import tempfile
 import time
 import uuid
-from collections.abc import Callable, Iterator
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
 
 from scripts import dev_dispatch, setup_remote_target
 from tests.remote_target import GUARDED_VARIABLE, fake_path
-from tests.remote_target_suite import DISPATCHER, INSTALL_SCRIPT, REPO, ROOT, contents, isolated_module, snapshot
+from tests.remote_target_suite import (
+    DISPATCHER,
+    INSTALL_SCRIPT,
+    REAL_BWRAP,
+    REPO,
+    ROOT,
+    contents,
+    isolated_module,
+    end_what_is_left,
+    gone_within,
+    processes_holding,
+    sandbox_home,
+    snapshot,
+)
+from tests.remote_target_suite import install_dispatcher as install
 
 pytestmark = pytest.mark.usefixtures(isolated_module.__name__)
 
-REAL_BWRAP = "/usr/bin/bwrap"
 MANIFEST = b'{"requires_python": "3.12"}'
 
 DEPLOYED_CORES = Path(
@@ -87,17 +98,6 @@ def fakes(tmp_path: Path) -> Path:
 def word(arguments: list[str]) -> str:
     """The argument list as a request carries it: JSON, UTF-8, base64url without padding."""
     return base64.urlsafe_b64encode(json.dumps(arguments).encode("utf-8")).decode("ascii").rstrip("=")
-
-
-def install(home: Path, *, bwrap: str = REAL_BWRAP, root: Path = ROOT) -> Path:
-    """The dispatcher, installed under *home* as the setup installs it, naming *bwrap* for its sandbox."""
-    installed = home / root / "dispatch.py"
-    installed.parent.mkdir(parents=True, exist_ok=True)
-    source = DISPATCHER.read_text(encoding="utf-8")
-    line = f'BWRAP = "{REAL_BWRAP}"\n'
-    assert source.count(line) == 1
-    installed.write_text(source.replace(line, f"BWRAP = {bwrap!r}\n"), encoding="utf-8")
-    return installed
 
 
 def environment(home: Path, request: str | None) -> dict[str, str]:
@@ -156,9 +156,10 @@ _LINGERING_PROBE = b"import sys, time\nprint('started', flush=True)\ntime.sleep(
 def a_probe_running_while_a_copy_lands(home: Path, go: Path) -> None:
     """A copy lands while a probe runs from the tree before it; the probe finishes from that tree."""
     first = copied(home, {"marker.txt": b"first\n", "scripts/probes/wait.py": _WAITING_PROBE})
-    running = start(home, f"probe wait.py {word([str(go)])}")
+    running = start(home, f"probe {first.name} wait.py {word([str(go)])}")
     try:
         assert running.stdout is not None
+        assert running.stdout.readline() == MARKER_LINE
         assert running.stdout.readline() == b"started\n"
         second = copied(home, {"marker.txt": b"second\n"})
         assert first.is_dir()
@@ -175,47 +176,14 @@ def a_probe_running_while_a_copy_lands(home: Path, go: Path) -> None:
     assert sorted(path.name for path in (home / ROOT / "trees").iterdir()) == [third.name]
 
 
-def processes_holding(token: str) -> list[int]:
-    """The processes on this machine whose command line holds *token*."""
-    found = []
-    for name in os.listdir("/proc"):
-        if not name.isdigit() or int(name) == os.getpid():
-            continue
-        try:
-            command_line = Path("/proc", name, "cmdline").read_bytes()
-        except OSError:
-            continue
-        if token.encode() in command_line:
-            found.append(int(name))
-    return found
-
-
-def end_what_is_left(token: str) -> None:
-    """Kill, by its pid, every process of this test's that still holds *token*: nothing outlives a failed test."""
-    for pid in processes_holding(token):
-        try:
-            os.kill(pid, signal.SIGKILL)
-        except ProcessLookupError:
-            continue
-
-
-def gone_within(token: str, seconds: float) -> bool:
-    """Whether every process holding *token* has ended within *seconds*."""
-    deadline = time.monotonic() + seconds
-    while processes_holding(token):
-        if time.monotonic() > deadline:
-            return False
-        time.sleep(0.05)
-    return True
-
-
 def a_probe_whose_caller_hangs_up(home: Path) -> None:
     """A probe is running; nothing reads the dispatcher's output any more; the probe ends and its tree is free."""
     first = copied(home, {"scripts/probes/linger.py": _LINGERING_PROBE})
     token = uuid.uuid4().hex
-    running = start(home, f"probe linger.py {word([token])}")
+    running = start(home, f"probe {first.name} linger.py {word([token])}")
     try:
         assert running.stdout is not None
+        assert running.stdout.readline() == MARKER_LINE
         assert running.stdout.readline() == b"started\n"
         running.stdout.close()
         assert running.wait(timeout=30) == 128 + signal.SIGKILL
@@ -231,31 +199,40 @@ def a_probe_whose_caller_hangs_up(home: Path) -> None:
 
 
 # Starts the dispatcher with its output on a pipe only this process reads,
-# prints the dispatcher's pid, and waits to be killed: the parent that goes.
+# prints the dispatcher's pid, says whether the probe wrote the line it writes
+# once it runs — within a minute, or before that output ended — and waits to
+# be killed, the pipe still open: the parent that goes.
 _PARENT = (
-    "import os, subprocess, sys, time\n"
+    "import os, select, subprocess, sys, time\n"
     "child = subprocess.Popen(sys.argv[1:], stdin=subprocess.DEVNULL, stdout=subprocess.PIPE)\n"
     "print(child.pid, flush=True)\n"
+    "deadline, seen = time.monotonic() + 60, b''\n"
+    "def ready():\n"
+    "    return select.select([child.stdout], [], [], max(0, deadline - time.monotonic()))[0]\n"
+    "while b'started\\n' not in seen and ready():\n"
+    "    chunk = os.read(child.stdout.fileno(), 4096)\n"
+    "    if not chunk:\n"
+    "        break\n"
+    "    seen += chunk\n"
+    "print('started' if b'started\\n' in seen else 'never started', flush=True)\n"
     "time.sleep(600)\n"
 )
 
 
 def a_probe_whose_caller_goes(home: Path) -> None:
     """A probe is running; the process holding the other end of the dispatcher's output dies; the probe ends."""
-    copied(home, {"scripts/probes/linger.py": _LINGERING_PROBE})
+    tree = copied(home, {"scripts/probes/linger.py": _LINGERING_PROBE})
     token = uuid.uuid4().hex
     parent = subprocess.Popen(
         [sys.executable, "-I", "-c", _PARENT, sys.executable, "-I", str(home / ROOT / "dispatch.py")],
         cwd=home,
         stdout=subprocess.PIPE,
-        env=environment(home, f"probe linger.py {word([token])}"),
+        env=environment(home, f"probe {tree.name} linger.py {word([token])}"),
     )
     try:
         assert parent.stdout is not None
         dispatcher = int(parent.stdout.readline())
-        deadline = time.monotonic() + 30
-        while not processes_holding(token) and time.monotonic() < deadline:
-            time.sleep(0.05)
+        assert parent.stdout.readline() == b"started\n"
         assert processes_holding(token)
         parent.kill()
         parent.wait()
@@ -295,32 +272,22 @@ def atlas_files() -> dict[str, bytes]:
 
 
 def copied(home: Path, files: dict[str, bytes], *, manifest: bytes | None = MANIFEST) -> Path:
-    """*files* copied in through the dispatcher; the tree ``current`` then names."""
+    """*files* copied in through the dispatcher; the tree whose id the copy answered with, which ``current`` names."""
     result = dispatch(home, "copy", tar(files, manifest=manifest))
     assert result.returncode == 0, result.stderr
-    return (home / ROOT / "current").resolve()
+    tree = home / ROOT / "trees" / result.stdout.decode().removesuffix("\n")
+    assert tree.is_dir()
+    assert (home / ROOT / "current").resolve() == tree.resolve()
+    return tree.resolve()
 
 
-def sandbox_unavailable() -> str | None:
-    """Why the real sandbox cannot be shown here, or ``None`` where it starts: the dispatcher's own trial."""
-    failure = dev_dispatch.sandbox_failure(REAL_BWRAP, sys.executable)
-    return None if failure is None else f"{REAL_BWRAP} cannot start a sandbox here: {failure}"
+MARKER_LINE = (dev_dispatch.RUN_MARKER + "\n").encode()
 
 
-@pytest.fixture
-def sandbox_home() -> Iterator[Path]:
-    """A home outside ``/tmp`` — the sandbox puts an empty ``/tmp`` of its own over it — or a skip saying why
-    the sandbox cannot be shown here."""
-    unavailable = sandbox_unavailable()
-    if unavailable is not None:
-        pytest.skip(unavailable)
-    base = Path(tempfile.mkdtemp(prefix="emu-atlas-dev-test-", dir="/var/tmp"))
-    try:
-        (base / "home").mkdir()
-        (base / "outside").mkdir()
-        yield base / "home"
-    finally:
-        shutil.rmtree(base)
+def answered(result: subprocess.CompletedProcess[bytes]) -> bytes:
+    """What a run wrote on stdout: what follows ``RUN_MARKER``'s line."""
+    assert result.stdout.startswith(MARKER_LINE), result.stdout
+    return result.stdout[len(MARKER_LINE) :]
 
 
 class TestTheRefusals:
@@ -340,28 +307,36 @@ class TestTheRefusals:
             pytest.param("setup", id="setup by name"),
             pytest.param("copy now", id="copy with an argument"),
             pytest.param("copy; touch pwned", id="copy with a command after it"),
-            pytest.param("ask", id="ask with no word"),
-            pytest.param("ask {word} {word}", id="ask with two words"),
-            pytest.param("ask $(touch pwned)", id="ask with a substitution"),
-            pytest.param("ask WyJ0b3VjaCJd!", id="ask with a word outside base64url"),
-            pytest.param("ask e30", id="ask with an object"),
-            pytest.param("ask WzFd", id="ask with a number"),
-            pytest.param("ask bm90IGpzb24", id="ask with no JSON"),
-            pytest.param("ask {nul}", id="ask with a NUL in a word"),
-            pytest.param("probe", id="probe with no name"),
-            pytest.param("probe ../escape.py", id="probe with a path"),
-            pytest.param("probe sub/one.py", id="probe in a subdirectory"),
-            pytest.param("probe one.sh", id="probe that is no Python file"),
-            pytest.param("probe .py", id="probe with an empty name"),
-            pytest.param("probe one.py {word} {word}", id="probe with two words"),
-            pytest.param("probe one.py e30", id="probe with an object"),
+            pytest.param("ask {tree}", id="ask with no word"),
+            pytest.param("ask {tree} {word} {word}", id="ask with two words"),
+            pytest.param("ask {tree} $(touch pwned)", id="ask with a substitution"),
+            pytest.param("ask {tree} WyJ0b3VjaCJd!", id="ask with a word outside base64url"),
+            pytest.param("ask {tree} e30", id="ask with an object"),
+            pytest.param("ask {tree} WzFd", id="ask with a number"),
+            pytest.param("ask {tree} bm90IGpzb24", id="ask with no JSON"),
+            pytest.param("ask {tree} {nul}", id="ask with a NUL in a word"),
+            pytest.param("probe {tree}", id="probe with no name"),
+            pytest.param("probe {tree} ../escape.py", id="probe with a path"),
+            pytest.param("probe {tree} sub/one.py", id="probe in a subdirectory"),
+            pytest.param("probe {tree} one.sh", id="probe that is no Python file"),
+            pytest.param("probe {tree} .py", id="probe with an empty name"),
+            pytest.param("probe {tree} one.py {word} {word}", id="probe with two words"),
+            pytest.param("probe {tree} one.py e30", id="probe with an object"),
+            pytest.param("ask {word}", id="ask without a tree"),
+            pytest.param("probe one.py", id="probe without a tree"),
+            pytest.param("ask current {word}", id="ask naming current"),
+            pytest.param("ask ../trees/tree-x1 {word}", id="ask naming a path"),
+            pytest.param("ask .removing-tree-x1 {word}", id="ask naming a tree set aside"),
+            pytest.param("probe tree-x1/.. one.py", id="probe naming a path"),
             pytest.param("cat .ssh/authorized_keys", id="another command"),
         ],
     )
     def test_anything_else_is_refused_and_runs_nothing(self, home: Path, request_text: str | None) -> None:
         install(home)
         if request_text is not None:
-            request_text = request_text.format(python=sys.executable, word=word(["detect"]), nul=word(["\x00"]))
+            request_text = request_text.format(
+                python=sys.executable, tree="tree-x1", word=word(["detect"]), nul=word(["\x00"])
+            )
 
         result = dispatch(home, request_text, b"import pathlib; pathlib.Path('pwned').touch()\n")
 
@@ -380,7 +355,7 @@ class TestTheRefusals:
     )
     def test_a_malformed_argument_word_is_named(self, home: Path, malformed: str) -> None:
         install(home)
-        request = f"ask {malformed.format(nul=word(['\x00']))}"
+        request = f"ask tree-x1 {malformed.format(nul=word(['\x00']))}"
 
         result = dispatch(home, request)
 
@@ -390,8 +365,11 @@ class TestTheRefusals:
         )
 
     def test_its_statuses_are_none_atlas_uses_and_differ(self) -> None:
-        statuses = {dev_dispatch.REFUSED, dev_dispatch.CANNOT_RUN, dev_dispatch.COPY_FAILED}
-        assert len(statuses) == 3
+        statuses = set(dev_dispatch.STATUSES)
+        named = [dev_dispatch.REFUSED, dev_dispatch.CANNOT_RUN, dev_dispatch.COPY_FAILED, dev_dispatch.TREE_GONE]
+        assert len(set(named)) == len(named)
+        assert statuses == set(named)
+        assert all(getattr(dev_dispatch, name) == status for status, name in dev_dispatch.STATUSES.items())
         assert statuses.isdisjoint({0, 1, 2})
 
 
@@ -610,6 +588,26 @@ class TestTheCopy:
         assert "the current tree is as it was." in result.stderr.decode()
         assert snapshot(home / ROOT) == before
 
+    @pytest.mark.skipif(os.geteuid() == 0, reason="root creates a directory whatever its parent's mode")
+    def test_a_trees_directory_that_takes_no_new_tree_leaves_the_root_as_it_was(self, home: Path) -> None:
+        """The directory is there, so the copy gets past creating it and fails making the new tree in it."""
+        install(home)
+        copied(home, {"atlas/__init__.py": b"the tree that was there\n"})
+        trees = home / ROOT / "trees"
+        trees.chmod(0o500)
+        try:
+            before = snapshot(home / ROOT)
+            result = dispatch(home, "copy", tar({"atlas/__init__.py": b"new\n"}))
+            after = snapshot(home / ROOT)
+        finally:
+            trees.chmod(0o700)
+
+        assert result.returncode == dev_dispatch.COPY_FAILED, result.stderr
+        message = result.stderr.decode()
+        assert message.startswith(f"emu-atlas-dev: the copy could not start ([Errno {errno.EACCES}] Permission denied")
+        assert message.endswith("); the current tree is as it was.\n")
+        assert after == before
+
     def test_older_trees_that_cannot_be_listed_leave_the_copy_current_and_named(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
     ) -> None:
@@ -726,30 +724,33 @@ class TestWhatCannotRun:
         assert result.stdout == b""
         return result.stderr.decode()
 
-    @pytest.mark.parametrize("request_text", [f"ask {word(['detect'])}", "probe one.py"])
-    def test_before_any_copy_it_says_to_copy_first(self, home: Path, request_text: str) -> None:
+    @pytest.mark.parametrize("request_text", [f"ask tree-none {word(['detect'])}", "probe tree-none one.py"])
+    def test_before_any_copy_a_tree_it_names_is_not_there(self, home: Path, request_text: str) -> None:
         install(home)
 
-        assert "no tree has been copied here yet: copy first." in self._cannot_run(home, request_text)
+        result = dispatch(home, request_text)
 
-    def test_a_tree_without_a_readable_manifest_says_to_copy_first(self, home: Path) -> None:
+        assert result.returncode == dev_dispatch.TREE_GONE
+        assert result.stdout == b""
+        assert result.stderr.decode() == (
+            "emu-atlas-dev: the tree tree-none is not here: a later copy replaced it, or it was never copied;"
+            " nothing ran.\n  Ask again: every call copies first.\n"
+        )
+
+    def test_a_tree_without_a_readable_manifest_says_to_ask_again(self, home: Path) -> None:
         install(home)
         tree = copied(home, _SAYING_ATLAS)
         (tree / "tree.json").write_text("{", encoding="utf-8")
 
-        assert "states no Python floor (tree.json: no JSON: Expecting" in self._cannot_run(home, f"ask {word([])}")
+        assert "states no Python floor (tree.json: no JSON: Expecting" in self._cannot_run(
+            home, f"ask {tree.name} {word([])}"
+        )
         (tree / "tree.json").unlink()
-        assert "states no Python floor (tree.json: No such file or directory): copy first." in self._cannot_run(
-            home, f"ask {word([])}"
+        assert self._cannot_run(home, f"ask {tree.name} {word([])}") == (
+            "emu-atlas-dev: the copied tree states no Python floor (tree.json: No such file or directory); nothing"
+            " ran.\n  Ask again: every call copies first.\n"
         )
 
-    def test_a_current_that_names_a_tree_that_is_gone_says_to_copy_again(self, home: Path) -> None:
-        install(home)
-        (home / ROOT / "current").symlink_to("trees/tree-gone")
-
-        message = self._cannot_run(home, f"ask {word([])}")
-
-        assert f"current names {(home / ROOT).resolve()}/trees/tree-gone, which is not there: copy again." in message
 
     @pytest.mark.skipif(os.geteuid() == 0, reason="root opens a directory whatever its mode")
     def test_a_tree_it_may_not_read_ends_the_request_with_the_error_not_a_retry(self, home: Path) -> None:
@@ -757,7 +758,7 @@ class TestWhatCannotRun:
         tree = copied(home, _SAYING_ATLAS)
         tree.chmod(0o000)
         try:
-            message = self._cannot_run(home, f"ask {word([])}")
+            message = self._cannot_run(home, f"ask {tree.name} {word([])}")
         finally:
             tree.chmod(0o700)
 
@@ -765,25 +766,27 @@ class TestWhatCannotRun:
 
     def test_an_interpreter_below_the_trees_floor_is_refused_naming_both_versions(self, home: Path) -> None:
         install(home)
-        copied(home, _SAYING_ATLAS, manifest=b'{"requires_python": "99.0"}')
+        tree = copied(home, _SAYING_ATLAS, manifest=b'{"requires_python": "99.0"}')
         have = ".".join(str(part) for part in sys.version_info[:3])
 
-        message = self._cannot_run(home, f"ask {word([])}")
+        message = self._cannot_run(home, f"ask {tree.name} {word([])}")
 
         assert f"this target's Python is {have}, below the 99.0 the copied tree needs; nothing ran." in message
 
     def test_without_bwrap_nothing_runs_unsandboxed(self, home: Path, tmp_path: Path) -> None:
         missing = tmp_path / "no-bwrap"
         install(home, bwrap=str(missing))
-        copied(home, _SAYING_ATLAS)
+        tree = copied(home, _SAYING_ATLAS)
 
-        assert f"no sandbox at {missing} — there is none; nothing ran." in self._cannot_run(home, f"ask {word([])}")
+        message = self._cannot_run(home, f"ask {tree.name} {word([])}")
+
+        assert f"no sandbox at {missing} — there is none; nothing ran." in message
 
     def test_a_bwrap_that_cannot_start_a_sandbox_runs_nothing(self, home: Path, fakes: Path) -> None:
         install(home, bwrap=str(fakes / "bwrap-broken"))
-        copied(home, _SAYING_ATLAS)
+        tree = copied(home, _SAYING_ATLAS)
 
-        message = self._cannot_run(home, f"ask {word([])}")
+        message = self._cannot_run(home, f"ask {tree.name} {word([])}")
 
         assert f"no sandbox at {fakes / 'bwrap-broken'} — it said: bwrap: setting up uid map: Permission denied;" in message
 
@@ -792,24 +795,53 @@ class TestWhatCannotRun:
         not_executable.write_text("", encoding="utf-8")
         not_executable.chmod(0o644)
         install(home, bwrap=str(not_executable))
-        copied(home, _SAYING_ATLAS)
+        tree = copied(home, _SAYING_ATLAS)
 
-        message = self._cannot_run(home, f"ask {word([])}")
+        message = self._cannot_run(home, f"ask {tree.name} {word([])}")
 
         assert f"no sandbox at {not_executable} — it is not executable; nothing ran." in message
+
+    @pytest.mark.parametrize(
+        ("which", "repair"),
+        [
+            ("missing", "install bubblewrap"),
+            ("not executable", "install bubblewrap"),
+            ("no sandbox", "install bubblewrap, or allow unprivileged user namespaces"),
+        ],
+    )
+    def test_its_refusal_names_the_repair_the_setup_names(
+        self, home: Path, tmp_path: Path, fakes: Path, monkeypatch: pytest.MonkeyPatch, which: str, repair: str
+    ) -> None:
+        from scripts import dev_target_install
+
+        bwrap = {"missing": tmp_path / "no-bwrap", "no sandbox": fakes / "bwrap-broken"}.get(which, tmp_path / "bwrap")
+        if which == "not executable":
+            bwrap.write_text("", encoding="utf-8")
+            bwrap.chmod(0o644)
+        install(home, bwrap=str(bwrap))
+        tree = copied(home, _SAYING_ATLAS)
+        monkeypatch.setattr(dev_target_install, "DISPATCHER_SOURCE", DISPATCHER.read_text(encoding="utf-8"))
+        monkeypatch.setattr(dev_target_install, "VALUES", {"lacks": ""})
+
+        message = self._cannot_run(home, f"ask {tree.name} {word([])}")
+        with pytest.raises(dev_target_install.Stop) as lacking:
+            dev_target_install.check_sandbox(str(bwrap), sys.executable)
+
+        assert message.endswith(f"; nothing ran.\n  To repair: {repair} on this target.\n")
+        assert lacking.value.line.endswith(f"; {repair}")
 
     def test_a_lock_the_file_system_refuses_ends_the_question_with_the_error(
         self, home: Path, fakes: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
     ) -> None:
         install(home, bwrap=str(fakes / "bwrap"))
-        copied(home, _SAYING_ATLAS)
+        tree = copied(home, _SAYING_ATLAS)
 
         def no_locks(descriptor: object, operation: int) -> None:
             raise OSError(errno.ENOLCK, "No locks available")
 
         monkeypatch.setattr(dev_dispatch.fcntl, "flock", no_locks)
         monkeypatch.setattr(dev_dispatch, "root_directory", lambda: str(home / ROOT))
-        monkeypatch.setenv("SSH_ORIGINAL_COMMAND", f"ask {word([])}")
+        monkeypatch.setenv("SSH_ORIGINAL_COMMAND", f"ask {tree.name} {word([])}")
 
         status = dev_dispatch.main()
 
@@ -842,10 +874,10 @@ class TestWhatCannotRun:
 
     def test_a_probe_the_tree_does_not_hold_is_named(self, home: Path, fakes: Path) -> None:
         install(home, bwrap=str(fakes / "bwrap"))
-        copied(home, _SAYING_ATLAS)
+        tree = copied(home, _SAYING_ATLAS)
 
         assert "the copied tree has no scripts/probes/absent.py; nothing ran." in self._cannot_run(
-            home, "probe absent.py"
+            home, f"probe {tree.name} absent.py"
         )
 
 
@@ -856,10 +888,10 @@ class TestWhatReachesTheSandbox:
         install(home, bwrap=str(fakes / "bwrap"))
         tree = copied(home, _SAYING_ATLAS)
 
-        result = dispatch(home, f"ask {word(['detect'])}")
+        result = dispatch(home, f"ask {tree.name} {word(['detect'])}")
 
         assert result.returncode == 0, result.stderr
-        said = json.loads(result.stdout)
+        said = json.loads(answered(result))
         assert said["file"] == str(tree / "atlas" / "__init__.py")
         assert said["argv"] == ["detect"]
         assert said["path"][-1] == str(tree)
@@ -867,48 +899,71 @@ class TestWhatReachesTheSandbox:
 
     def test_words_with_blanks_quotes_and_parentheses_arrive_as_they_were(self, home: Path, fakes: Path) -> None:
         install(home, bwrap=str(fakes / "bwrap"))
-        copied(home, _SAYING_ATLAS)
+        tree = copied(home, _SAYING_ATLAS)
         arguments = ["savefile-location", "/run/media/card/roms/A Game (Europe) 'Rev 1' \"x\".chd", "--core", "ü"]
 
-        result = dispatch(home, f"ask {word(arguments)}")
+        result = dispatch(home, f"ask {tree.name} {word(arguments)}")
 
         assert result.returncode == 0, result.stderr
-        assert json.loads(result.stdout)["argv"] == arguments
+        assert json.loads(answered(result))["argv"] == arguments
 
     @pytest.mark.parametrize("status", [0, 2, 7])
     def test_the_questions_own_status_is_passed_through(self, home: Path, fakes: Path, status: int) -> None:
         install(home, bwrap=str(fakes / "bwrap"))
-        copied(home, _SAYING_ATLAS)
+        tree = copied(home, _SAYING_ATLAS)
 
-        assert dispatch(home, f"ask {word([str(status)])}").returncode == status
+        assert dispatch(home, f"ask {tree.name} {word([str(status)])}").returncode == status
 
     @pytest.mark.parametrize("padded", [False, True], ids=["unpadded", "padded"])
     def test_a_probe_script_runs_with_its_words(self, home: Path, fakes: Path, padded: bool) -> None:
         install(home, bwrap=str(fakes / "bwrap"))
         probe = b"import sys, atlas\nprint(sys.argv[0].endswith('/scripts/probes/two_answers.py'), sys.argv[1:])\n"
-        copied(home, {**_SAYING_ATLAS, "scripts/probes/two_answers.py": probe})
+        tree = copied(home, {**_SAYING_ATLAS, "scripts/probes/two_answers.py": probe})
         encoded = word(["a b", "(c)"])
         encoded += "=" * (-len(encoded) % 4) if padded else ""
 
-        result = dispatch(home, f"probe two_answers.py {encoded}")
+        result = dispatch(home, f"probe {tree.name} two_answers.py {encoded}")
 
         assert result.returncode == 0, result.stderr
-        assert result.stdout == b"True ['a b', '(c)']\n"
+        assert answered(result) == b"True ['a b', '(c)']\n"
 
     def test_a_run_ended_by_a_signal_answers_128_plus_its_number(self, home: Path, fakes: Path) -> None:
         install(home, bwrap=str(fakes / "bwrap"))
-        copied(home, {"scripts/probes/ends.py": b"import os, signal\nos.kill(os.getpid(), signal.SIGTERM)\n"})
+        tree = copied(home, {"scripts/probes/ends.py": b"import os, signal\nos.kill(os.getpid(), signal.SIGTERM)\n"})
 
-        assert dispatch(home, "probe ends.py").returncode == 128 + signal.SIGTERM
+        assert dispatch(home, f"probe {tree.name} ends.py").returncode == 128 + signal.SIGTERM
+
+    def test_a_probe_that_crashes_ends_with_2_and_its_traceback(self, home: Path, fakes: Path) -> None:
+        install(home, bwrap=str(fakes / "bwrap"))
+        tree = copied(home, {"scripts/probes/crashes.py": b"import no_such_module\n"})
+
+        result = dispatch(home, f"probe {tree.name} crashes.py")
+
+        assert result.returncode == dev_dispatch.PROBE_NOT_PUT == 2
+        assert answered(result) == b""
+        assert b"ModuleNotFoundError: No module named 'no_such_module'" in result.stderr
+        assert result.stderr.endswith(
+            b"emu-atlas-dev: the probe crashes.py crashed (the traceback is above): a question it could not put.\n"
+        )
+
+    def test_a_question_that_crashes_keeps_atlas_s_own_status(self, home: Path, fakes: Path) -> None:
+        """Only a probe's crash is turned into 2: atlas's own ending stands."""
+        install(home, bwrap=str(fakes / "bwrap"))
+        tree = copied(home, {"atlas/__init__.py": b"", "atlas/__main__.py": b"raise KeyError('x')\n"})
+
+        result = dispatch(home, f"ask {tree.name} {word([])}")
+
+        assert result.returncode == 1
+        assert b"KeyError: 'x'" in result.stderr
 
     def test_a_probe_without_words_gets_none(self, home: Path, fakes: Path) -> None:
         install(home, bwrap=str(fakes / "bwrap"))
-        copied(home, {"scripts/probes/bare.py": b"import sys\nprint(sys.argv[1:])\n"})
+        tree = copied(home, {"scripts/probes/bare.py": b"import sys\nprint(sys.argv[1:])\n"})
 
-        result = dispatch(home, "probe bare.py")
+        result = dispatch(home, f"probe {tree.name} bare.py")
 
         assert result.returncode == 0, result.stderr
-        assert result.stdout == b"[]\n"
+        assert answered(result) == b"[]\n"
 
 
 class TestACopyWhileAProbeRuns:
@@ -917,6 +972,160 @@ class TestACopyWhileAProbeRuns:
         install(home, bwrap=str(fakes / "bwrap"))
 
         a_probe_running_while_a_copy_lands(home, tmp_path / "go")
+
+
+class TestTheTreeARequestNames:
+    """A question runs from the tree its copy answered with, and from no other: never from ``current``."""
+
+    def test_a_copy_answers_with_the_id_of_the_tree_it_made(self, home: Path) -> None:
+        install(home)
+
+        result = dispatch(home, "copy", tar({"atlas/__init__.py": b"\n"}))
+
+        assert result.returncode == 0, result.stderr
+        tree_id = result.stdout.decode().removesuffix("\n")
+        assert dev_dispatch.TREE_ID.fullmatch(tree_id)
+        assert (home / ROOT / "trees" / tree_id / "atlas" / "__init__.py").is_file()
+
+    def test_a_question_whose_tree_another_copy_replaced_runs_nowhere(self, home: Path, fakes: Path) -> None:
+        """Two clients: the first copies, the second copies, then the first asks."""
+        install(home, bwrap=str(fakes / "bwrap"))
+        first = copied(home, {**_SAYING_ATLAS, "marker.txt": b"first\n"})
+        second = copied(home, {**_SAYING_ATLAS, "marker.txt": b"second\n"})
+        assert not first.exists()
+
+        result = dispatch(home, f"ask {first.name} {word(['detect'])}")
+
+        assert result.returncode == dev_dispatch.TREE_GONE
+        assert result.stdout == b""
+        assert result.stderr.decode() == (
+            f"emu-atlas-dev: the tree {first.name} is not here: a later copy replaced it, or it was never copied;"
+            " nothing ran.\n  Ask again: every call copies first.\n"
+        )
+        assert json.loads(answered(dispatch(home, f"ask {second.name} {word(['detect'])}")))["file"] == str(
+            second / "atlas" / "__init__.py"
+        )
+
+    @pytest.mark.parametrize("request_form", ["ask {tree} {word}", "probe {tree} say.py {word}"])
+    def test_the_tree_a_request_names_is_the_one_it_runs_from_whatever_is_current(
+        self, home: Path, fakes: Path, request_form: str
+    ) -> None:
+        """A tree a run still holds outlives the next copy; a request naming it runs there, not from ``current``."""
+        install(home, bwrap=str(fakes / "bwrap"))
+        say_probe = b"import atlas, json\nprint(json.dumps({'file': atlas.__file__}))\n"
+        files = {**_SAYING_ATLAS, "scripts/probes/linger.py": _LINGERING_PROBE, "scripts/probes/say.py": say_probe}
+        first = copied(home, files)
+        token = uuid.uuid4().hex
+        holding = start(home, f"probe {first.name} linger.py {word([token])}")
+        try:
+            assert holding.stdout is not None
+            assert holding.stdout.readline() == MARKER_LINE
+            assert holding.stdout.readline() == b"started\n"
+            second = copied(home, files)
+            assert first.is_dir()
+
+            asked = [
+                dispatch(home, request_form.format(tree=tree.name, word=word(["detect"]))) for tree in (first, second)
+            ]
+        finally:
+            holding.kill()
+            holding.wait()
+            end_what_is_left(token)
+
+        assert [json.loads(answered(result))["file"] for result in asked] == [
+            str(first / "atlas" / "__init__.py"),
+            str(second / "atlas" / "__init__.py"),
+        ]
+
+
+class TestTheLockOnTheTree:
+    """``_lock_tree``: only a tree id becomes a path, and a tree a copy removes while the lock is awaited is gone."""
+
+    def test_a_tree_removed_between_opening_it_and_locking_it_runs_nowhere(
+        self, home: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The race TREE_GONE exists for: a copy took the exclusive lock first and set the tree aside."""
+        install(home)
+        tree = copied(home, _SAYING_ATLAS)
+        real_flock = dev_dispatch.fcntl.flock
+        removed: list[str] = []
+
+        def a_copy_gets_there_first(descriptor: int, operation: int) -> None:
+            if operation == dev_dispatch.fcntl.LOCK_SH and not removed:
+                aside = tree.with_name(".removing-" + tree.name)
+                tree.rename(aside)
+                removed.append(str(aside))
+            real_flock(descriptor, operation)
+
+        def no_sandbox_may_start(*_: object) -> None:
+            raise AssertionError("a run started from a tree that is gone")
+
+        monkeypatch.setattr(dev_dispatch.fcntl, "flock", a_copy_gets_there_first)
+        monkeypatch.setattr(dev_dispatch, "run_held", no_sandbox_may_start)
+
+        with pytest.raises(dev_dispatch.Stop) as stop:
+            dev_dispatch.run_sandboxed(
+                str(home / ROOT), tree_id=tree.name, kind="module", target="atlas", arguments=[]
+            )
+
+        assert removed
+        assert stop.value.status == dev_dispatch.TREE_GONE
+        assert stop.value.message == (
+            f"emu-atlas-dev: the tree {tree.name} is not here: a later copy replaced it, or it was never copied;"
+            " nothing ran.\n  Ask again: every call copies first."
+        )
+
+    @pytest.mark.parametrize("tree_id", ["../trees", "/etc", "current", "tree-é"])
+    def test_nothing_but_a_tree_id_becomes_a_path(self, home: Path, tree_id: str) -> None:
+        install(home)
+
+        with pytest.raises(ValueError, match="is no tree id"):
+            dev_dispatch.run_sandboxed(str(home / ROOT), tree_id=tree_id, kind="module", target="atlas", arguments=[])
+
+    def test_a_non_ascii_tree_id_is_refused(self, home: Path) -> None:
+        install(home)
+
+        result = dispatch(home, f"ask tree-\u00e9 {word([])}")
+
+        assert result.returncode == dev_dispatch.REFUSED
+
+
+class TestTheDispatchersOwnCrash:
+    def test_an_exception_of_its_own_ends_with_cannot_run_not_python_s_1(
+        self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        def crashes(request: str, root: str) -> int:
+            raise RuntimeError("an unforeseen state")
+
+        monkeypatch.setattr(dev_dispatch, "dispatch", crashes)
+
+        status = dev_dispatch.main()
+
+        err = capsys.readouterr().err
+        assert status == dev_dispatch.CANNOT_RUN
+        assert "RuntimeError: an unforeseen state\n" in err
+        assert err.endswith("emu-atlas-dev: the dispatcher failed (the traceback is above).\n")
+
+    def test_a_run_that_cannot_be_started_after_the_trial_is_no_missing_sandbox(
+        self, home: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        install(home)
+        tree = copied(home, _SAYING_ATLAS)
+
+        def too_long(*_: object, **__: object) -> object:
+            raise OSError(errno.E2BIG, "Argument list too long")
+
+        monkeypatch.setattr(dev_dispatch, "check_sandbox", lambda bwrap: None)
+        monkeypatch.setattr(dev_dispatch.subprocess, "Popen", too_long)
+
+        with pytest.raises(dev_dispatch.Stop) as stop:
+            dev_dispatch.run_held(str(tree), "module", "atlas", [])
+
+        assert stop.value.status == dev_dispatch.CANNOT_RUN
+        assert stop.value.message == (
+            "emu-atlas-dev: the run could not be started (Argument list too long); nothing ran."
+        )
+        assert capsys.readouterr().out == ""
 
 
 class TestACallerThatIsGone:
@@ -972,12 +1181,12 @@ class TestTheSandboxCommandLine:
         install(home, bwrap=str(recorder))
         tree = copied(home, _SAYING_ATLAS)
 
-        assert dispatch(home, f"ask {word(['detect'])}").returncode == 0
+        assert dispatch(home, f"ask {tree.name} {word(['detect'])}").returncode == 0
 
         argv = json.loads(record.read_text(encoding="utf-8"))
         command = argv[argv.index("--") + 1 :]
         assert command[:4] == [sys.executable, "-I", "-S", "-c"]
-        assert command[5:] == [str(tree), "module", "atlas", "detect"]
+        assert command[5:] == [dev_dispatch.RUN_MARKER, str(tree), "module", "atlas", "detect"]
 
 
 class TestTheRealSandbox:
@@ -999,10 +1208,10 @@ class TestTheRealSandbox:
         tree = copied(home, {"scripts/probes/write.py": probe})
         targets = [str(home / "written"), str(tree / "written"), str(home.parent / "outside" / "written")]
 
-        result = dispatch(home, f"probe write.py {word(targets)}")
+        result = dispatch(home, f"probe {tree.name} write.py {word(targets)}")
 
         assert result.returncode == 0, result.stderr
-        said = json.loads(result.stdout)
+        said = json.loads(answered(result))
         assert said == {"refused": [30, 30, 30], "interfaces": ["lo"]}  # 30: EROFS
         assert not any(Path(target).exists() for target in targets)
 
@@ -1019,12 +1228,12 @@ class TestTheRealSandbox:
             b"print(json.dumps(seen))\n"
         )
         install(sandbox_home)
-        copied(sandbox_home, {"scripts/probes/processes.py": probe})
+        tree = copied(sandbox_home, {"scripts/probes/processes.py": probe})
 
-        result = dispatch(sandbox_home, "probe processes.py")
+        result = dispatch(sandbox_home, f"probe {tree.name} processes.py")
 
         assert result.returncode == 0, result.stderr
-        seen = json.loads(result.stdout)
+        seen = json.loads(answered(result))
         assert 1 <= len(seen) <= 3, seen
         assert all("processes.py" in line or "bwrap" in line for line in seen.values()), seen
 
@@ -1059,25 +1268,25 @@ class TestTheRealSandbox:
         install(sandbox_home)
         tree = copied(sandbox_home, {"scripts/probes/descriptors.py": probe})
 
-        result = dispatch(sandbox_home, "probe descriptors.py")
+        result = dispatch(sandbox_home, f"probe {tree.name} descriptors.py")
 
         assert result.returncode == 0, result.stderr
-        assert json.loads(result.stdout) == []
+        assert json.loads(answered(result)) == []
         assert not list(tree.rglob("escaped"))
 
     def test_a_question_answers_as_it_does_unsandboxed(self, sandbox_home: Path) -> None:
         home = sandbox_home
         install(home)
-        copied(home, atlas_files())
+        tree = copied(home, atlas_files())
         env = {"HOME": str(home), "PATH": os.environ["PATH"]}
         direct = subprocess.run(
             [sys.executable, "-m", "atlas", "detect"], cwd=REPO, capture_output=True, check=True, env=env
         )
 
-        result = dispatch(home, f"ask {word(['detect'])}")
+        result = dispatch(home, f"ask {tree.name} {word(['detect'])}")
 
         assert result.returncode == 0, result.stderr
-        assert result.stdout == direct.stdout
+        assert answered(result) == direct.stdout
 
     def test_a_core_probe_loads_a_deployed_core_in_the_sandbox(self, sandbox_home: Path) -> None:
         """#810 D3: atlas starts the core probe as a child of ``sys.executable``, inside the sandbox too."""
@@ -1090,12 +1299,12 @@ class TestTheRealSandbox:
         )
         home = sandbox_home
         install(home)
-        copied(home, {**atlas_files(), "scripts/probes/read_core.py": probe})
+        tree = copied(home, {**atlas_files(), "scripts/probes/read_core.py": probe})
 
-        result = dispatch(home, f"probe read_core.py {word([so_path])}")
+        result = dispatch(home, f"probe {tree.name} read_core.py {word([so_path])}")
 
         assert result.returncode == 0, result.stderr
-        assert json.loads(result.stdout) == {"status": "answered", "unloadable": None}
+        assert json.loads(answered(result)) == {"status": "answered", "unloadable": None}
 
 
 def _a_core_that_answers_here() -> str:
@@ -1118,7 +1327,7 @@ class TestNonAsciiDigitsAndLetters:
     def test_a_probe_name_with_a_non_ascii_character_is_refused(self, home: Path, name: str) -> None:
         install(home)
 
-        assert dispatch(home, f"probe {name}").returncode == dev_dispatch.REFUSED
+        assert dispatch(home, f"probe tree-x1 {name}").returncode == dev_dispatch.REFUSED
 
     def test_a_floor_with_a_non_ascii_digit_is_no_floor(self, home: Path) -> None:
         install(home)
@@ -1176,7 +1385,9 @@ _PYTHON_3_8_NAMES = {
     "tarfile",
     "tempfile",
     "threading",
+    "traceback",
     "typing.Callable",
+    "typing.Final",
     "typing.IO",
     "typing.Iterator",
     "typing.Literal",

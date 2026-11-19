@@ -39,6 +39,7 @@ import tarfile
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -836,6 +837,31 @@ class TestWhatTheTargetLacks:
             f"handheld lacks a {broken} that starts a sandbox — it said: {BROKEN_BWRAP_MESSAGE};"
             " install bubblewrap, or allow unprivileged user namespaces." in err
         )
+
+    @pytest.mark.parametrize(
+        ("reason", "reworded", "repair"),
+        [
+            ("there is none", "nothing lies at that path", "install bubblewrap"),
+            ("it said: {}", "it answered: {}", "install bubblewrap, or allow unprivileged user namespaces"),
+        ],
+        ids=["missing", "no sandbox"],
+    )
+    def test_the_repair_follows_the_kind_of_failure_not_the_wording_of_its_reason(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, reason: str, reworded: str, repair: str
+    ) -> None:
+        from scripts import dev_target_install
+
+        source = DISPATCHER.read_text(encoding="utf-8")
+        assert source.count(f'"{reason}"') == 1
+        monkeypatch.setattr(dev_target_install, "DISPATCHER_SOURCE", source.replace(f'"{reason}"', f'"{reworded}"'))
+        monkeypatch.setattr(dev_target_install, "VALUES", {"lacks": "lacks: "})
+        bwrap = tmp_path / "no-bwrap" if repair == "install bubblewrap" else Path(fake_path(tmp_path)) / "bwrap-broken"
+
+        with pytest.raises(dev_target_install.Stop) as stop:
+            dev_target_install.check_sandbox(str(bwrap), sys.executable)
+
+        assert stop.value.line.endswith(f"; {repair}")
+        assert f" — {reworded.split(':')[0]}" in stop.value.line
 
     @pytest.mark.parametrize("lacking", ["python", "bwrap"])
     def test_the_printed_script_refuses_the_same_way(
@@ -1862,7 +1888,8 @@ class TestOtherFailures:
             text=f"player@{_ADDRESS}", user="player", hostname=_ADDRESS, port="22", proxy_jump=None, proxy_command=None
         )
 
-        said = setup_remote_target.classify(stderr, name="handheld", destination=destination, known_hosts=())
+        failure = setup_remote_target.ssh_failure(stderr, name="handheld", destination=destination)
+        said = setup_remote_target.failure_text(failure, name="handheld", destination=destination, known_hosts=())
 
         assert said is None
 
@@ -2045,6 +2072,118 @@ class TestWhatReachesSshAndThePatterns:
         assert why.startswith("it did not say its version")
 
 
+class TestReadingAnEntryBack:
+    """``read_entry`` on a config the setup's own writer wrote, with more than one target in it."""
+
+    def test_each_entry_is_read_alone_among_others(self, tmp_path: Path) -> None:
+        directory = tmp_path / "config home with blanks"
+        key, known_hosts = directory / "id_ed25519", directory / "known_hosts"
+        handheld = setup_remote_target.Destination(
+            text=f"player@{_ADDRESS}", user="player", hostname=_ADDRESS, port="22", proxy_jump=None, proxy_command=None
+        )
+        relay = setup_remote_target.Destination(
+            text="relayed", user="other", hostname=_NEW_ADDRESS, port="2222", proxy_jump=None,
+            proxy_command="ssh -W %h:%p jumper@203.0.113.5",
+        )
+        text = ""
+        for name, destination in (("handheld", handheld), ("relay", relay)):
+            entry = setup_remote_target.config_entry(name, destination, key=key, known_hosts=known_hosts)
+            text = setup_remote_target.updated_config(text, name, entry, f"# {name}")
+        assert f'IdentityFile "{key}"' in text
+
+        assert setup_remote_target.read_entry(text, "handheld") == setup_remote_target.Destination(
+            text="handheld", user="player", hostname=_ADDRESS, port="22", proxy_jump=None, proxy_command=None
+        )
+        assert setup_remote_target.read_entry(text, "relay") == setup_remote_target.Destination(
+            text="relay", user="other", hostname=_NEW_ADDRESS, port="2222", proxy_jump=None,
+            proxy_command="ssh -W %h:%p jumper@203.0.113.5",
+        )
+        assert setup_remote_target.read_entry(text, "absent") is None
+        assert setup_remote_target.read_entry(text, "handheld relay") is None
+
+    def test_a_key_given_twice_keeps_its_first_value_as_ssh_does(self) -> None:
+        text = f"Host handheld\n    HostName {_ADDRESS}\n    User player\n    HostName {_NEW_ADDRESS}\n"
+
+        entry = setup_remote_target.read_entry(text, "handheld")
+
+        assert entry is not None
+        assert entry.hostname == _ADDRESS
+
+    def test_only_a_single_quoted_word_is_unquoted(self) -> None:
+        text = (
+            'Host handheld\n    HostName "192.0.2.20"\n    User player\n'
+            '    ProxyCommand "/usr/bin/nc" %h "%p"\n'
+        )
+
+        entry = setup_remote_target.read_entry(text, "handheld")
+
+        assert entry is not None
+        assert (entry.hostname, entry.proxy_command) == (_ADDRESS, '"/usr/bin/nc" %h "%p"')
+
+    def test_an_entry_that_names_no_address_or_user_is_refused_not_read_as_none(self) -> None:
+        with pytest.raises(setup_remote_target.SetupError, match="the entry for handheld names no HostName or no User"):
+            setup_remote_target.read_entry("Host handheld\n    User player\n", "handheld")
+
+
+class TestTheReadingOfSsh:
+    """``ssh_failure`` and what the setup does with it, where only the reading decides."""
+
+    def _destination(self) -> setup_remote_target.Destination:
+        return setup_remote_target.Destination(
+            text=f"player@{_ADDRESS}", user="player", hostname=_ADDRESS, port="22", proxy_jump=None, proxy_command=None
+        )
+
+    @pytest.mark.parametrize(
+        "stderr",
+        [
+            "Received disconnect from 192.0.2.20 port 22:2: Too many authentication failures\n",
+            "a failure no pattern knows\n",
+        ],
+        ids=["too many failures", "unknown"],
+    )
+    def test_a_key_login_that_ends_otherwise_on_the_target_hands_over_to_nobody(self, stderr: str) -> None:
+        result = subprocess.CompletedProcess([], setup_remote_target.SSH_FAILED, "", stderr)
+
+        assert setup_remote_target.hand_over(result, name="handheld", destination=self._destination()) is None
+
+    def test_too_many_failures_is_no_permission_denied(self) -> None:
+        failure = setup_remote_target.ssh_failure(
+            "Received disconnect from 192.0.2.20 port 22:2: Too many authentication failures\n",
+            name="handheld",
+            destination=self._destination(),
+        )
+
+        assert (failure.kind, failure.permission_denied) == ("no login", False)
+
+    @pytest.mark.parametrize(
+        "payload",
+        [{"host": "x"}, {"offending": "/known_hosts"}, {"permission_denied": True}],
+        ids=["host", "offending", "permission denied"],
+    )
+    def test_a_payload_belongs_to_its_own_kind(self, payload: dict[str, Any]) -> None:
+        with pytest.raises(ValueError, match="carries another kind's payload"):
+            setup_remote_target.SshFailure("no server", "target", **payload)
+
+    @pytest.mark.parametrize(
+        ("named", "where"),
+        [("handheld", "target"), ("emu-atlas-dev.handheld", "target"), (_ADDRESS, "target"), ("bastion", "hop")],
+        ids=["the target's name", "its host key alias", "its address", "another name"],
+    )
+    def test_an_unresolved_name_is_placed_by_the_names_failed_where_uses(self, named: str, where: str) -> None:
+        """Behind a hop, a name ssh could not resolve is the target's where it is one of the target's names."""
+        destination = setup_remote_target.Destination(
+            text="handheld", user="player", hostname=_ADDRESS, port="22", proxy_jump="jumper@203.0.113.5",
+            proxy_command=None,
+        )
+        stderr = f"ssh: Could not resolve hostname {named}: Name or service not known\n"
+
+        failure = setup_remote_target.ssh_failure(stderr, name="handheld", destination=destination)
+
+        assert failure.where == where == setup_remote_target.failed_where(
+            stderr, name="handheld", destination=destination
+        )
+
+
 class TestTheTaskAndTheGuide:
     def test_the_task_hands_its_name_destination_and_print_flag_to_the_script(self) -> None:
         task = tomllib.loads((REPO / "mise.toml").read_text(encoding="utf-8"))["tasks"]["setup:remote-target"]
@@ -2107,5 +2246,5 @@ class TestTheTaskAndTheGuide:
 
         guide = (REPO / "docs" / "remote-target.md").read_text(encoding="utf-8")
 
-        for name in ("REFUSED", "CANNOT_RUN", "COPY_FAILED"):
-            assert f"- **{getattr(dev_dispatch, name)} `{name}`** — " in guide, name
+        for status, name in dev_dispatch.STATUSES.items():
+            assert f"- **{status} `{name}`** — " in guide, name
