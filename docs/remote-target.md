@@ -23,18 +23,16 @@ the setup reads with `ssh -G` and never writes. `<name>` is yours to choose — 
    or your SSH config — when there is no key yet, when the target refuses the key, when the target takes the key but its
    dispatcher runs no install (gone, or one that does not take the setup request), and when a jump host on the way stops
    the key's login, since your own config may pass it. Before each such login it says what `ssh` is about to ask: `ssh`
-   names the target `emu-atlas-dev.<name>` in its questions — at the host key (item 3) and at a password prompt,
-   `<user>@emu-atlas-dev.<name>'s password:` — and a password it asks for is the login password of the destination's
-   user on the target, no password of this tool's. An account with no password, as SteamOS ships it, gets in through
-   `--print` instead (below); behind a jump host or a proxy command, which `--print` cannot set up, it needs a key of
-   yours on the target first.
+   calls the target `emu-atlas-dev.<name>` in its questions — at the host key (item 3) and in a password prompt,
+   `<user>@emu-atlas-dev.<name>'s password:` — and a password prompt that names `emu-atlas-dev.<name>` asks for the
+   login password of the destination's user on the target, not one of this tool's. For an account with no password, see
+   `--print` below.
 2. **It creates the build host's key for targets** if there is none: `~/.config/emu-atlas-dev/id_ed25519` (under
    `$XDG_CONFIG_HOME` where that is set). One key serves every target; its comment is `emu-atlas-dev@<build host>`.
 3. **It records the target's host key** in this tool's own known-hosts file, `~/.config/emu-atlas-dev/known_hosts`. At
    first contact `ssh` shows the fingerprint and asks, as it always does — even for a machine your own
    `~/.ssh/known_hosts` already knows, because that file is not the one the target's entry names. The record is filed
-   under the target's name (`emu-atlas-dev.<name>`) rather than its address, so a target at a new address keeps it; that
-   is also the name `ssh`'s questions give the target.
+   under the target's name (`emu-atlas-dev.<name>`) rather than its address, so a target at a new address keeps it.
 4. **It checks that the target has what a probe needs**, still before writing anything there: `/usr/bin/python3` at or
    above the package's Python floor (`requires-python` in `pyproject.toml`), and `/usr/bin/bwrap` able to start the
    sandbox every probe runs in.

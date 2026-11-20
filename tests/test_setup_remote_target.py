@@ -1616,15 +1616,16 @@ _LOGIN_MARK = "<login {}>"
 def _own_login_notice(*, user: str = "player", address: str = _ADDRESS, via: str | None = None) -> str:
     """The notice the setup gives before a login through the user's own access to ``handheld``."""
     if via is None:
-        second = "  An account with no password, as SteamOS ships it, gets in through --print instead.\n"
+        second = "  An account with no password, as SteamOS ships it, is set up with --print instead.\n"
     else:
         second = (
-            "  An account with no password needs a key of yours in its ~/.ssh/authorized_keys first: --print cannot"
-            f" set up a target reached through {via}.\n"
+            "  An account with no password needs a key of yours in its ~/.ssh/authorized_keys, or a password, first:"
+            f" --print cannot set up a target reached through {via}.\n"
         )
     return (
-        "emu-atlas-dev: ssh names handheld emu-atlas-dev.handheld, the name its host key is recorded under; a"
-        f" password it asks for is the login password of {user} on {address}.\n" + second
+        "emu-atlas-dev: ssh calls handheld 'emu-atlas-dev.handheld' in its questions, the name its host key is"
+        f" recorded under; a password it asks for under that name is the login password of {user} on {address}, not"
+        " one of this tool's.\n" + second
     )
 
 
@@ -1683,7 +1684,7 @@ class TestWhatSshAsksForOnTheUsersOwnLogin:
         assert code == 0, err
         assert _LOGIN_MARK.format("key") in err
         assert _LOGIN_MARK.format("own") not in err
-        assert "ssh names handheld" not in err
+        assert "ssh calls handheld" not in err
 
     def test_the_notice_names_the_user_and_address_the_destination_resolved_to(
         self, remote: Remote, capsys: pytest.CaptureFixture[str]
@@ -1694,12 +1695,6 @@ class TestWhatSshAsksForOnTheUsersOwnLogin:
 
         assert code == 0, err
         assert _own_login_notice(user="deck") in err
-
-    def test_the_guide_names_the_name_ssh_asks_with_and_whose_password_it_asks_for(self) -> None:
-        guide = " ".join((REPO / "docs" / "remote-target.md").read_text(encoding="utf-8").split())
-
-        assert "`<user>@emu-atlas-dev.<name>'s password:`" in guide
-        assert "the login password of the destination's user on the target" in guide
 
 
 class TestHops:
@@ -2325,6 +2320,16 @@ class TestTheTaskAndTheGuide:
             pointers = re.findall(r'docs/remote-target\.md, "([^"]+)"', text)
             assert pointers, script
             assert set(pointers) <= headings, script
+
+    def test_the_guide_names_the_name_ssh_asks_with_and_whose_password_it_asks_for(self) -> None:
+        guide = " ".join((REPO / "docs" / "remote-target.md").read_text(encoding="utf-8").split())
+        alias = setup_remote_target.host_key_alias("<name>")
+
+        assert f"`<user>@{alias}'s password:`" in guide
+        assert (
+            f"a password prompt that names `{alias}` asks for the login password of the destination's user on the"
+            " target, not one of this tool's" in guide
+        )
 
     def test_the_guide_names_the_sandboxs_options_as_the_dispatcher_starts_it(self) -> None:
         from scripts import dev_dispatch

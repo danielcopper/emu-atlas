@@ -963,24 +963,18 @@ class Plan:
 
 
 def own_login_notice(name: str, destination: Destination) -> str:
-    """What the setup says before a login through the user's own access: what ``ssh`` is about to ask.
-
-    ``ssh`` names the target by its host key alias, in a host key question and
-    in a password prompt alike, which reads as an account or a password of
-    this tool's; the password it asks for is the login password of the user the
-    destination resolved to. An account with no password gets in through
-    ``--print``, except behind a hop, which ``--print`` cannot set up.
-    """
+    """What the setup says before a login through the user's own access: what ``ssh`` is about to ask."""
     notice = (
-        f"{PREFIX}: ssh names {name} {host_key_alias(name)}, the name its host key is recorded under; a password it"
-        f" asks for is the login password of {destination.user} on {destination.hostname}.\n"
+        f"{PREFIX}: ssh calls {name} '{host_key_alias(name)}' in its questions, the name its host key is recorded"
+        f" under; a password it asks for under that name is the login password of {destination.user} on"
+        f" {destination.hostname}, not one of this tool's.\n"
     )
     if destination.via:
         return notice + (
-            "  An account with no password needs a key of yours in its ~/.ssh/authorized_keys first: --print cannot"
-            f" set up a target reached through {destination.via}."
+            "  An account with no password needs a key of yours in its ~/.ssh/authorized_keys, or a password, first:"
+            f" --print cannot set up a target reached through {destination.via}."
         )
-    return notice + "  An account with no password, as SteamOS ships it, gets in through --print instead."
+    return notice + "  An account with no password, as SteamOS ships it, is set up with --print instead."
 
 
 _HANDING_OVER: dict[HandOver, str] = {
@@ -995,7 +989,7 @@ def log_in_and_install(
 ) -> subprocess.CompletedProcess[str]:
     """Install through the key's login, else the user's own; the login that installed.
 
-    The user's own login follows :func:`own_login_notice` on stderr. Both logins record a host key into a trial copy of the known-hosts file in
+    Both logins record a host key into a trial copy of the known-hosts file in
     *scratch*, which only a finished install puts in place.
     """
     trial_known_hosts = scratch / KNOWN_HOSTS_NAME
