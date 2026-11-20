@@ -98,9 +98,9 @@ cue to copy it. As its first act inside the sandbox, the run writes one line on 
 writes none. `<word>` is the argument list as a JSON array of strings, UTF-8, base64url-encoded: content paths carry
 blanks, quotes and parentheses, which words split on blanks cannot.
 
-A target set up before trees were named by their content runs an older dispatcher: it ends a question with 8 for a tree
-it does not hold, and the client then asks for the setup to be run again, which installs this checkout's dispatcher
-through the key. So does a dispatcher from before the marker line.
+A target set up before trees were named by their content runs an older dispatcher, and the client asks for the setup to
+be run again, which installs this checkout's dispatcher through the key; how the client tells one is under the statuses
+below.
 
 The setup request runs outside the sandbox: through it the key can run any code on the target with the user's rights,
 its own `authorized_keys` line among what it can rewrite. So `from=` is the only bound on the key, and the sandbox
@@ -112,7 +112,8 @@ guards against a faulty probe script or a core that writes, not against the key'
    floor, `X.Y` — and `files`, every file of the tree sorted by path, each with its `path`, its `sha256` and whether it
    is `executable`. Directories are implied by the files they hold; `__pycache__` and `*.pyc` are never listed. The
    dispatcher refuses a manifest whose sha256 is not the id the request names, and one with a path that is absolute,
-   holds `.`, `..`, an empty name or `__pycache__`, names a `.pyc` or the manifest itself, or is listed twice.
+   holds `.`, `..`, an empty name or `__pycache__`, names a `.pyc` or the manifest itself, is listed twice, or is a file
+   that another path needs as its directory.
 2. The dispatcher answers with one line, `emu-atlas-dev: lacks` and, each after a blank, the sha256 of every file whose
    content its current tree does not hold — none where it holds the tree already. It hashes the current tree's files to
    know, rather than take its manifest's word for them.
@@ -124,18 +125,21 @@ guards against a faulty probe script or a core that writes, not against the key'
    compiles the tree (below). Then one rename puts the tree at its id, and another makes it `current`. Its last line on
    stdout is the tree's id.
 
-Whatever fails — a stream that breaks off, a member that is no regular file, one that was not asked for or comes twice,
-a file whose content is not its sha256 — leaves the current tree as it was and removes what the copy built; a copy
-killed outright leaves its directory for the next copy to remove. Two copies take turns, never building at the same
-time. An older tree that cannot be removed is named on stderr, after it has been moved aside where the rename went
-through; the copy stays current, and a later copy tries again.
+Whatever fails leaves the current tree as it was and removes what the copy built. A stream that breaks off, a member
+that is no regular file, one that was not asked for or comes twice, and a file whose content is not its sha256 are a
+copy that did not arrive whole; an error of the target's own while building — a full disk, say — is named with the step
+it stopped at; an exception of the dispatcher's own ends the copy with its traceback. A copy killed outright leaves its
+directory for the next copy to remove. Two copies take turns, never building at the same time. An older tree that cannot
+be removed is named on stderr, after it has been moved aside where the rename went through; the copy stays current, and
+a later copy tries again.
 
 **The bytecode.** Before the rename, the dispatcher compiles every `.py` file of the new tree with its own interpreter —
 `/usr/bin/python3`, the one the sandbox runs — into the `__pycache__` beside it, as checked-hash bytecode: at import
 Python checks each file against the hash of its source, not its timestamp. It compiles and runs nothing, outside the
-sandbox. The bytecode of a source the current tree holds unchanged comes over from it; only new and changed sources are
-compiled. The sandbox only reads the files. A source that does not compile gets none, and a question that finds bytecode
-stale or missing still answers: Python compiles in memory then, as it did before the copy compiled anything.
+sandbox. The bytecode of a source the current tree holds unchanged, where it is this interpreter's checked-hash file,
+comes over from it; every other source is compiled. The sandbox only reads the files. A source that does not compile
+gets none, and a question fails on it as it would without; one that finds bytecode stale or missing compiles the source
+in memory and answers, as it did before the copy compiled anything.
 
 **The sandbox.** Every question and every probe script runs through `/usr/bin/bwrap`
 (`--ro-bind / / --dev /dev --proc /proc --tmpfs /tmp --unshare-net --unshare-pid --die-with-parent`): the file system
@@ -163,12 +167,15 @@ a run the dispatcher ended because its connection was gone among them:
 - **4 `CANNOT_RUN`** — nothing ran: a tree without a readable manifest (remove it on the target, and the next call
   copies it anew), an interpreter below the tree's floor, a probe the tree does not hold, no working sandbox, a run that
   could not be started, an error reading the tree, or an exception of the dispatcher's own, its traceback on stderr.
-- **5 `COPY_FAILED`** — the copy was refused for its manifest, could not start, did not arrive whole, or arrived but
-  could not be made current; the current tree is as it was.
+- **5 `COPY_FAILED`** — the copy was refused for its manifest, could not start, did not arrive whole, could not be built
+  on the target (a full disk, say; the message names the step), or arrived but could not be put in place or made
+  current; the current tree is as it was.
 - **9 `TREE_ABSENT`** — nothing ran: the target does not hold the tree the request names, never copied or removed by a
   later copy. It says nothing on stderr: the client copies the tree and asks again.
 
-8 is no status of this dispatcher's: it is what an older one ends a question with for a tree it does not hold.
+8 is no status of this dispatcher's. A target set up after the marker line but before trees were named by their content
+ends a question with 8 for a tree it does not hold; one from before the marker line refuses the request (3). Either way
+the client asks for the setup to be run again.
 
 A probe script that raises — at compile and import time as well — ends with 2, a question it could not put, with its
 traceback on stderr: the bootstrap that runs it turns its crash into that, here as on a target.
@@ -272,9 +279,10 @@ address that takes no connection within 15 seconds.
 stderr that passes on with the run's own stderr. On stdout it would land in front of the answer, so nothing on stdout
 counts but the copy's lines and what follows the marker at the question. Anything else there — ahead of the marker or of
 a `TREE_ABSENT`, ahead of the copy's lacks line, or beside its id — ends the call without an answer, shows what arrived,
-each line escaped, and asks for the startup files to be silent for a shell without a terminal; where it came at the
-copy, no file was sent. No marker, no lacks line or no id is what a dispatcher older than this client answers, and so is
-a question that ends with 8: run the setup again.
+each line escaped, and asks for the startup files to be silent for a shell without a terminal. Where it came ahead of
+the copy's lacks line, no file was sent; beside its id, the copy went through and nothing was asked. No marker, no lacks
+line or no id, like a question that ends with 8 (see the statuses above), means the dispatcher there is not this
+checkout's: run the setup again.
 
 What comes back is printed here and written nowhere, the tree included.
 
@@ -321,20 +329,20 @@ comes — and ends with **nothing done on the target**, or, after a copy went th
 Measured from a build host on a Steam Deck on the same network, medians of five runs, when every call copied the whole
 tree and nothing was compiled ahead of the question:
 
-| Part                                                                      | Time        |
-| ------------------------------------------------------------------------- | ----------- |
-| one connection alone: the login and the dispatcher's start                | 0.27 s      |
-| the copy: the whole tree, an uncompressed tar of about 7.4 MB             | 0.48 s      |
-| a question up to the run's marker: connection, dispatcher and sandbox     | 0.33 s      |
-| importing `atlas.cli` in the sandbox                                      | 1.05–1.13 s |
-| of that, compiling atlas's 69 source files, which the sandbox cannot keep | 0.72–0.91 s |
-| `atlas --version` in all, copy and question                               | 1.85 s      |
+| Part                                                                                       | Time        |
+| ------------------------------------------------------------------------------------------ | ----------- |
+| one connection alone: the login and the dispatcher's start                                 | 0.27 s      |
+| the copy, its own connection included: the whole tree, an uncompressed tar of about 7.4 MB | 0.48 s      |
+| a question up to the run's marker: connection, dispatcher and sandbox                      | 0.33 s      |
+| importing `atlas.cli` in the sandbox                                                       | 1.05–1.13 s |
+| of that, compiling atlas's 69 source files, which the sandbox cannot keep                  | 0.72–0.91 s |
+| `atlas --version` in all, copy and question                                                | 1.85 s      |
 
 Nearly all of it was the fixed cost, not atlas's own work. What remains for a question about a tree the target holds is
 one connection — the 0.33 s up to the marker — and the import from the bytecode the copy compiled, without the compile:
-about 0.5–0.8 s for `--version` on that device, derived from the parts above, not measured. A call after a change pays
-two connections more, the question that finds the tree absent and the copy, and the copy sends the changed files alone,
-gzip-compressed, and compiles those alone.
+0.47–0.74 s for `--version` on that device, the parts above added up, not measured. A call after a change pays two
+connections more, the question that finds the tree absent and the copy, and the copy sends the changed files alone,
+gzip-compressed, and compiles the sources whose bytecode it cannot carry over.
 
 ## A device that is also a romm-tender target
 

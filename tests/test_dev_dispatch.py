@@ -67,6 +67,7 @@ from tests.remote_target_suite import (
     sha256,
     snapshot,
     tree_id,
+    without_caches,
 )
 from tests.remote_target_suite import install_dispatcher as install
 
@@ -292,7 +293,7 @@ def send_copy(
 
 
 def copied(home: Path, files: dict[str, bytes], *, floor: str = "3.12") -> Path:
-    """*files* copied in through the dispatcher; the tree whose id the copy answered with, which ``current`` names."""
+    """*files* copied in through the dispatcher; the tree their manifest's id names, which ``current`` names."""
     result = send_copy(home, files, floor=floor)
     assert result.status == 0, result.stderr
     named = result.stdout.decode().splitlines()[-1]
@@ -312,8 +313,11 @@ def stream_of(files: dict[str, bytes], *, lacking: list[str] | None = None) -> t
     return tree_id(manifest), io.BytesIO(manifest + b"\n" + gz_tar({digest: contents[digest] for digest in wanted}))
 
 
-def without_caches(entries: dict[str, Entry]) -> dict[str, Entry]:
-    return {name: entry for name, entry in entries.items() if "__pycache__" not in Path(name).parts}
+def copy_here(root: str, files: dict[str, bytes], *, lacking: list[str] | None = None, out: io.StringIO | None = None) -> int:
+    """*files* copied into *root* by the dispatcher's own ``copy``, run in this process, by a client that sends
+    *lacking*."""
+    named, stream = stream_of(files, lacking=lacking)
+    return dev_dispatch.copy(root, stream, out if out is not None else io.StringIO(), tree_id=named)
 
 
 def compiled(source: Path) -> Path:
@@ -542,13 +546,13 @@ class TestTheCopy:
         root = str(tmp_path)
         first = {"atlas/__init__.py": b"one\n"}
         monkeypatch.setattr(dev_dispatch, "remove_others", lambda trees, tree: [])
-        dev_dispatch.copy(root, *stream_of(first), io.StringIO())
-        dev_dispatch.copy(root, *stream_of({"atlas/__init__.py": b"two\n"}), io.StringIO())
+        copy_here(root, first)
+        copy_here(root, {"atlas/__init__.py": b"two\n"})
         named, stream = stream_of(first, lacking=[])
         held = snapshot(tmp_path / "trees" / named)
         out = io.StringIO()
 
-        assert dev_dispatch.copy(root, named, stream, out) == 0
+        assert dev_dispatch.copy(root, stream, out, tree_id=named) == 0
 
         assert out.getvalue() == f"{dev_dispatch.LACKS}\n{named}\n"
         assert os.readlink(tmp_path / "current") == f"trees/{named}"
@@ -563,10 +567,10 @@ class TestTheCopy:
         first = {"atlas/__init__.py": b"kept\n", "atlas/x.py": b"one\n"}
         second = {**first, "atlas/x.py": b"two\n"}
         old, stream = stream_of(first)
-        dev_dispatch.copy(root, old, stream, io.StringIO())
+        dev_dispatch.copy(root, stream, io.StringIO(), tree_id=old)
         new, stream = stream_of(second, lacking=[sha256(b"two\n")])
 
-        dev_dispatch.copy(root, new, stream, io.StringIO())
+        dev_dispatch.copy(root, stream, io.StringIO(), tree_id=new)
 
         kept = [tmp_path / "trees" / name / "atlas" / "__init__.py" for name in (old, new)]
         assert kept[0].read_bytes() == kept[1].read_bytes() == b"kept\n"
@@ -766,7 +770,7 @@ class TestTheCopy:
         named, stream = stream_of({"atlas/__init__.py": b"\n"})
 
         with pytest.raises(dev_dispatch.Stop) as stopped:
-            dev_dispatch.copy("/nonexistent", named, stream, io.StringIO())
+            dev_dispatch.copy("/nonexistent", stream, io.StringIO(), tree_id=named)
 
         assert stopped.value.status == dev_dispatch.COPY_FAILED
         assert "its manifest did not arrive whole: it is longer than 16 bytes" in stopped.value.message
@@ -779,7 +783,10 @@ class TestTheCopy:
         result = send_copy(home, {"atlas/x": b"a file\n", "atlas/x/y.py": b"inside it\n"})
 
         assert result.status == dev_dispatch.COPY_FAILED
-        assert "the copy did not arrive whole (" in result.stderr.decode()
+        assert result.stderr.decode() == (
+            "emu-atlas-dev: the copy was refused: its manifest lists no tree: atlas/x is a file and a directory at"
+            " once; the current tree is as it was.\n"
+        )
         assert snapshot(home / ROOT) == before
 
     def test_a_swap_that_fails_leaves_no_copy_behind(self, home: Path) -> None:
@@ -870,7 +877,7 @@ class TestTheCopy:
 
         monkeypatch.setattr(os, "listdir", listdir)
 
-        status = dev_dispatch.copy(str(tmp_path), *stream_of({"atlas/__init__.py": b"\n"}), io.StringIO())
+        status = copy_here(str(tmp_path), {"atlas/__init__.py": b"\n"})
 
         assert status == 0
         assert (tmp_path / "current" / "atlas" / "__init__.py").is_file()
@@ -882,7 +889,7 @@ class TestTheCopy:
     def test_an_older_tree_the_file_system_will_not_lock_stays_and_is_named(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
     ) -> None:
-        dev_dispatch.copy(str(tmp_path), *stream_of({"atlas/__init__.py": b"one\n"}), io.StringIO())
+        copy_here(str(tmp_path), {"atlas/__init__.py": b"one\n"})
         first = (tmp_path / "current").resolve()
         real_flock = dev_dispatch.fcntl.flock
 
@@ -894,7 +901,7 @@ class TestTheCopy:
         monkeypatch.setattr(dev_dispatch.fcntl, "flock", no_locks_without_waiting)
         capsys.readouterr()
 
-        status = dev_dispatch.copy(str(tmp_path), *stream_of({"atlas/__init__.py": b"two\n"}), io.StringIO())
+        status = copy_here(str(tmp_path), {"atlas/__init__.py": b"two\n"})
 
         assert status == 0
         assert (tmp_path / "current" / "atlas" / "__init__.py").read_bytes() == b"two\n"
@@ -903,10 +910,25 @@ class TestTheCopy:
             f"emu-atlas-dev: the copy is current, but could not remove {first}: No locks available.\n"
         )
 
-    @pytest.mark.parametrize("error", [ValueError("not a tar error"), KeyboardInterrupt()], ids=["error", "interrupt"])
+    @pytest.mark.parametrize(
+        ("error", "said"),
+        [
+            (dev_dispatch.Broken("a stream cut off"), "the copy did not arrive whole (a stream cut off)"),
+            (tarfile.ReadError("invalid compressed data"), "the copy did not arrive whole (invalid compressed data)"),
+            (EOFError("the stream ended"), "the copy did not arrive whole (the stream ended)"),
+            (
+                OSError(errno.ENOSPC, "No space left on device"),
+                "the copy could not be built here while taking the files ([Errno 28] No space left on device)",
+            ),
+            (AttributeError("a bug of the dispatcher's own"), None),
+            (KeyboardInterrupt(), None),
+        ],
+        ids=["broken", "no gzip", "cut short", "a full disk", "a bug", "an interrupt"],
+    )
     def test_whatever_ends_a_build_takes_the_new_tree_away(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, error: BaseException
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, error: BaseException, said: str | None
     ) -> None:
+        """A broken stream and an error of this machine end the copy, each saying which; anything else goes on up."""
         (tmp_path / "trees").mkdir()
 
         def failing(staging: str, *_: object) -> None:
@@ -915,16 +937,82 @@ class TestTheCopy:
 
         monkeypatch.setattr(dev_dispatch, "build", failing)
         named, stream = stream_of({"atlas/__init__.py": b"\n"})
-        manifest, entries = dev_dispatch.receive_manifest(stream, named)
-        expected = type(error) if isinstance(error, KeyboardInterrupt) else dev_dispatch.Stop
+        manifest = dev_dispatch.receive_manifest(stream, tree_id=named)
+        expected = dev_dispatch.Stop if said is not None else type(error)
 
         with pytest.raises(expected) as raised:
-            dev_dispatch.take(str(tmp_path), named, manifest, entries, stream, io.StringIO())
+            dev_dispatch.take(str(tmp_path), manifest, stream, io.StringIO())
 
-        if isinstance(raised.value, dev_dispatch.Stop):
+        if said is not None:
+            assert isinstance(raised.value, dev_dispatch.Stop)
             assert raised.value.status == dev_dispatch.COPY_FAILED
-            assert "the copy did not arrive whole (not a tar error)" in raised.value.message
+            assert raised.value.message == f"emu-atlas-dev: {said}; the current tree is as it was."
+        else:
+            assert raised.value is error
         assert list((tmp_path / "trees").iterdir()) == []
+
+    @pytest.mark.parametrize(
+        ("error", "status", "said"),
+        [
+            (
+                OSError(errno.ENOSPC, "No space left on device"),
+                dev_dispatch.COPY_FAILED,
+                "emu-atlas-dev: the copy could not be built here while compiling the tree ([Errno 28] No space left"
+                " on device); the current tree is as it was.\n",
+            ),
+            (
+                AttributeError("a bug of the dispatcher's own"),
+                dev_dispatch.CANNOT_RUN,
+                "AttributeError: a bug of the dispatcher's own\n"
+                "emu-atlas-dev: the dispatcher failed (the traceback is above).\n",
+            ),
+        ],
+        ids=["a full disk", "a bug"],
+    )
+    def test_a_build_that_fails_here_says_so_and_a_bug_shows_its_traceback(
+        self,
+        home: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+        error: BaseException,
+        status: int,
+        said: str,
+    ) -> None:
+        """Through ``main``, as sshd runs it: neither is told as a copy that did not arrive whole."""
+        install(home)
+        named, stream = stream_of({"atlas/__init__.py": b"\n"})
+
+        def fails(*_: object, **__: object) -> None:
+            raise error
+
+        monkeypatch.setattr(dev_dispatch.py_compile, "compile", fails)
+        monkeypatch.setattr(dev_dispatch, "root_directory", lambda: str(home / ROOT))
+        monkeypatch.setattr(sys, "stdin", io.TextIOWrapper(stream))
+        monkeypatch.setenv("SSH_ORIGINAL_COMMAND", f"copy {named}")
+
+        assert dev_dispatch.main() == status
+
+        err = capsys.readouterr().err
+        assert err.endswith(said)
+        assert ("Traceback (most recent call last):" in err) is (status == dev_dispatch.CANNOT_RUN)
+        assert sorted(path.name for path in (home / ROOT / "trees").iterdir()) == []
+        assert not (home / ROOT / "current").exists()
+
+    def test_a_tree_that_cannot_be_put_at_its_id_leaves_the_tree_that_was_there(self, home: Path) -> None:
+        """Something that is no directory stands where the tree is to go: the rename into place fails."""
+        install(home)
+        copied(home, {"atlas/__init__.py": b"the tree that was there\n"})
+        files = {"atlas/__init__.py": b"new\n"}
+        (home / ROOT / "trees" / tree_id(manifest_line(files))).write_text("in the way\n", encoding="utf-8")
+        before = snapshot(home / ROOT)
+
+        result = send_copy(home, files)
+
+        assert result.status == dev_dispatch.COPY_FAILED
+        message = result.stderr.decode()
+        assert message.startswith("emu-atlas-dev: the copy arrived whole but could not be put in place (")
+        assert message.endswith("; the current tree is as it was.\n")
+        assert snapshot(home / ROOT) == before
 
     def test_installed_elsewhere_it_takes_its_root_from_where_it_lies(self, home: Path) -> None:
         elsewhere = install(home, root=Path("other"))
@@ -961,7 +1049,7 @@ class TestTheBytecode:
     ) -> None:
         root = str(tmp_path)
         first = {"atlas/__init__.py": b"x = 1\n", "atlas/kept.py": b"y = 2\n"}
-        dev_dispatch.copy(root, *stream_of(first), io.StringIO())
+        copy_here(root, first)
         before = compiled(tmp_path / "current" / "atlas" / "kept.py").read_bytes()
         real_compile = py_compile.compile
         compiled_now: list[str] = []
@@ -973,7 +1061,7 @@ class TestTheBytecode:
         monkeypatch.setattr(dev_dispatch.py_compile, "compile", recording)
         second = {**first, "atlas/__init__.py": b"x = 3\n"}
 
-        dev_dispatch.copy(root, *stream_of(second, lacking=[sha256(b"x = 3\n")]), io.StringIO())
+        copy_here(root, second, lacking=[sha256(b"x = 3\n")])
 
         assert compiled_now == ["__init__.py"]
         tree = (tmp_path / "current").resolve()
@@ -985,15 +1073,31 @@ class TestTheBytecode:
     ) -> None:
         root = str(tmp_path)
         files = {"atlas/__init__.py": b"x = 1\n"}
-        dev_dispatch.copy(root, *stream_of(files), io.StringIO())
+        copy_here(root, files)
         old = compiled(tmp_path / "current" / "atlas" / "__init__.py")
         old.write_bytes(old.read_bytes()[:4] + (0).to_bytes(4, "little") + old.read_bytes()[8:])
         second = {**files, "atlas/x.py": b"\n"}
 
-        dev_dispatch.copy(root, *stream_of(second, lacking=[sha256(b"\n")]), io.StringIO())
+        copy_here(root, second, lacking=[sha256(b"\n")])
 
         header = compiled((tmp_path / "current").resolve() / "atlas" / "__init__.py").read_bytes()[:16]
         assert int.from_bytes(header[4:8], "little") == 0b11
+
+    def test_bytecode_the_current_tree_holds_of_another_source_is_compiled_anew(self, tmp_path: Path) -> None:
+        """Checked-hash bytecode of this interpreter comes over only where its header names this very source."""
+        root = str(tmp_path)
+        files = {"atlas/__init__.py": b"x = 1\n"}
+        copy_here(root, files)
+        old = compiled(tmp_path / "current" / "atlas" / "__init__.py")
+        held = old.read_bytes()
+        old.write_bytes(held[:8] + importlib.util.source_hash(b"x = 2\n") + held[16:])
+        second = {**files, "atlas/x.py": b"\n"}
+
+        copy_here(root, second, lacking=[sha256(b"\n")])
+
+        header = compiled((tmp_path / "current").resolve() / "atlas" / "__init__.py").read_bytes()[:16]
+        assert int.from_bytes(header[4:8], "little") == 0b11
+        assert header[8:16] == importlib.util.source_hash(b"x = 1\n")
 
     def test_compiling_runs_nothing(self, home: Path, tmp_path: Path) -> None:
         install(home)
@@ -1041,7 +1145,7 @@ class TestTheBytecode:
 
 
 class TestWhatCannotRun:
-    """A question or a probe that cannot run here ends with the reason, and nothing runs."""
+    """A question or a probe that cannot run here ends with the reason, or with TREE_ABSENT alone, and nothing runs."""
 
     def _cannot_run(self, home: Path, request: str) -> str:
         result = dispatch(home, request)
@@ -1298,7 +1402,7 @@ class TestACopyWhileAProbeRuns:
 
 
 class TestTheTreeARequestNames:
-    """A question runs from the tree its copy answered with, and from no other: never from ``current``."""
+    """A question runs from the tree its id names, and from no other: never from ``current``."""
 
     def test_a_copy_answers_with_the_id_of_the_tree_it_made(self, home: Path) -> None:
         """#818 D2: ``tree-`` and the sha256 of the manifest, the directory's name and the last line on stdout."""
@@ -1714,6 +1818,7 @@ _PYTHON_3_8_NAMES = {
     "typing.IO",
     "typing.Iterator",
     "typing.Literal",
+    "typing.NamedTuple",
     "typing.cast",
 }
 

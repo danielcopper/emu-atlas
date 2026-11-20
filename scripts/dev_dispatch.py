@@ -39,14 +39,13 @@ import tarfile
 import tempfile
 import threading
 import traceback
-from typing import IO, Final, Iterator, Literal
+from typing import IO, Final, Iterator, Literal, NamedTuple
 
 # The dispatcher's own exit statuses, none of which atlas uses (it ends with 0
 # or 2); docs/remote-target.md lists what each one covers. A question's or a
-# probe's own status is passed through. The build host's client
-# (scripts/ask.py) ends with 6 and 7 of its own, and takes 8 for a dispatcher
-# older than itself, which answered 8 for a tree it did not hold: so
-# TREE_ABSENT is 9.
+# probe's own status is passed through. TREE_ABSENT is 9: the build host's
+# client (scripts/ask.py) ends with 6 and 7 of its own and reads 8 as an older
+# dispatcher (its OLDER_TREE_GONE).
 REFUSED = 3
 CANNOT_RUN = 4
 COPY_FAILED = 5
@@ -92,6 +91,9 @@ STAGED = ".current.new"
 COPY_LOCK = ".copy.lock"
 REMOVING = ".removing-"
 BUILDING = ".building-"
+CACHE_DIRECTORY = "__pycache__"
+COMPILED_SUFFIX = ".pyc"
+"""Where a tree's bytecode goes and what it is called: no file a copy carries is either; the client leaves them out."""
 PROBES = os.path.join("scripts", "probes")
 
 COULD_NOT_START = "{}: the copy could not start ({}); the current tree is as it was."
@@ -110,6 +112,13 @@ PROBE_NAME = re.compile(r"\w+\.py", re.ASCII)
 # that tree, so an answer is the answer of the content the id names.
 TREE_PREFIX = "tree-"
 TREE_ID = re.compile(re.escape(TREE_PREFIX) + r"[0-9a-f]{64}", re.ASCII)
+
+
+def tree_id_of(manifest: bytes) -> str:
+    """The id of the tree whose manifest is *manifest*, as both ends compute it."""
+    return TREE_PREFIX + hashlib.sha256(manifest).hexdigest()
+
+
 SHA256 = re.compile(r"[0-9a-f]{64}", re.ASCII)
 _WORD = re.compile(r"[A-Za-z0-9_-]*={0,2}")
 _FLOOR = re.compile(r"(\d+)\.(\d+)", re.ASCII)
@@ -461,13 +470,18 @@ def path_problem(path: object) -> str | None:
     """Why *path* cannot be a file of a tree; ``None`` where it can.
 
     A relative POSIX path of plain names: none of them empty, ``.``, ``..`` or
-    ``__pycache__``, no ``.pyc`` file and not the manifest, so that a file lands
-    inside the new tree and never where its bytecode or its manifest goes.
+    :data:`CACHE_DIRECTORY`, no :data:`COMPILED_SUFFIX` file and not the
+    manifest, so that a file lands inside the new tree and never where its
+    bytecode or its manifest goes.
     """
     if not isinstance(path, str) or not path or "\x00" in path:
         return "{!r} is no path".format(path)
     names = path.split("/")
-    if path == MANIFEST or names[-1].endswith(".pyc") or any(name in ("", ".", "..", "__pycache__") for name in names):
+    if (
+        path == MANIFEST
+        or names[-1].endswith(COMPILED_SUFFIX)
+        or any(name in ("", ".", "..", CACHE_DIRECTORY) for name in names)
+    ):
         return "{!r} is no path a file of a tree may have".format(path)
     return None
 
@@ -504,8 +518,14 @@ def parse_manifest(data: bytes) -> list[Entry]:
     if not isinstance(files, list):
         raise ValueError("no list of files")
     entries = [entry_of(item) for item in files]
-    if len({entry.path for entry in entries}) != len(entries):
+    paths = {entry.path for entry in entries}
+    if len(paths) != len(entries):
         raise ValueError("a path listed twice")
+    for path in paths:
+        names = path.split("/")
+        for depth in range(1, len(names)):
+            if "/".join(names[:depth]) in paths:
+                raise ValueError("{} is a file and a directory at once".format("/".join(names[:depth])))
     return entries
 
 
@@ -513,18 +533,29 @@ def copy_refused(why: str) -> Stop:
     return Stop(COPY_FAILED, "{}: the copy was refused: {}; {}".format(PREFIX, why, AS_IT_WAS))
 
 
-def receive_manifest(stream: IO[bytes], tree_id: str) -> tuple[bytes, list[Entry]]:
-    """The manifest line at the head of *stream*, without its newline, and its files: the tree *tree_id*'s, or a
-    refusal."""
+class Manifest(NamedTuple):
+    """A tree's manifest as a copy received it: the tree's id, the line itself without its newline, and its files.
+
+    Built by :func:`receive_manifest` alone, which holds ``tree_id`` to the
+    line's sha256 and ``entries`` to what the line lists.
+    """
+
+    tree_id: str
+    data: bytes
+    entries: list[Entry]
+
+
+def receive_manifest(stream: IO[bytes], *, tree_id: str) -> Manifest:
+    """The manifest line at the head of *stream*: the tree *tree_id*'s, or a refusal."""
     line = stream.readline(MANIFEST_LIMIT)
     if not line.endswith(b"\n"):
         why = "it is longer than {} bytes".format(MANIFEST_LIMIT) if len(line) >= MANIFEST_LIMIT else "it broke off"
         raise copy_refused("its manifest did not arrive whole: {}".format(why))
     data = line[:-1]
-    if TREE_PREFIX + hashlib.sha256(data).hexdigest() != tree_id:
+    if tree_id_of(data) != tree_id:
         raise copy_refused("its manifest is not the one {} names: their sha256 differs".format(tree_id))
     try:
-        return data, parse_manifest(data)
+        return Manifest(tree_id, data, parse_manifest(data))
     except ValueError as error:
         raise copy_refused("its manifest lists no tree: {}".format(error)) from None
 
@@ -680,16 +711,16 @@ def reuse_compiled(staging: str, entry: Entry, held: Held) -> bool:
     return True
 
 
-def compile_tree(staging: str, final: str, entries: list[Entry], held: Held) -> None:
+def compile_tree(staging: str, entries: list[Entry], held: Held, *, final: str) -> None:
     """Checked-hash bytecode for every ``.py`` file of the tree in *staging*, which becomes *final*: compiled, never run.
 
     Each goes into its directory's ``__pycache__`` under this interpreter's own
     tag — the interpreter the sandbox runs, which reads the files there and
     checks each against its source. The bytecode of a source the current tree
-    holds unchanged comes over from it; every other source is compiled. A
-    source that does not compile gets none: a question compiles it in memory
-    and fails on it as it would without, and so does one that finds bytecode
-    stale or missing.
+    holds unchanged, where it is this interpreter's checked-hash file, comes
+    over from it; every other source is compiled. A source that does not
+    compile gets none, and a question fails on it as it would without; one that
+    finds bytecode stale or missing compiles the source in memory and answers.
     """
     if getattr(sys.implementation, "cache_tag", None) is None:  # an interpreter that keeps no bytecode files
         return
@@ -790,52 +821,70 @@ def left_note(left: str | None) -> str:
     return " It " + left + "." if left else ""
 
 
-def build_beside(root: str, final: str, manifest: bytes, entries: list[Entry], stream: IO[bytes], out: IO[str]) -> str:
-    """Build the tree *entries* list beside the current one; the directory it was built in, ready to be renamed to
+_ARRIVED_BROKEN = (Broken, tarfile.TarError, EOFError)
+"""What a stream that did not arrive whole raises: tarfile names a broken gzip stream a ``ReadError`` as well."""
+
+
+def build_beside(root: str, manifest: Manifest, stream: IO[bytes], out: IO[str], *, final: str) -> str:
+    """Build the tree *manifest* lists beside the current one; the directory it was built in, ready to be renamed to
     *final*.
 
     It answers on *out* with the sha256 of every file the current tree lacks,
     reads those from *stream*, copies the rest from the current tree, writes
-    *manifest*, checks every file and compiles the tree. An error or an
-    interrupt removes what it built and leaves the current tree as it was; a
-    copy killed outright leaves its directory for the next copy to remove.
+    the manifest, checks every file and compiles the tree. Whatever ends it
+    removes what it built and leaves the current tree as it was: a stream that
+    did not arrive whole and an error of this machine's (a full disk, say) each
+    end the copy with :data:`COPY_FAILED` and say which; anything else goes on
+    up, so that :func:`main` shows its traceback. A copy killed outright leaves
+    its directory for the next copy to remove.
     """
     try:
         staging = tempfile.mkdtemp(prefix=BUILDING, dir=os.path.dirname(final))
     except OSError as error:
         raise Stop(COPY_FAILED, COULD_NOT_START.format(PREFIX, error)) from None
+    step = "reading the current tree"
     try:
         held = current_files(root)
-        lacking = sorted({entry.sha256 for entry in entries} - set(held.by_hash))
+        lacking = sorted({entry.sha256 for entry in manifest.entries} - set(held.by_hash))
+        step = "answering what it lacks"
         answer_lacking(out, lacking)
-        build(staging, entries, held, stream, set(lacking))
+        step = "taking the files"
+        build(staging, manifest.entries, held, stream, set(lacking))
+        step = "writing the manifest"
         with created(os.path.join(staging, MANIFEST), FILE_MODE) as handle:
-            handle.write(manifest)
-        verify(staging, entries)
-        compile_tree(staging, final, entries, held)
+            handle.write(manifest.data)
+        step = "checking the files"
+        verify(staging, manifest.entries)
+        step = "compiling the tree"
+        compile_tree(staging, manifest.entries, held, final=final)
     except BaseException as error:
-        left = discard(staging)
-        if not isinstance(error, Exception):
-            raise
-        raise Stop(
-            COPY_FAILED,
-            "{}: the copy did not arrive whole ({}); {}{}".format(PREFIX, error, AS_IT_WAS, left_note(left)),
-        ) from None
+        left = left_note(discard(staging))
+        if isinstance(error, _ARRIVED_BROKEN):
+            raise Stop(
+                COPY_FAILED, "{}: the copy did not arrive whole ({}); {}{}".format(PREFIX, error, AS_IT_WAS, left)
+            ) from None
+        if isinstance(error, OSError):
+            raise Stop(
+                COPY_FAILED,
+                "{}: the copy could not be built here while {} ({}); {}{}".format(PREFIX, step, error, AS_IT_WAS, left),
+            ) from None
+        raise
     return staging
 
 
-def take(root: str, tree_id: str, manifest: bytes, entries: list[Entry], stream: IO[bytes], out: IO[str]) -> str:
-    """Make the tree *tree_id* current, built beside the current one where this target does not hold it yet; the tree.
+def take(root: str, manifest: Manifest, stream: IO[bytes], out: IO[str]) -> str:
+    """Make the tree *manifest* lists current, built beside the current one where this target does not hold it yet;
+    the tree.
 
     A tree it holds already is made current as it is, and the client is told
     it lacks nothing. A new tree comes into place with one rename once it is
     whole and compiled, and becomes current with another; one that cannot be
     made current is removed again, unless a question already runs from it.
     """
-    final = os.path.join(root, TREES, tree_id)
+    final = os.path.join(root, TREES, manifest.tree_id)
     built = not (os.path.isdir(final) and not os.path.islink(final))
     if built:
-        staging = build_beside(root, final, manifest, entries, stream, out)
+        staging = build_beside(root, manifest, stream, out, final=final)
         try:
             os.rename(staging, final)
         except OSError as error:
@@ -860,7 +909,7 @@ def take(root: str, tree_id: str, manifest: bytes, entries: list[Entry], stream:
     return final
 
 
-def copy(root: str, tree_id: str, stream: IO[bytes], out: IO[str]) -> int:
+def copy(root: str, stream: IO[bytes], out: IO[str], *, tree_id: str) -> int:
     """Take the tree *tree_id* from *stream* and answer its id on *out*; a copy that does not arrive whole leaves the
     current tree as it was.
 
@@ -870,7 +919,7 @@ def copy(root: str, tree_id: str, stream: IO[bytes], out: IO[str]) -> int:
     The tree's id, the last line on *out*, is what a question names to run from
     this tree and no other (:func:`held_tree`).
     """
-    manifest, entries = receive_manifest(stream, tree_id)
+    manifest = receive_manifest(stream, tree_id=tree_id)
     trees = os.path.join(root, TREES)
     try:
         os.makedirs(trees, exist_ok=True)
@@ -882,7 +931,7 @@ def copy(root: str, tree_id: str, stream: IO[bytes], out: IO[str]) -> int:
             fcntl.flock(lock, fcntl.LOCK_EX)
         except OSError as error:
             raise Stop(COPY_FAILED, COULD_NOT_START.format(PREFIX, error)) from None
-        tree = take(root, tree_id, manifest, entries, stream, out)
+        tree = take(root, manifest, stream, out)
         notes = remove_others(trees, tree)
     for note in notes:
         sys.stderr.write("{}: the copy is current, but {}.\n".format(PREFIX, note))
@@ -896,7 +945,7 @@ def dispatch(request: str, root: str) -> int:
         os.chdir(os.path.expanduser("~"))
         os.execv(sys.executable, [sys.executable, "-I", "-"])
     if len(words) == 2 and words[0] == "copy" and TREE_ID.fullmatch(words[1]):
-        return copy(root, words[1], sys.stdin.buffer, sys.stdout)
+        return copy(root, sys.stdin.buffer, sys.stdout, tree_id=words[1])
     if len(words) < 3 or not TREE_ID.fullmatch(words[1]):
         raise refused(request)
     if len(words) == 3 and words[0] == "ask":

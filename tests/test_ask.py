@@ -65,6 +65,7 @@ from tests.remote_target_suite import (
     processes_holding,
     sandbox_home,
     snapshot,
+    without_caches,
 )
 
 pytestmark = pytest.mark.usefixtures(isolated_module.__name__)
@@ -171,10 +172,6 @@ def called(capfd: pytest.CaptureFixture[str], mode: ask.Mode, *argv: str) -> tup
     status = ask.main(mode, list(argv))
     captured = capfd.readouterr()
     return status, captured.out, captured.err
-
-
-def without_caches(entries: dict[str, Entry]) -> dict[str, Entry]:
-    return {name: entry for name, entry in entries.items() if "__pycache__" not in Path(name).parts}
 
 
 def said(out: str) -> dict[str, Any]:
@@ -533,7 +530,7 @@ class TestTheCopy:
     ) -> None:
         """The walk gives no such name; the archive's writer refuses one all the same."""
         tree = write_tree(tmp_path / "tree", _SAYING_ATLAS)
-        monkeypatch.setattr(ask, "copy_members", lambda root: ([root / "atlas", root / name], []))
+        monkeypatch.setattr(ask, "copy_members", lambda root: ([root / "atlas" / "__init__.py", root / name], []))
 
         with pytest.raises(ValueError, match="lies outside what a copy carries"):
             ask.build_copy(tree, "3.12")
@@ -585,6 +582,7 @@ class TestTheCopy:
         archive = copy.archive([empty, table])
 
         assert archive[:2] == b"\x1f\x8b"
+        assert archive[8] == 4  # gzip's XFL: 4 for the fastest level
         with tarfile.open(fileobj=io.BytesIO(archive), mode="r:gz") as opened:
             members = opened.getmembers()
             assert [(member.name, member.isreg()) for member in members] == [(empty, True), (table, True)]
@@ -930,6 +928,19 @@ class TestTheDispatchersOwnStatuses:
         assert "the copy to handheld ended with 255 without a word from its dispatcher" in err
         assert not (there.root / "current").exists()
 
+    def test_a_runs_own_9_is_passed_on_and_copies_nothing(
+        self, there: There, capfd: pytest.CaptureFixture[str]
+    ) -> None:
+        """9 after the run's marker is the probe's, not the dispatcher's TREE_ABSENT."""
+        write_tree(there.tree, {"scripts/probes/ends_9.py": "import sys\nprint('ran')\nsys.exit(9)\n"})
+        assert called(capfd, "probe", "--target", "handheld", "say.py")[0] == 0  # the target holds the tree
+        logged = len(log_lines(there.world))
+
+        status, out, err = called(capfd, "probe", "--target", "handheld", "ends_9.py")
+
+        assert (status, out, err) == (9, "ran\n", "")
+        assert log_lines(there.world)[logged:] == [f"login {_ADDRESS} key"]
+
     def test_a_run_that_ends_with_ssh_s_own_status_is_not_taken_for_an_answer(
         self, there: There, capfd: pytest.CaptureFixture[str]
     ) -> None:
@@ -1134,7 +1145,7 @@ class TestTheTargetsShell:
         )
         assert log_lines(there.world)[logged:] == [f"login {_ADDRESS} key"]
 
-    def test_a_dispatcher_that_answers_the_copy_without_its_lacks_line_is_older_than_the_client(
+    def test_a_dispatcher_that_answers_the_copy_without_its_lacks_line_is_none_this_client_takes(
         self, there: There, capfd: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
     ) -> None:
         breaks_before_the_copy(there, monkeypatch, "import sys\nsys.stdin.buffer.readline()\n")
@@ -1145,10 +1156,9 @@ class TestTheTargetsShell:
         assert out == ""
         assert err == (
             "emu-atlas-dev: handheld's dispatcher answered the copy without naming the files it lacks.\n"
-            "  The dispatcher there is older than this client; run the setup again, which installs this checkout's"
-            " dispatcher:\n"
+            f"  {ask.OTHER_DISPATCHER}\n"
             f"    mise run setup:remote-target handheld player@{_ADDRESS}\n"
-            "  Nothing was asked.\n"
+            "  No file was sent; nothing was asked.\n"
         )
 
     def test_a_copy_answered_with_another_tree_is_no_copy_of_this_one(

@@ -64,6 +64,11 @@ def snapshot(root: Path) -> dict[str, Entry]:
     return tree
 
 
+def without_caches(entries: dict[str, Entry]) -> dict[str, Entry]:
+    """A :func:`snapshot` without what any ``__pycache__`` holds: what a tree holds beside its bytecode."""
+    return {name: entry for name, entry in entries.items() if "__pycache__" not in Path(name).parts}
+
+
 def contents(entries: dict[str, Entry]) -> dict[str, bytes | str | None]:
     """A :func:`snapshot` without its modes, for a test that states what a tree holds."""
     return {name: entry[1] for name, entry in entries.items()}
@@ -175,7 +180,7 @@ def copy_exchange(
         if not chunk:
             break
         head += chunk
-    line, newline, rest = head.partition(b"\n")
+    line, newline, _ = head.partition(b"\n")
     lacks = dev_dispatch.LACKS.encode()
     lacking = line[len(lacks) :].decode().split() if newline and line.startswith(lacks) else None
     sent = b""
