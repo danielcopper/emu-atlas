@@ -1,5 +1,6 @@
 """What the remote-target test modules share: the isolation, a snapshot of a tree, the paths, the dispatcher
-installed with the ``bwrap`` it names, and a home the real sandbox can be shown in.
+installed with the ``bwrap`` it names, a copy sent to it as a client sends one, and a home the real sandbox can be
+shown in.
 
 Kept apart from ``tests/remote_target.py``, which every stand-in imports when it
 starts: this module imports ``pytest``, which a stand-in has no use for.
@@ -7,18 +8,23 @@ starts: this module imports ``pytest``, which a stand-in has no use for.
 
 from __future__ import annotations
 
+import hashlib
+import io
 import json
 import os
 import shutil
 import signal
 import socket
 import stat
+import subprocess
 import sys
+import tarfile
 import tempfile
 import time
 import tomllib
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from pathlib import Path
+from typing import NamedTuple
 
 import pytest
 
@@ -101,6 +107,74 @@ def install_dispatcher(home: Path, *, bwrap: str = REAL_BWRAP, root: Path = ROOT
     assert source.count(line) == 1
     installed.write_text(source.replace(line, f"BWRAP = {bwrap!r}\n"), encoding="utf-8")
     return installed
+
+
+def sha256(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def manifest_line(files: dict[str, bytes], *, floor: str = "3.12", executable: frozenset[str] = frozenset()) -> bytes:
+    """The manifest of *files*, as whatever sends a copy has to write it: one line of JSON, without its newline."""
+    entries = [
+        {"executable": name in executable, "path": name, "sha256": sha256(data)} for name, data in sorted(files.items())
+    ]
+    return json.dumps({"files": entries, "requires_python": floor}, sort_keys=True, separators=(",", ":")).encode()
+
+
+def tree_id(manifest: bytes) -> str:
+    return dev_dispatch.TREE_PREFIX + sha256(manifest)
+
+
+def gz_tar(members: dict[str, bytes]) -> bytes:
+    """A gzip tar of *members*, regular files in this order, as a copy sends the files a target lacks."""
+    buffer = io.BytesIO()
+    with tarfile.open(fileobj=buffer, mode="w:gz") as archive:
+        for name, data in members.items():
+            member = tarfile.TarInfo(name)
+            member.size = len(data)
+            member.mode = 0o644
+            archive.addfile(member, io.BytesIO(data))
+    return buffer.getvalue()
+
+
+class Exchanged(NamedTuple):
+    """How a copy's one connection ended: the dispatcher's status, the sha256 its lacks line named (``None`` for no
+    such line), all it wrote on stdout and on stderr."""
+
+    status: int
+    lacking: list[str] | None
+    stdout: bytes
+    stderr: bytes
+
+
+def copy_exchange(
+    command: list[str],
+    *,
+    env: dict[str, str],
+    cwd: Path,
+    manifest: bytes,
+    contents: dict[str, bytes],
+    files: Callable[[list[str]], bytes] | None = None,
+) -> Exchanged:
+    """A copy through *command*, the dispatcher: the manifest line out, the lacks line back, then what *files*
+    makes of the sha256 it names — by default a gzip tar of those of *contents* — and nothing where it names none."""
+    process = subprocess.Popen(
+        command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env, cwd=cwd
+    )
+    assert process.stdin is not None and process.stdout is not None
+    try:
+        process.stdin.write(manifest + b"\n")
+        process.stdin.flush()
+    except BrokenPipeError:
+        pass
+    line = process.stdout.readline()
+    lacks = dev_dispatch.LACKS.encode()
+    lacking = line[len(lacks) :].decode().split() if line.startswith(lacks) else None
+    sent = b""
+    if lacking:
+        sent = files(lacking) if files is not None else gz_tar({digest: contents[digest] for digest in lacking})
+    out, err = process.communicate(sent)
+    return Exchanged(process.returncode, lacking, line + out, err)
 
 
 def sandbox_unavailable() -> str | None:

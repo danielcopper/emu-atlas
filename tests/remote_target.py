@@ -62,6 +62,7 @@ import hashlib
 import json
 import os
 import re
+import signal
 import subprocess
 import sys
 from dataclasses import asdict, dataclass, field
@@ -126,6 +127,9 @@ class World:
     """What ``ip route get`` names as this machine's source address."""
     drop_after_first_line: bool = False
     """Drop the connection once the login's command has written its first line to stdout."""
+    drop_request_after_first_line: str | None = None
+    """Drop the connection of a request whose first word is this, once its first line on stdout has passed on: the
+    command keeps its stdin and is killed with the connection."""
     hop_failure: HopFailure | None = None
     """How a ProxyJump hop fails, if it does."""
     keygen_fails: bool = False
@@ -490,12 +494,30 @@ def _run_on_target(world: World, target: Target, command: str, forced: str | Non
     sys.stderr.buffer.flush()
     sys.stdout.write(target.login_output)
     sys.stdout.flush()
+    if world.drop_request_after_first_line is not None and env.get("SSH_ORIGINAL_COMMAND", "").split()[:1] == [
+        world.drop_request_after_first_line
+    ]:
+        return _dropped_after_first_line(command, target, env)
     if not world.drop_after_first_line:
         return subprocess.run(["/bin/sh", "-c", command], cwd=target.home, env=env, check=False).returncode
     ran = subprocess.run(
         ["/bin/sh", "-c", command], cwd=target.home, env=env, check=False, capture_output=True, text=True
     )
     print(ran.stdout.splitlines()[0] if ran.stdout else "")
+    print("client_loop: send disconnect: Connection reset by peer", file=sys.stderr)
+    return 255
+
+
+def _dropped_after_first_line(command: str, target: Target, env: dict[str, str]) -> int:
+    """*command* run with this process's stdin, its first line on stdout passed on, then the connection dropped."""
+    running = subprocess.Popen(
+        ["/bin/sh", "-c", command], cwd=target.home, env=env, stdout=subprocess.PIPE, start_new_session=True
+    )
+    assert running.stdout is not None
+    sys.stdout.buffer.write(running.stdout.readline())
+    sys.stdout.buffer.flush()
+    os.killpg(running.pid, signal.SIGKILL)
+    running.wait()
     print("client_loop: send disconnect: Connection reset by peer", file=sys.stderr)
     return 255
 
