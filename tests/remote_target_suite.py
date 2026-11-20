@@ -167,14 +167,22 @@ def copy_exchange(
         process.stdin.flush()
     except BrokenPipeError:
         pass
-    line = process.stdout.readline()
+    # The lacks line read off the descriptor itself: a buffered readline can take
+    # the id that follows it along, which communicate() then never sees.
+    head = b""
+    while b"\n" not in head:
+        chunk = os.read(process.stdout.fileno(), 65536)
+        if not chunk:
+            break
+        head += chunk
+    line, newline, rest = head.partition(b"\n")
     lacks = dev_dispatch.LACKS.encode()
-    lacking = line[len(lacks) :].decode().split() if line.startswith(lacks) else None
+    lacking = line[len(lacks) :].decode().split() if newline and line.startswith(lacks) else None
     sent = b""
     if lacking:
         sent = files(lacking) if files is not None else gz_tar({digest: contents[digest] for digest in lacking})
     out, err = process.communicate(sent)
-    return Exchanged(process.returncode, lacking, line + out, err)
+    return Exchanged(process.returncode, lacking, head + out, err)
 
 
 def sandbox_unavailable() -> str | None:
