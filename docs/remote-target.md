@@ -297,10 +297,10 @@ usage error:
 - **6 `NOT_ASKED`** — no answer was taken, and nothing was done on the target but a copy where one went through: no such
   target, an entry without an address or a user, no key for targets here, no `ssh` or one that could not be started, a
   copy that could not be built here, an `ssh` that ended before the login (below), an interpreter the target cannot
-  start or a dispatcher that is gone there, the target shell's output or an older dispatcher (the run, if it started,
-  ended before its answer was taken), a target that holds no tree even after its copy went through, or a crash of the
-  client before it contacted anything or after the copy went through. Without `--target`: Python that could not be
-  started here, or a crash of the client, after which whatever ran here printed above and its status is lost.
+  start or a dispatcher that is gone there, the target shell's output, an older dispatcher or another one (the run, if
+  it started, ended before its answer was taken), a target that holds no tree even after its copy went through, or a
+  crash of the client before it contacted anything or after the copy went through. Without `--target`: Python that could
+  not be started here, or a crash of the client, after which whatever ran here printed above and its status is lost.
 - **7 `BROKE_OFF`** — the request ended without a status of the dispatcher's or the run's: the connection broke, the
   dispatcher or the run's sandbox there failed to start, or `ssh` failed before the login with a message no pattern
   knows, so that whether the request reached the target is not known. After a copy, the target's current tree is that
