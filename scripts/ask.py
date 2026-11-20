@@ -536,11 +536,12 @@ def say(message: str) -> None:
         pass
 
 
-def dispatcher_status(status: int, name: str) -> str:
+def dispatcher_status(status: int, target: Target) -> str:
     """The line this client adds below a status of the dispatcher's own, which ran nothing of the request's."""
+    name = target.name
     line = f"{PREFIX}: that was {name}'s dispatcher ({status}, {dev_dispatch.STATUSES[status]}), not atlas or a probe."
     if status == dev_dispatch.REFUSED:
-        line += f"\n  {OTHER_DISPATCHER}\n{setup_line(name, None)}"
+        line += f"\n  {OTHER_DISPATCHER}\n{setup_line(name, target.destination)}"
     return line
 
 
@@ -749,7 +750,7 @@ def copy_tree(target: Target, phase: Phase, copy: Copy) -> None:
 def copy_failed(status: int, stderr: str, target: Target) -> Refusal:
     """The refusal for a copy that ended with *status*, *stderr* said, and is no failure before the login."""
     if status in dev_dispatch.STATUSES:
-        return Refusal(status, dispatcher_status(status, target.name) + "\n  Nothing was asked.")
+        return Refusal(status, dispatcher_status(status, target) + "\n  Nothing was asked.")
     unstarted = dispatcher_not_started(status, stderr, target)
     if unstarted is not None:
         return Refusal(NOT_ASKED, f"{unstarted}\n  Nothing was done on {target.name}.")
@@ -895,7 +896,7 @@ def judge(status: int, stderr: str, asking: Asking, answer: Answer) -> int:
         )
         return NOT_ASKED
     if not answer.marked and status in dev_dispatch.STATUSES and status != dev_dispatch.COPY_FAILED:
-        say(dispatcher_status(status, target.name))
+        say(dispatcher_status(status, target))
         return status
     if answer.marked:
         if answer.write_failed is not None:
@@ -927,11 +928,11 @@ def _output_ahead(status: int, asking: Asking, answer: Answer) -> int:
         return NOT_ASKED
     if status in dev_dispatch.STATUSES:
         say(f"{PREFIX}: {target.name} wrote this on stdout as well:\n{arrived}\n{SHELL_PRINTS}")
-        say(dispatcher_status(status, target.name))
+        say(dispatcher_status(status, target))
         return status
     say(
         f"{PREFIX}: no marker came from {target.name}, so what arrived on stdout cannot be told apart from what its"
-        f" shell prints:\n{arrived}\n  {OLDER_DISPATCHER}\n{setup_line(target.name, target.destination)}\n"
+        f" shell prints:\n{arrived}\n  {OTHER_DISPATCHER}\n{setup_line(target.name, target.destination)}\n"
         f"  No answer was taken; {what_runs(request)} gave none here."
     )
     return NOT_ASKED
@@ -975,7 +976,7 @@ def _unmarked(status: int, stderr: str, asking: Asking) -> int:
     if status == 0:
         say(
             f"{PREFIX}: {target.name}'s dispatcher ran the request but wrote no marker ahead of its answer, so none was"
-            f" taken.\n  {OLDER_DISPATCHER}\n{setup_line(target.name, target.destination)}"
+            f" taken.\n  {OTHER_DISPATCHER}\n{setup_line(target.name, target.destination)}"
         )
         return NOT_ASKED
     say(

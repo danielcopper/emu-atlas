@@ -873,7 +873,7 @@ class TestTheDispatchersOwnStatuses:
             "emu-atlas-dev: that was handheld's dispatcher (3, REFUSED), not atlas or a probe.\n"
             "  The dispatcher there does not take this client's requests; run the setup again, which installs this"
             " checkout's dispatcher:\n"
-            "    mise run setup:remote-target handheld <destination>\n"
+            f"    mise run setup:remote-target handheld player@{_ADDRESS}\n"
         )
         assert snapshot(there.target_home) == before
 
@@ -1175,8 +1175,11 @@ class TestTheTargetsShell:
 
         assert status == ask.NOT_ASKED
         tree = ask.build_copy(there.tree, FLOOR).tree_id
-        assert err.startswith(f"emu-atlas-dev: handheld's dispatcher answered the copy of {tree} with another tree,")
-        assert err.endswith(f"  {ask.COPY_WENT_THROUGH}\n")
+        assert err == (
+            f"emu-atlas-dev: handheld's dispatcher answered the copy of {tree} with another tree, {other}.\n"
+            f"  {ask.OTHER_DISPATCHER}\n    mise run setup:remote-target handheld player@{_ADDRESS}\n"
+            f"  {ask.COPY_WENT_THROUGH}\n"
+        )
 
 
 class TestACrashOfTheClient:
@@ -1329,28 +1332,25 @@ class TestTheAnswer:
         )
 
     @pytest.mark.parametrize("probe", ["say.py", "quiet.py"], ids=["with an answer", "with none"])
-    def test_a_dispatcher_that_writes_no_marker_is_older_than_the_client(
+    def test_a_dispatcher_that_writes_no_marker_is_none_this_client_takes(
         self, there: There, capfd: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch, probe: str
     ) -> None:
         write_tree(there.tree, {"scripts/probes/quiet.py": ""})
 
-        def an_older_dispatcher(_: str) -> None:
+        def a_dispatcher_without_the_marker(_: str) -> None:
             installed = there.root / "dispatch.py"
             source = installed.read_text(encoding="utf-8")
             call = "arguments, marker=RUN_MARKER)"
             assert source.count(call) == 1
             installed.write_text(source.replace(call, "arguments)"), encoding="utf-8")
 
-        copy_then(there, monkeypatch, an_older_dispatcher)
+        copy_then(there, monkeypatch, a_dispatcher_without_the_marker)
 
         status, out, err = called(capfd, "probe", "--target", "handheld", probe)
 
         assert status == ask.NOT_ASKED
         assert out == ""
-        older = (
-            "  The dispatcher there is older than this client; run the setup again, which installs this checkout's"
-            f" dispatcher:\n    mise run setup:remote-target handheld player@{_ADDRESS}\n"
-        )
+        other = f"  {ask.OTHER_DISPATCHER}\n    mise run setup:remote-target handheld player@{_ADDRESS}\n"
         if probe == "say.py":
             atlas_file = (there.root / "current").resolve() / "atlas" / "__init__.py"
             assert err.startswith("the probe said this on stderr\n")
@@ -1358,12 +1358,12 @@ class TestTheAnswer:
                 "emu-atlas-dev: no marker came from handheld, so what arrived on stdout cannot be told apart from what"
                 " its shell prints:\n"
                 f"    '{{\"file\": \"{atlas_file}\", \"argv\": []}}'\n"
-                f"{older}  No answer was taken; the probe say.py gave none here.\n"
+                f"{other}  No answer was taken; the probe say.py gave none here.\n"
             )
         else:
             assert err == (
                 "emu-atlas-dev: handheld's dispatcher ran the request but wrote no marker ahead of its answer, so"
-                f" none was taken.\n{older}"
+                f" none was taken.\n{other}"
             )
 
     def test_output_ahead_of_the_marker_ends_the_run_on_the_target(
@@ -1510,7 +1510,7 @@ class TestTheAnswer:
         assert err == (
             "emu-atlas-dev: refused: probe\n"
             "emu-atlas-dev: that was handheld's dispatcher (3, REFUSED), not atlas or a probe.\n"
-            f"  {ask.OTHER_DISPATCHER}\n    mise run setup:remote-target handheld <destination>\n"
+            f"  {ask.OTHER_DISPATCHER}\n    mise run setup:remote-target handheld player@{_ADDRESS}\n"
         )
 
     def test_a_crash_while_asking_ends_the_run_on_the_target(
@@ -1602,7 +1602,7 @@ class TestTheCopysAnswer:
     """``tree_named``: the copy's id at the end of what arrived on its stdout, and nothing else there."""
 
     @pytest.mark.parametrize(
-        ("stdout", "arrived", "older"),
+        ("stdout", "arrived", "named_none"),
         [
             (b"Welcome back.{id}\n", "    'Welcome back.'", False),
             (b"\n{id}\n", "    (only blank space: '\\n')", False),
@@ -1612,8 +1612,8 @@ class TestTheCopysAnswer:
         ],
         ids=["glued to the id", "a blank line", "an escape", "after the id", "no id"],
     )
-    def test_anything_beside_the_id_is_shown_escaped_and_older_only_without_one(
-        self, tmp_path: Path, stdout: bytes, arrived: str, older: bool
+    def test_anything_beside_the_id_is_shown_escaped_and_another_dispatcher_named_only_without_one(
+        self, tmp_path: Path, stdout: bytes, arrived: str, named_none: bool
     ) -> None:
         target = a_target_for(_HANDHELD, tmp_path)
         stdout = stdout.replace(b"{id}", _TREE_ID.encode())
@@ -1627,8 +1627,21 @@ class TestTheCopysAnswer:
         assert message.startswith(
             f"emu-atlas-dev: handheld wrote this on stdout beside its dispatcher's answer to the copy:\n{arrived}\n"
         )
-        assert ("It named no tree either." in message) is older
+        other = f"  {ask.OTHER_DISPATCHER}\n    mise run setup:remote-target handheld player@{_ADDRESS}\n"
+        assert (f"\n  It named no tree either.\n{other}" in message) is named_none
+        assert (ask.OTHER_DISPATCHER in message) is named_none
         assert message.endswith(f"  {ask.COPY_WENT_THROUGH}")
+
+    def test_no_id_at_all_is_another_dispatchers_answer(self, tmp_path: Path) -> None:
+        with pytest.raises(ask.Refusal) as refusal:
+            ask.tree_named(b"", a_target_for(_HANDHELD, tmp_path))
+
+        assert refusal.value.status == ask.NOT_ASKED
+        assert refusal.value.message == (
+            "emu-atlas-dev: handheld's dispatcher took the copy but named no tree to ask from.\n"
+            f"  {ask.OTHER_DISPATCHER}\n    mise run setup:remote-target handheld player@{_ADDRESS}\n"
+            f"  {ask.COPY_WENT_THROUGH}"
+        )
 
     def test_the_id_alone_is_the_tree(self, tmp_path: Path) -> None:
         assert ask.tree_named(f"{_TREE_ID}\n".encode(), a_target_for(_HANDHELD, tmp_path)) == _TREE_ID
