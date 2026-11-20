@@ -55,6 +55,7 @@ from atlas.platforms import (
     SYSTEM_RESOLUTION_STATUSES,
     PLATFORM_SYSTEM_STATUSES,
     RESOLUTION_AMBIGUOUS,
+    RESOLUTION_UNANIMOUS,
     RESOLUTION_CONFLICT,
     RESOLUTION_RESOLVED,
     RESOLUTION_UNKNOWN,
@@ -1581,8 +1582,8 @@ class TestTheResolutionStatesItsShape:
                 translation=translate([("romm", "gba")]),
             )
 
-    def test_the_status_is_one_of_four(self):
-        assert SYSTEM_RESOLUTION_STATUSES == ("resolved", "unknown", "ambiguous", "conflict")
+    def test_the_status_is_one_of_five(self):
+        assert SYSTEM_RESOLUTION_STATUSES == ("resolved", "unknown", "ambiguous", "unanimous", "conflict")
         with pytest.raises(ValueError, match="status 'named' is not one of"):
             SystemResolution("named", ("esde", "gba"), EXACT_MATCH)  # type: ignore[arg-type]
 
@@ -1604,15 +1605,27 @@ class TestTheResolutionStatesItsShape:
             with pytest.raises(ValueError, match="two or more candidates are listed exactly when"):
                 SystemResolution(status, None, None, self._TWO, translate([("romm", "snes")]))
 
-    def test_candidates_are_listed_exactly_where_ambiguous(self):
+    @pytest.mark.parametrize("status", [RESOLUTION_AMBIGUOUS, RESOLUTION_UNANIMOUS])
+    def test_candidates_are_listed_exactly_where_ambiguous_or_unanimous(self, status: SystemResolutionStatus):
+        # Both statuses list the systems the asked pairs named alike, two or
+        # more, whether they answer alike or not (#784 D65 b).
         translation = translate([("romm", "snes")])
-        assert SystemResolution(RESOLUTION_AMBIGUOUS, None, None, self._TWO, translation).candidates == self._TWO
+        assert SystemResolution(status, None, None, self._TWO, translation).candidates == self._TWO
         with pytest.raises(ValueError, match="two or more candidates are listed exactly when"):
-            SystemResolution(RESOLUTION_AMBIGUOUS, None, None, self._TWO[:1], translation)
+            SystemResolution(status, None, None, self._TWO[:1], translation)
         with pytest.raises(ValueError, match="two or more candidates are listed exactly when"):
-            SystemResolution(RESOLUTION_AMBIGUOUS, None, None, (), translation)
+            SystemResolution(status, None, None, (), translation)
         with pytest.raises(ValueError, match="candidates are listed only where several systems answer"):
             SystemResolution(RESOLUTION_UNKNOWN, None, None, self._TWO[:1], translation)
+
+    def test_a_unanimous_resolution_names_no_system(self):
+        # The shared answer names no system (#784 D62, D65 e), so neither does
+        # its resolution, and candidates never stand beside a resolved system.
+        translation = translate([("romm", "snes")])
+        with pytest.raises(ValueError, match="a system is named exactly when the status is resolved"):
+            SystemResolution(RESOLUTION_UNANIMOUS, ("esde", "snes"), "narrowMatch", self._TWO, translation)
+        with pytest.raises(ValueError, match="two or more candidates are listed exactly when"):
+            SystemResolution(RESOLUTION_RESOLVED, ("esde", "snes"), "narrowMatch", self._TWO, translation)
 
     def test_each_candidate_is_a_different_system(self):
         twice = (self._TWO[0], SystemCandidate(("esde", "sfc"), "absent"))

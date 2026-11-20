@@ -1368,6 +1368,16 @@ class TestEveryIdentityIsAWordTheCommandCarries:
         """What a client joins on: which emulator, and which row of the launch list."""
         return [(row.emulator, row.declared_index) for row in rows]
 
+    @staticmethod
+    def _catalogue_apart_firmware_alike(catalogue: Any, firmware: Any) -> bool:
+        """The catalogue answer ambiguous beside a unanimous firmware answer, which compares its cores as a set (#784 D63)."""
+        return (
+            catalogue.resolution is not None
+            and catalogue.resolution.status == "ambiguous"
+            and firmware.resolution is not None
+            and firmware.resolution.status == "unanimous"
+        )
+
     def test_where_both_answers_name_emulators_they_name_the_same_ones(self):
         # The join, over every catalogue the corpus declares: the same emulator
         # under the same identity and the same declared position, whichever
@@ -1390,10 +1400,23 @@ class TestEveryIdentityIsAWordTheCommandCarries:
         # (a-bare-retroarch-derives-its-emulator-list-from-the-cores answers
         # label None against the catalogue's "mGBA") while both sides name
         # mgba_libretro.so. That asymmetry is the argument for the fields.
+        #
+        # Where the asked pairs name several systems, the catalogue answer
+        # compares their entries in launch order, with their positions and
+        # selections, and the firmware answer its cores as a set (#784 D63):
+        # candidates whose entries are the same cores in another order — a
+        # gamelist selection moved one, or the catalogue declares them in
+        # another order — leave the catalogue answer ambiguous and empty
+        # beside a unanimous firmware answer that names the cores. That
+        # pairing is the decision, not a dropped field, so it is left out of
+        # the join.
         wrong = []
         for name, install, system, answer, _content in self._catalogue_answers():
+            firmware_answer = install.firmware_for_system(system=system)
+            if self._catalogue_apart_firmware_alike(answer, firmware_answer):
+                continue
             catalogue = self._sorted(self._pairs(answer.entries))
-            firmware = self._sorted(self._pairs(install.firmware_for_system(system=system).cores))
+            firmware = self._sorted(self._pairs(firmware_answer.cores))
             if firmware != catalogue:
                 wrong.append(f"{name}: catalogue {catalogue} vs firmware {firmware}")
         assert wrong == []
@@ -1405,13 +1428,20 @@ class TestEveryIdentityIsAWordTheCommandCarries:
         # passes content_path=None), so no per-game entry can match there,
         # while the catalogue answer promotes the row the gamelist names. Asked
         # without a content path, the two orders are identical — and this is
-        # what says the sort above hides nothing else.
+        # what says the sort above hides nothing else. The second is the shared
+        # answer several named systems give alike: its firmware cores are listed
+        # by core file name, an order no candidate declares; and beside a
+        # unanimous firmware answer, the ambiguous catalogue answer of
+        # candidates whose entries differ in order (#784 D63).
         wrong = []
         for name, install, system, answer, content in self._catalogue_answers():
-            if content is not None:
+            if content is not None or answer.resolution is not None and answer.resolution.status == "unanimous":
+                continue
+            firmware_answer = install.firmware_for_system(system=system)
+            if self._catalogue_apart_firmware_alike(answer, firmware_answer):
                 continue
             catalogue = self._pairs(answer.entries)
-            firmware = self._pairs(install.firmware_for_system(system=system).cores)
+            firmware = self._pairs(firmware_answer.cores)
             if firmware != catalogue:
                 wrong.append(f"{name}: catalogue {catalogue} vs firmware {firmware}")
         assert wrong == []

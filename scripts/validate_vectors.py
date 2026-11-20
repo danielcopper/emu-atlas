@@ -273,8 +273,13 @@ RESOLUTION_STATUS_REASONS = {
     "resolved": None,
     "unknown": "system-unknown",
     "ambiguous": "system-ambiguous",
+    "unanimous": "system-unanimous",
     "conflict": "system-pairs-conflict",
 }
+# The statuses that list the systems the asked pairs named alike (D65 b), and the one whose answer is the
+# answer every one of them gives, whose entries name no system (D62, D65 e).
+CANDIDATE_STATUSES = {"ambiguous", "unanimous"}
+SHARED_STATUS = "unanimous"
 UNRESOLVED_SYSTEM_CODES = {code for code in RESOLUTION_STATUS_REASONS.values() if code is not None}
 KNOWN_PLATFORM_TAG_SOURCES = {"catalogue", "vocabulary"}
 # The roots question (issue #612) is answered by two arrangements alone. Its
@@ -738,6 +743,7 @@ KNOWN_CAVEAT_CODES = {
     "firmware-content-unidentified",
     "system-unknown",
     "system-ambiguous",
+    "system-unanimous",
     "system-pairs-conflict",
     "rom-path-undeclared",
     "rom-path-unresolved",
@@ -903,6 +909,7 @@ KNOWN_UNRESOLVED_CODES = {
     "emulator-config-path-untranslatable",
     "slot-device-uninterpreted",
     "not-set-up",
+    "system-ambiguous",
 }
 
 
@@ -3659,7 +3666,14 @@ def _validate_emulator_identity(name: str, entry: Any, subject: str) -> None:
         )
 
 
-def _validate_emulator(name: str, entry: Any) -> None:
+def _shared(answer: dict[str, Any]) -> bool:
+    """Whether *answer* is the one several named systems give alike — its resolution ``unanimous`` (D62)."""
+    resolution = answer.get("resolution")
+    return isinstance(resolution, dict) and resolution.get("status") == SHARED_STATUS
+
+
+def _validate_emulator(name: str, entry: Any, shared: bool = False) -> None:
+    """One catalogue entry; *shared* says it is an entry of a shared answer, which names no system (D65 e)."""
     _require_exact(name, entry, EMULATOR_FIELDS, "each emulator")
     if not isinstance(entry["label"], str) or not entry["label"]:
         fail(f"{name}: emulator label must be a non-empty string")
@@ -3673,7 +3687,10 @@ def _validate_emulator(name: str, entry: Any) -> None:
     if selection is not None and not isinstance(selection, str):
         fail(f"{name}: emulator selection must be null or a string")
     _validate_declared_index(name, entry, "emulator")
-    _validate_system_pair(f"{name}: emulator system", entry["system"])
+    if shared != (entry["system"] is None):
+        fail(f"{name}: an emulator names no system exactly in an answer whose resolution is unanimous")
+    if entry["system"] is not None:
+        _validate_system_pair(f"{name}: emulator system", entry["system"])
     _validate_caveats(name, entry["caveats"])
     _validate_launch(name, entry)
 
@@ -3839,7 +3856,7 @@ def _validate_catalogue(name: str, catalogue: Any) -> None:
     if not isinstance(catalogue["entries"], list):
         fail(f"{name}: expected.catalogue.entries must be a list")
     for entry in catalogue["entries"]:
-        _validate_emulator(name, entry)
+        _validate_emulator(name, entry, _shared(catalogue))
     _validate_caveats(name, catalogue["caveats"])
     unread = _no_catalogue_codes_in(catalogue["caveats"])
     # A derived answer is the one legal pairing (issue #133): the entries come
@@ -4131,8 +4148,8 @@ def _validate_launchable(name: str, answer: Any) -> None:
     if answer["alternatives"] and answer["verdict"] != "entry-not-accepted":
         fail(f"{name}: expected.launchable.alternatives travels with 'entry-not-accepted' alone")
     if answer["entry"] is not None:
-        _validate_emulator(name, answer["entry"])
-    _validate_installers(name, answer["verdict"], answer["installers"])
+        _validate_emulator(name, answer["entry"], _shared(answer))
+    _validate_installers(name, answer["verdict"], answer["installers"], _shared(answer))
     _validate_caveats(name, answer["caveats"])
 
 
@@ -4186,12 +4203,13 @@ def _validate_opens(name: str, answer: dict[str, Any]) -> None:
             fail(f"{name}: expected.launchable.opens.present must be true, false or null")
 
 
-def _validate_installers(name: str, verdict: Any, installers: Any) -> None:
+def _validate_installers(name: str, verdict: Any, installers: Any, shared: bool) -> None:
     """The emulators a needs-installation verdict names: a list there, ``null`` everywhere else.
 
     Each names its emulator once, by a non-empty token, beside the entry that
     runs it or ``null`` — and an entry stated there runs that very emulator,
-    since the token is what the two are joined on.
+    since the token is what the two are joined on. *shared* says the answer is
+    a shared one, whose entries name no system.
     """
     if verdict != "needs-installation":
         if installers is not None:
@@ -4209,7 +4227,7 @@ def _validate_installers(name: str, verdict: Any, installers: Any) -> None:
         entry = installer["entry"]
         if entry is None:
             continue
-        _validate_emulator(name, entry)
+        _validate_emulator(name, entry, shared)
         if entry.get("emulator") != emulator:
             fail(f"{name}: an installer's entry must run the emulator it is named for")
 
@@ -4225,7 +4243,7 @@ def _validate_launch_command(name: str, answer: Any) -> None:
     _validate_resolution(f"{name}: expected.launch_command", answer)
     entry, command = answer["entry"], answer["command"]
     if entry is not None:
-        _validate_emulator(name, entry)
+        _validate_emulator(name, entry, _shared(answer))
     _validate_caveats(name, answer["caveats"])
     startable = entry is not None and entry.get("availability") == "startable"
     if command is None:
@@ -4271,7 +4289,7 @@ def _validate_save_portability(name: str, answer: Any) -> None:
     _validate_resolution(f"{name}: expected.save_portability", answer)
     for side in ("source", "target"):
         if answer[side] is not None:
-            _validate_emulator(name, answer[side])
+            _validate_emulator(name, answer[side], _shared(answer))
     if answer["verdict"] not in KNOWN_PORTABILITY_VERDICTS:
         fail(f"{name}: expected.save_portability.verdict must be one of {KNOWN_PORTABILITY_VERDICTS}")
     parts = answer["parts"]
@@ -4735,10 +4753,13 @@ def _validate_resolution(where: str, answer: dict[str, Any], *, asked: bool = Tr
     ``resolution`` is ``null`` exactly where the question was asked about no
     system (*asked* false), which only a firmware question can be. Otherwise
     its ``status`` says how it ended: ``resolved`` names the one system the
-    question answered for and the tier that named it; ``ambiguous`` lists two or
-    more ``candidates`` with their catalogue status; ``unknown`` and
-    ``conflict`` name neither — and the answer's own caveats carry the code
-    stating the reason of every status but ``resolved``. Related systems are
+    question answered for and the tier that named it; ``ambiguous`` and
+    ``unanimous`` list two or more ``candidates`` with their catalogue status;
+    ``unknown`` and ``conflict`` name neither — and the answer's own caveats
+    carry the code stating the reason of every status but ``resolved``.
+    ``system-unanimous`` stands only beside ``unanimous``, and never beside
+    ``system-ambiguous``: one answer does not state both that the candidates
+    answer alike and that they answer differently. Related systems are
     never a tier. ``translation`` is the platform table's answer for the pairs
     that went through it, in the projection, or ``null``.
     """
@@ -4763,8 +4784,13 @@ def _validate_resolution(where: str, answer: dict[str, Any], *, asked: bool = Tr
     _validate_candidates(where, status, candidates)
     _validate_resolution_translation(where, resolution)
     reason = RESOLUTION_STATUS_REASONS[status]
-    if reason is not None and reason not in {c["code"] for c in answer["caveats"]}:
+    codes = {c["code"] for c in answer["caveats"]}
+    if reason is not None and reason not in codes:
         fail(f"{where}.resolution is {status} and the answer does not state {reason}")
+    if status == SHARED_STATUS and RESOLUTION_STATUS_REASONS["ambiguous"] in codes:
+        fail(f"{where}.resolution is {status} and the answer also states system-ambiguous")
+    if status != SHARED_STATUS and RESOLUTION_STATUS_REASONS[SHARED_STATUS] in codes:
+        fail(f"{where}.resolution is {status} and the answer states system-unanimous")
 
 
 def _validate_resolution_translation(where: str, resolution: dict[str, Any]) -> None:
@@ -4786,11 +4812,14 @@ def _validate_resolution_translation(where: str, resolution: dict[str, Any]) -> 
 
 
 def _validate_candidates(where: str, status: str, candidates: Any) -> None:
-    """A resolution's candidates: two or more systems with their catalogue status, exactly where it is ambiguous."""
-    if not isinstance(candidates, list) or (status == "ambiguous") != (len(candidates) >= 2) or (
-        candidates and status != "ambiguous"
+    """A resolution's candidates: two or more systems with their status, exactly where it is ambiguous or unanimous."""
+    if not isinstance(candidates, list) or (status in CANDIDATE_STATUSES) != (len(candidates) >= 2) or (
+        candidates and status not in CANDIDATE_STATUSES
     ):
-        fail(f"{where}.resolution.candidates lists two or more systems, exactly where the status is ambiguous")
+        fail(
+            f"{where}.resolution.candidates lists two or more systems, exactly where the status is ambiguous or "
+            "unanimous"
+        )
     for candidate in candidates:
         _require_exact(where, candidate, {"system", "status"}, "each resolution candidate")
         _validate_system_pair(f"{where}.resolution.candidates[].system", candidate["system"])

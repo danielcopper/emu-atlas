@@ -11,6 +11,7 @@ from typing import Callable, Iterable, Mapping, cast
 import pytest
 
 import atlas
+from atlas._shared_answer import SharedEntry
 import atlas.installations
 import atlas.retroarch_cfg
 from atlas._question import once, one_question
@@ -390,6 +391,7 @@ class TestEveryPublicMethodIsOneQuestion:
             atlas.BareRetroArchNative,
             atlas.BareRetroArchFlatpak,
             atlas.EmulatorEntry,
+            SharedEntry,
         ],
     )
     def test_every_public_method_runs_as_one_question(self, cls: type):
