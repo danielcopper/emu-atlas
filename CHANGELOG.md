@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.36.0](https://github.com/danielcopper/emu-atlas/compare/v0.35.0...v0.36.0) (2026-11-20)
+
+
+### ⚠ BREAKING CHANGES
+
+* **platforms:** a resolution's `status` has a fifth value, `unanimous`, beside the new caveat `system-unanimous`, and candidates are listed where the status is `ambiguous` or `unanimous`. A catalogue entry's `system` (entries[].system, entry.system, source.system, target.system, installers[].entry.system) is `null` in a unanimous answer. Such an entry's own placement questions may refuse with the new Unresolved code `system-ambiguous`, and the refusals `standalone-unsupported`, `standalone-variant-unestablished` and `core-file-foreign` take a second data shape there, `sources` and `keys` naming every candidate in place of `source` and `key`. Vector families: machines 1714 vectors (100 in system-pairs, 23 new in several-named-systems), platform-table 29, unchanged. Two system-pairs vectors change their verdict: a-pair-naming-several-systems-lists-them-as-candidates answers the shared catalogue entry, unanimous, where it answered no entries, ambiguous, and a-save-question-asked-pairs-naming-several-systems-says-so states system-unanimous and keys the core's record, where it stated system-ambiguous.
+
+### Features
+
+* **platforms:** share the answer of several named systems that agree ([#815](https://github.com/danielcopper/emu-atlas/issues/815)) ([81dbf28](https://github.com/danielcopper/emu-atlas/commit/81dbf2861a287005d02836a28589bf4905dba97a))
+
+
+### Bug Fixes
+
+* **dev:** say which password a target's setup asks for ([#819](https://github.com/danielcopper/emu-atlas/issues/819)) ([17f7fc1](https://github.com/danielcopper/emu-atlas/commit/17f7fc1d83458053640c63863b8ecfae2a6428fe)), closes [#817](https://github.com/danielcopper/emu-atlas/issues/817)
+* **scripts:** bound the cores directory the save-literal sweep reads ([#806](https://github.com/danielcopper/emu-atlas/issues/806)) ([f920849](https://github.com/danielcopper/emu-atlas/commit/f920849fcdf82df7dee3ae8708d055656044b367))
+
 ## [0.35.0](https://github.com/danielcopper/emu-atlas/compare/v0.34.0...v0.35.0) (2026-11-17)
 
 
