@@ -22,7 +22,11 @@ the setup reads with `ssh -G` and never writes. `<name>` is yours to choose — 
    logs in through your own `ssh` instead — with whatever access that already has: a password, or a key from your agent
    or your SSH config — when there is no key yet, when the target refuses the key, when the target takes the key but its
    dispatcher runs no install (gone, or one that does not take the setup request), and when a jump host on the way stops
-   the key's login, since your own config may pass it.
+   the key's login, since your own config may pass it. Before each such login it says what `ssh` is about to ask: `ssh`
+   calls the target `emu-atlas-dev.<name>` in its questions — at the host key (item 3) and in a password prompt,
+   `<user>@emu-atlas-dev.<name>'s password:` — and a password prompt that names `emu-atlas-dev.<name>` asks for the
+   login password of the destination's user on the target, not one of this tool's. For an account with no password, see
+   `--print` below.
 2. **It creates the build host's key for targets** if there is none: `~/.config/emu-atlas-dev/id_ed25519` (under
    `$XDG_CONFIG_HOME` where that is set). One key serves every target; its comment is `emu-atlas-dev@<build host>`.
 3. **It records the target's host key** in this tool's own known-hosts file, `~/.config/emu-atlas-dev/known_hosts`. At

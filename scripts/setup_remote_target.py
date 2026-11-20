@@ -962,6 +962,21 @@ class Plan:
         return self.directory / SSH_CONFIG_NAME
 
 
+def own_login_notice(name: str, destination: Destination) -> str:
+    """What the setup says before a login through the user's own access: what ``ssh`` is about to ask."""
+    notice = (
+        f"{PREFIX}: ssh calls {name} '{host_key_alias(name)}' in its questions, the name its host key is recorded"
+        f" under; a password it asks for under that name is the login password of {destination.user} on"
+        f" {destination.hostname}, not one of this tool's.\n"
+    )
+    if destination.via:
+        return notice + (
+            "  An account with no password needs a key of yours in its ~/.ssh/authorized_keys, or a password, first:"
+            f" --print cannot set up a target reached through {destination.via}."
+        )
+    return notice + "  An account with no password, as SteamOS ships it, is set up with --print instead."
+
+
 _HANDING_OVER: dict[HandOver, str] = {
     "refused": "refused this machine's key",
     FORCED_COMMAND: "took this machine's key, but its forced command ran no install",
@@ -1013,7 +1028,11 @@ def log_in_and_install(
                 f"{PREFIX}: {plan.name} {_HANDING_OVER[handed_over]}; logging in with your own access instead.",
                 file=sys.stderr,
             )
-    result = log_in(None) if key_result is None or handed_over is not None else key_result
+    if key_result is not None and handed_over is None:
+        result = key_result
+    else:
+        print(own_login_notice(plan.name, plan.destination), file=sys.stderr)
+        result = log_in(None)
 
     if installed_from(result) is None:
         message = failure_message(

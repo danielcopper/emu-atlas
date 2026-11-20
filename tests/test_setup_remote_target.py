@@ -1610,6 +1610,93 @@ class TestAKeyWhoseForcedCommandFails:
         assert snapshot(remote.build_home) == build_before
 
 
+_LOGIN_MARK = "<login {}>"
+
+
+def _own_login_notice(*, user: str = "player", address: str = _ADDRESS, via: str | None = None) -> str:
+    """The notice the setup gives before a login through the user's own access to ``handheld``."""
+    if via is None:
+        second = "  An account with no password, as SteamOS ships it, is set up with --print instead.\n"
+    else:
+        second = (
+            "  An account with no password needs a key of yours in its ~/.ssh/authorized_keys, or a password, first:"
+            f" --print cannot set up a target reached through {via}.\n"
+        )
+    return (
+        "emu-atlas-dev: ssh calls handheld 'emu-atlas-dev.handheld' in its questions, the name its host key is"
+        f" recorded under; a password it asks for under that name is the login password of {user} on {address}, not"
+        " one of this tool's.\n" + second
+    )
+
+
+class TestWhatSshAsksForOnTheUsersOwnLogin:
+    """#817: before a login through the user's own access, the setup says what ssh is about to ask."""
+
+    @pytest.fixture
+    def marked(self, remote: Remote, monkeypatch: pytest.MonkeyPatch) -> Remote:
+        """*remote* with each setup login marking on stderr, as it starts, whose access it uses."""
+        real = setup_remote_target.setup_login
+
+        def marking(*args: Any, **kwargs: Any) -> subprocess.CompletedProcess[str]:
+            print(_LOGIN_MARK.format("own" if kwargs["key_config"] is None else "key"), file=sys.stderr)
+            return real(*args, **kwargs)
+
+        monkeypatch.setattr(setup_remote_target, "setup_login", marking)
+        return remote
+
+    @staticmethod
+    def _prepare(remote: Remote, capsys: pytest.CaptureFixture[str], case: str) -> str:
+        """The target set up for *case*, and the destination to run the setup with."""
+        if case == "no key":
+            return f"player@{_ADDRESS}"
+        if case == "hop":
+            remote.world.configs = {"handheld": {"user": ["player"], "hostname": [_ADDRESS], "proxyjump": ["bastion"]}}
+        destination = "handheld" if case == "hop" else f"player@{_ADDRESS}"
+        first, _, err = remote.setup(capsys, "handheld", destination)
+        assert first == 0, err
+        if case == "key refused":
+            remote.target().client_address = _MOVED_FROM
+        elif case == "forced command":
+            (remote.root / "dispatch.py").unlink()
+        elif case == "hop":
+            remote.world.hop_failure = "denied"
+        return destination
+
+    @pytest.mark.parametrize("case", ["no key", "key refused", "forced command", "hop"])
+    def test_the_notice_stands_directly_before_every_login_of_the_users_own(
+        self, marked: Remote, capsys: pytest.CaptureFixture[str], case: str
+    ) -> None:
+        destination = self._prepare(marked, capsys, case)
+
+        _, _, err = marked.setup(capsys, "handheld", destination)
+
+        notice = _own_login_notice(via="bastion" if case == "hop" else None)
+        assert err.count(notice) == 1, err
+        assert notice + _LOGIN_MARK.format("own") + "\n" in err
+
+    def test_no_notice_stands_before_a_login_with_the_build_hosts_key_alone(
+        self, marked: Remote, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        destination = self._prepare(marked, capsys, "key")
+
+        code, _, err = marked.setup(capsys, "handheld", destination)
+
+        assert code == 0, err
+        assert _LOGIN_MARK.format("key") in err
+        assert _LOGIN_MARK.format("own") not in err
+        assert "ssh calls handheld" not in err
+
+    def test_the_notice_names_the_user_and_address_the_destination_resolved_to(
+        self, remote: Remote, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        remote.world.configs = {"handheld-alias": {"user": ["deck"], "hostname": [_ADDRESS]}}
+
+        code, _, err = remote.setup(capsys, "handheld", "handheld-alias")
+
+        assert code == 0, err
+        assert _own_login_notice(user="deck") in err
+
+
 class TestHops:
     def _behind_bastion(self, remote: Remote, hop: str = "bastion") -> None:
         remote.world.configs = {"handheld": {"user": ["player"], "hostname": [_ADDRESS], "proxyjump": [hop]}}
@@ -2233,6 +2320,16 @@ class TestTheTaskAndTheGuide:
             pointers = re.findall(r'docs/remote-target\.md, "([^"]+)"', text)
             assert pointers, script
             assert set(pointers) <= headings, script
+
+    def test_the_guide_names_the_name_ssh_asks_with_and_whose_password_it_asks_for(self) -> None:
+        guide = " ".join((REPO / "docs" / "remote-target.md").read_text(encoding="utf-8").split())
+        alias = setup_remote_target.host_key_alias("<name>")
+
+        assert f"`<user>@{alias}'s password:`" in guide
+        assert (
+            f"a password prompt that names `{alias}` asks for the login password of the destination's user on the"
+            " target, not one of this tool's" in guide
+        )
 
     def test_the_guide_names_the_sandboxs_options_as_the_dispatcher_starts_it(self) -> None:
         from scripts import dev_dispatch
