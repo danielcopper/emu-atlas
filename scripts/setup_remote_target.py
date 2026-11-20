@@ -962,6 +962,27 @@ class Plan:
         return self.directory / SSH_CONFIG_NAME
 
 
+def own_login_notice(name: str, destination: Destination) -> str:
+    """What the setup says before a login through the user's own access: what ``ssh`` is about to ask.
+
+    ``ssh`` names the target by its host key alias, in a host key question and
+    in a password prompt alike, which reads as an account or a password of
+    this tool's; the password it asks for is the login password of the user the
+    destination resolved to. An account with no password gets in through
+    ``--print``, except behind a hop, which ``--print`` cannot set up.
+    """
+    notice = (
+        f"{PREFIX}: ssh names {name} {host_key_alias(name)}, the name its host key is recorded under; a password it"
+        f" asks for is the login password of {destination.user} on {destination.hostname}.\n"
+    )
+    if destination.via:
+        return notice + (
+            "  An account with no password needs a key of yours in its ~/.ssh/authorized_keys first: --print cannot"
+            f" set up a target reached through {destination.via}."
+        )
+    return notice + "  An account with no password, as SteamOS ships it, gets in through --print instead."
+
+
 _HANDING_OVER: dict[HandOver, str] = {
     "refused": "refused this machine's key",
     FORCED_COMMAND: "took this machine's key, but its forced command ran no install",
@@ -974,7 +995,7 @@ def log_in_and_install(
 ) -> subprocess.CompletedProcess[str]:
     """Install through the key's login, else the user's own; the login that installed.
 
-    Both logins record a host key into a trial copy of the known-hosts file in
+    The user's own login follows :func:`own_login_notice` on stderr. Both logins record a host key into a trial copy of the known-hosts file in
     *scratch*, which only a finished install puts in place.
     """
     trial_known_hosts = scratch / KNOWN_HOSTS_NAME
@@ -1013,7 +1034,11 @@ def log_in_and_install(
                 f"{PREFIX}: {plan.name} {_HANDING_OVER[handed_over]}; logging in with your own access instead.",
                 file=sys.stderr,
             )
-    result = log_in(None) if key_result is None or handed_over is not None else key_result
+    if key_result is not None and handed_over is None:
+        result = key_result
+    else:
+        print(own_login_notice(plan.name, plan.destination), file=sys.stderr)
+        result = log_in(None)
 
     if installed_from(result) is None:
         message = failure_message(
