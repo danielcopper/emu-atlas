@@ -1794,8 +1794,10 @@ class TestTheCopysAnswer:
         assert message.endswith(f"  {ask.COPY_WENT_THROUGH}")
 
     def test_no_id_at_all_is_another_dispatchers_answer(self, tmp_path: Path) -> None:
+        target = a_target_for(_HANDHELD, tmp_path)
+
         with pytest.raises(ask.Refusal) as refusal:
-            ask.tree_named(b"", a_target_for(_HANDHELD, tmp_path))
+            ask.tree_named(b"", target)
 
         assert refusal.value.status == ask.NOT_ASKED
         assert refusal.value.message == (
