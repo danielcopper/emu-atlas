@@ -284,8 +284,9 @@ a `TREE_ABSENT`, ahead of the copy's lacks line, or beside its id — ends the c
 each line escaped, and asks for the startup files to be silent for a shell without a terminal. Where it came ahead of
 the copy's lacks line, no file was sent; beside its id, the copy went through and nothing was asked. No lacks line or no
 id, like a question that ends with 8 (see the statuses above), means the dispatcher there is not this checkout's: run
-the setup again. So does a question that ends with 0 and no marker. One that ends with any other status and no marker is
-told by its own failure, below the shell's output, as it is without that output.
+the setup again. So does a question that ends with 0 and no marker, or that writes more than 64 KiB on stdout without
+one, after which the client ends the connection. One that ends with any other status and no marker is told by its own
+failure, below the shell's output, as it is without that output.
 
 What comes back is printed here and written nowhere, the tree included.
 

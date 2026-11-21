@@ -1367,8 +1367,9 @@ class TestTheQuestionsStderr:
 
 
 class TestShellOutputBeforeAFailure:
-    """#818 D8: output on stdout ahead of the marker names another dispatcher only for a 0; any other status is the
-    failure's own, told as it is without that output."""
+    """#818 D8: output on stdout ahead of the run's marker names another dispatcher only for a 0 (and for a 3, which
+    the dispatcher's status line names as another one), or where this client cut the output off; any other status is
+    the failure's own, told as it is without that output."""
 
     NOISE = "    'Welcome back.'"
 
@@ -1389,6 +1390,13 @@ class TestShellOutputBeforeAFailure:
                 " with 127)",
             ),
             (
+                dev_dispatch.COPY_FAILED,
+                "",
+                ask.BROKE_OFF,
+                "emu-atlas-dev: the question on handheld ended with 5 before its run started: the connection broke, or"
+                " the dispatcher or its sandbox there failed to start; what ssh and the target said is above.",
+            ),
+            (
                 1,
                 "",
                 ask.BROKE_OFF,
@@ -1396,7 +1404,7 @@ class TestShellOutputBeforeAFailure:
                 " the dispatcher or its sandbox there failed to start; what ssh and the target said is above.",
             ),
         ],
-        ids=["ssh's own failure", "no interpreter", "a dispatcher that broke"],
+        ids=["ssh's own failure", "no interpreter", "a copy's status", "a dispatcher that broke"],
     )
     def test_a_failure_with_shell_output_gives_its_own_reason_and_status(
         self,
@@ -1418,6 +1426,30 @@ class TestShellOutputBeforeAFailure:
         )
         assert ends_with in err
         assert ask.OTHER_DISPATCHER not in err
+        assert "dispatcher (" not in err
+
+    def test_output_this_client_cut_off_with_no_marker_names_another_dispatcher(
+        self, there: There, capfd: pytest.CaptureFixture[str]
+    ) -> None:
+        """More than AHEAD_LIMIT with no marker: the client ends the connection, and ssh's kill is no failure of the
+        target's."""
+        there.target().login_output = ("x" * 1023 + "\n") * 256  # 256 KiB, ahead of anything the dispatcher writes
+        there.save()
+        logged = len(log_lines(there.world))
+
+        status, out, err = called(capfd, "ask", "--target", "handheld", "detect")
+
+        assert (status, out) == (ask.NOT_ASKED, "")
+        assert err.startswith(
+            "emu-atlas-dev: no marker came from handheld, so what arrived on stdout cannot be told apart from what its"
+            " shell prints:\n"
+        )
+        assert err.endswith(
+            f"  {ask.OTHER_DISPATCHER}\n    mise run setup:remote-target handheld player@{_ADDRESS}\n"
+            "  No answer was taken; the question gave none here.\n"
+        )
+        assert "no run started" not in err
+        assert log_lines(there.world)[logged:] == [f"login {_ADDRESS} key"]
 
     def test_a_0_with_shell_output_and_no_marker_names_another_dispatcher(
         self, tmp_path: Path, capfd: pytest.CaptureFixture[str]

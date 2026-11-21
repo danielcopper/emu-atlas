@@ -38,7 +38,7 @@ import tarfile
 import threading
 import traceback
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import IO, Final, Iterator, Literal, NamedTuple, assert_never
 
@@ -851,6 +851,13 @@ class Answer:
     marked: bool
     write_failed: OSError | None = None
     """Why passing the answer on to this process's stdout stopped, where it did."""
+    cut_off: bool = False
+    """Whether this client ended the connection itself, more than :data:`AHEAD_LIMIT` having come with no marker: the
+    status is then ssh's being killed, not the target's."""
+
+
+QUESTION_STATUSES = frozenset(dev_dispatch.STATUSES) - {dev_dispatch.COPY_FAILED}
+"""The dispatcher's own statuses a question can end with: a copy's COPY_FAILED is none of them."""
 
 
 def read_answer(pipe: IO[bytes], sink: Sink) -> Answer:
@@ -887,7 +894,8 @@ class Asking:
 
 
 def ask_there(asking: Asking, tree: str) -> int | None:
-    """Send the request for *tree*: its answer passed on after the run's marker, its stderr as it comes and kept.
+    """Send the request for *tree*: its answer passed on after the run's marker, its stderr held back until the run
+    starts, then passed on as it comes (:class:`HeldSink`), and kept.
 
     ``None`` where the target does not hold *tree*: nothing ran, and the
     dispatcher said so with :data:`dev_dispatch.TREE_ABSENT` alone.
@@ -907,11 +915,13 @@ def ask_there(asking: Asking, tree: str) -> int | None:
         errors = threading.Thread(target=collect, args=(process.stderr, held, said), daemon=True)
         errors.start()
         answer = read_answer(process.stdout, Sink(sys.stdout.fileno(), on_marked=held.release))
-        if answer.ahead:
-            # The run ends with its connection: ssh gone and its output no
-            # longer read, the dispatcher sees its output hang up.
+        if answer.marked and answer.ahead or len(answer.ahead) > AHEAD_LIMIT:
+            # The client stopped reading before the output ended. The run ends
+            # with its connection: ssh gone and its output no longer read, the
+            # dispatcher sees its output hang up.
             process.kill()
             process.stdout.close()
+            answer = replace(answer, cut_off=not answer.marked)
         status = dev_dispatch.status_of(process.wait())
         errors.join()
     except BaseException:
@@ -946,7 +956,7 @@ def judge(status: int, stderr: str, asking: Asking, answer: Answer) -> int:
             f"{asking.not_asked()}"
         )
         return NOT_ASKED
-    if not answer.marked and status in dev_dispatch.STATUSES and status != dev_dispatch.COPY_FAILED:
+    if not answer.marked and status in QUESTION_STATUSES:
         say(dispatcher_status(status, target))
         return status
     if answer.marked:
@@ -960,11 +970,12 @@ def _output_ahead(status: int, stderr: str, asking: Asking, answer: Answer) -> i
     """The status for a request with output on stdout where the run's answer was not: ahead of the marker, or with none.
 
     With the marker, that output is the shell's, and the run is ended unanswered.
-    Without one, a status of the dispatcher's own stands, the output named
-    beside it. A 0 without a marker is a program that ran the request and wrote
-    none, whose output cannot be told apart from the shell's. Any other status
-    is a failure of its own (#818 D8): the output is shown as the shell's, and
-    the failure is told as it is without it.
+    Without one, a status of the dispatcher's own a question can end with
+    stands, the output named beside it. A 0 without a marker is a program that
+    ran the request and wrote none, and so is one whose output this client cut
+    off past :data:`AHEAD_LIMIT`: neither output can be told apart from the
+    shell's. Any other status is a failure of its own (#818 D8): the output is
+    shown as the shell's, and the failure is told as it is without it.
     """
     target, request = asking.target, asking.request
     arrived = shown(answer.ahead.decode("utf-8", "replace"))
@@ -980,11 +991,11 @@ def _output_ahead(status: int, stderr: str, asking: Asking, answer: Answer) -> i
             f"{asking.not_asked()}"
         )
         return NOT_ASKED
-    if status in dev_dispatch.STATUSES:
+    if status in QUESTION_STATUSES:
         say(f"{PREFIX}: {target.name} wrote this on stdout as well:\n{arrived}\n{SHELL_PRINTS}")
         say(dispatcher_status(status, target))
         return status
-    if status != 0:
+    if status != 0 and not answer.cut_off:
         say(f"{PREFIX}: {target.name} wrote this on stdout, and no run started:\n{arrived}\n{SHELL_PRINTS}")
         return judge(status, stderr, asking, Answer(b"", marked=False))
     say(
