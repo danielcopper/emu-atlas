@@ -271,18 +271,21 @@ connection. One that does not ends with `TREE_ABSENT`; the client then sends `co
 the target lacks (see "The copy" above), and asks again, once. A target that holds no such tree even then — another
 client's copy replaced it in between — ends the call with that said, and nothing is copied twice. What the run writes
 after the dispatcher's marker arrives on stdout and its stderr on stderr, byte for byte, and its exit status is the
-command's; what `ssh` and the target write on stderr before the run starts passes on with it. A note the copy writes on
-stderr — an older tree it could not remove — is shown there, and the question is still asked. `ssh` gives up on an
-address that takes no connection within 15 seconds.
+command's. What `ssh` and the target write on stderr before the run starts is held back until it starts, and passed on
+then; where no run starts, it is passed on ahead of the client's message, unless the client recognises a failure before
+the login, whose explanation then stands alone. A note the copy writes on stderr — an older tree it could not remove —
+is shown there, and the question is still asked. `ssh` gives up on an address that takes no connection within 15
+seconds.
 
 **The target's shell.** sshd runs the dispatcher through the user's shell, and that shell's startup files may print. On
 stderr that passes on with the run's own stderr. On stdout it would land in front of the answer, so nothing on stdout
 counts but the copy's lines and what follows the marker at the question. Anything else there — ahead of the marker or of
 a `TREE_ABSENT`, ahead of the copy's lacks line, or beside its id — ends the call without an answer, shows what arrived,
 each line escaped, and asks for the startup files to be silent for a shell without a terminal. Where it came ahead of
-the copy's lacks line, no file was sent; beside its id, the copy went through and nothing was asked. No marker, no lacks
-line or no id, like a question that ends with 8 (see the statuses above), means the dispatcher there is not this
-checkout's: run the setup again.
+the copy's lacks line, no file was sent; beside its id, the copy went through and nothing was asked. No lacks line or no
+id, like a question that ends with 8 (see the statuses above), means the dispatcher there is not this checkout's: run
+the setup again. So does a question that ends with 0 and no marker. One that ends with any other status and no marker is
+told by its own failure, below the shell's output, as it is without that output.
 
 What comes back is printed here and written nowhere, the tree included.
 
@@ -311,8 +314,8 @@ usage error:
 
 An interrupt (Ctrl-C) ends the call with 130 and says where it found it.
 
-Each failure before the login says what to do — at the question, below what `ssh` itself said, which passes on as it
-comes — and ends with **nothing done on the target**, or, after a copy went through, that the question was not asked:
+Each failure before the login says what to do, the client's explanation alone, and ends with **nothing done on the
+target**, or, after a copy went through, that the question was not asked:
 
 | What the call meets                     | What to do                                                                                |
 | --------------------------------------- | ----------------------------------------------------------------------------------------- |

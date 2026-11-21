@@ -37,6 +37,7 @@ import sys
 import tarfile
 import threading
 import traceback
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import IO, Final, Iterator, Literal, NamedTuple, assert_never
@@ -785,11 +786,16 @@ def dispatcher_not_started(status: int, stderr: str, target: Target) -> str | No
 
 
 class Sink:
-    """One of this process's own descriptors, written to until a write fails, then left alone."""
+    """One of this process's own descriptors, written to until a write fails, then left alone.
 
-    def __init__(self, descriptor: int) -> None:
+    *on_marked* runs where :func:`read_answer` finds the run's marker, before
+    anything after it is written.
+    """
+
+    def __init__(self, descriptor: int, on_marked: Callable[[], None] | None = None) -> None:
         self.descriptor = descriptor
         self.failed: OSError | None = None
+        self.on_marked = on_marked
 
     def write(self, data: bytes) -> None:
         if self.failed is not None or not data:
@@ -798,6 +804,43 @@ class Sink:
             write_all(self.descriptor, data)
         except OSError as error:
             self.failed = error
+
+    def marked(self) -> None:
+        if self.on_marked is not None:
+            self.on_marked()
+
+
+class HeldSink(Sink):
+    """A :class:`Sink` that holds what it is given until :meth:`release`, then passes that on and the rest as it comes;
+    or :meth:`drop` forgets what it held.
+
+    The question's stderr goes through one (#818 D7): what ssh and the target
+    write ahead of the run's marker stays back until the run starts, so that
+    where the client recognises a failure before the login, its own
+    explanation stands alone.
+    """
+
+    def __init__(self, descriptor: int) -> None:
+        super().__init__(descriptor)
+        self._lock = threading.Lock()
+        self._held: bytearray | None = bytearray()
+
+    def write(self, data: bytes) -> None:
+        with self._lock:
+            if self._held is not None:
+                self._held.extend(data)
+                return
+            super().write(data)
+
+    def release(self) -> None:
+        with self._lock:
+            held, self._held = self._held, None
+            if held:
+                super().write(bytes(held))
+
+    def drop(self) -> None:
+        with self._lock:
+            self._held = None
 
 
 @dataclass(frozen=True)
@@ -819,6 +862,7 @@ def read_answer(pipe: IO[bytes], sink: Sink) -> Answer:
     ahead, rest = read_up_to(pipe, _MARKER)
     if rest is None:
         return Answer(ahead, marked=False)
+    sink.marked()
     if ahead:
         return Answer(ahead, marked=True)
     sink.write(rest)
@@ -857,11 +901,12 @@ def ask_there(asking: Asking, tree: str) -> int | None:
         after = asking.not_asked() if asking.copied else "  Nothing was contacted."
         raise Refusal(NOT_ASKED, f"{ssh_not_started(error)}\n{after}") from error
     said = bytearray()
+    held = HeldSink(sys.stderr.fileno())
     try:
         assert process.stdout is not None and process.stderr is not None
-        errors = threading.Thread(target=collect, args=(process.stderr, Sink(sys.stderr.fileno()), said), daemon=True)
+        errors = threading.Thread(target=collect, args=(process.stderr, held, said), daemon=True)
         errors.start()
-        answer = read_answer(process.stdout, Sink(sys.stdout.fileno()))
+        answer = read_answer(process.stdout, Sink(sys.stdout.fileno(), on_marked=held.release))
         if answer.ahead:
             # The run ends with its connection: ssh gone and its output no
             # longer read, the dispatcher sees its output hang up.
@@ -871,12 +916,18 @@ def ask_there(asking: Asking, tree: str) -> int | None:
         errors.join()
     except BaseException:
         # The run ends with its connection: ssh gone and both pipes closed, the
-        # dispatcher sees its output hang up.
+        # dispatcher sees its output hang up. What was held back is shown.
         end_connection(process)
+        held.release()
         raise
+    stderr = bytes(said).decode("utf-8", "replace")
+    if not answer.marked and status == setup.SSH_FAILED and not_reached(stderr, asking.target) is not None:
+        held.drop()  # the client's own explanation stands alone (#818 D7)
+    else:
+        held.release()
     if status == dev_dispatch.TREE_ABSENT and not answer.marked and not answer.ahead:
         return None
-    return judge(status, bytes(said).decode("utf-8", "replace"), asking, answer)
+    return judge(status, stderr, asking, answer)
 
 
 def what_runs(request: Request) -> str:
@@ -887,7 +938,7 @@ def judge(status: int, stderr: str, asking: Asking, answer: Answer) -> int:
     """This call's status for a request that ended with *status*: the run's own, the dispatcher's or the client's."""
     target = asking.target
     if answer.ahead:
-        return _output_ahead(status, asking, answer)
+        return _output_ahead(status, stderr, asking, answer)
     if status == OLDER_TREE_GONE and not answer.marked:
         say(
             f"{PREFIX}: {target.name}'s dispatcher ended with {status}, which only one older than this client ends a"
@@ -905,12 +956,15 @@ def judge(status: int, stderr: str, asking: Asking, answer: Answer) -> int:
     return _unmarked(status, stderr, asking)
 
 
-def _output_ahead(status: int, asking: Asking, answer: Answer) -> int:
+def _output_ahead(status: int, stderr: str, asking: Asking, answer: Answer) -> int:
     """The status for a request with output on stdout where the run's answer was not: ahead of the marker, or with none.
 
     With the marker, that output is the shell's, and the run is ended unanswered.
     Without one, a status of the dispatcher's own stands, the output named
-    beside it; any other run's output cannot be told apart from the shell's.
+    beside it. A 0 without a marker is a program that ran the request and wrote
+    none, whose output cannot be told apart from the shell's. Any other status
+    is a failure of its own (#818 D8): the output is shown as the shell's, and
+    the failure is told as it is without it.
     """
     target, request = asking.target, asking.request
     arrived = shown(answer.ahead.decode("utf-8", "replace"))
@@ -930,6 +984,9 @@ def _output_ahead(status: int, asking: Asking, answer: Answer) -> int:
         say(f"{PREFIX}: {target.name} wrote this on stdout as well:\n{arrived}\n{SHELL_PRINTS}")
         say(dispatcher_status(status, target))
         return status
+    if status != 0:
+        say(f"{PREFIX}: {target.name} wrote this on stdout, and no run started:\n{arrived}\n{SHELL_PRINTS}")
+        return judge(status, stderr, asking, Answer(b"", marked=False))
     say(
         f"{PREFIX}: no marker came from {target.name}, so what arrived on stdout cannot be told apart from what its"
         f" shell prints:\n{arrived}\n  {OTHER_DISPATCHER}\n{setup_line(target.name, target.destination)}\n"

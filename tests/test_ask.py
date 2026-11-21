@@ -30,6 +30,7 @@ import signal
 import subprocess
 import sys
 import tarfile
+import threading
 import time
 import tomllib
 import uuid
@@ -176,13 +177,6 @@ def called(capfd: pytest.CaptureFixture[str], mode: ask.Mode, *argv: str) -> tup
 
 def said(out: str) -> dict[str, Any]:
     return json.loads(out)
-
-
-def clients_own(err: str) -> tuple[str, str]:
-    """*err* split ahead of the client's first line: what ssh and the target said, and what the client said."""
-    at = err.find("emu-atlas-dev: ")
-    assert at >= 0, err
-    return err[:at], err[at:]
 
 
 class TestTheTasks:
@@ -682,9 +676,8 @@ class TestTheCopy:
 class TestWhenTheTargetCannotBeUsed:
     """#810: each failure says why and how to repair it, ends with NOT_ASKED, and does nothing on the target."""
 
-    def _not_asked(self, there: There, capfd: pytest.CaptureFixture[str], *, ssh_ran: bool = True) -> str:
-        """The client's own words; where ssh ran, its own, which the question's connection passes on as they come,
-        are ahead of them."""
+    def _not_asked(self, there: There, capfd: pytest.CaptureFixture[str]) -> str:
+        """All the call said: the client's own explanation, what ssh said held back and dropped (#818 D7)."""
         there.save()
         before = snapshot(there.target_home)
 
@@ -693,11 +686,7 @@ class TestWhenTheTargetCannotBeUsed:
         assert status == ask.NOT_ASKED
         assert out == ""
         assert snapshot(there.target_home) == before
-        if not ssh_ran:
-            return err
-        ssh_said, ours = clients_own(err)
-        assert ssh_said
-        return ours
+        return err
 
     def test_no_such_target(self, there: There, capfd: pytest.CaptureFixture[str]) -> None:
         logins = len(ssh_calls(there.world))
@@ -721,7 +710,7 @@ class TestWhenTheTargetCannotBeUsed:
         empty.mkdir()
         monkeypatch.setenv("PATH", str(empty))
 
-        err = self._not_asked(there, capfd, ssh_ran=False)
+        err = self._not_asked(there, capfd)
 
         assert err == (
             "emu-atlas-dev: asking a target needs ssh, and this machine has none on its PATH.\n"
@@ -1055,7 +1044,6 @@ class TestBetweenTheCopyAndTheQuestion:
         assert status == ask.NOT_ASKED
         assert out == ""
         assert err == (
-            f"ssh: connect to host {_ADDRESS} port 22: Connection refused\n"
             f"emu-atlas-dev: no SSH server answers at {_ADDRESS} port 22, where handheld's entry says it is.\n"
             "  handheld may be asleep: wake it and ask again. Or it has a new address: run the setup with that one:\n"
             "    mise run setup:remote-target handheld player@<new address>\n"
@@ -1291,9 +1279,7 @@ class TestTwoTargets:
         code, _, err = called(capfd, "ask", "--target", "handheld", "detect")
 
         assert code == ask.NOT_ASKED
-        assert clients_own(err)[1].startswith(
-            f"emu-atlas-dev: no SSH server answers at {_ADDRESS} port 22, where handheld's entry"
-        )
+        assert err.startswith(f"emu-atlas-dev: no SSH server answers at {_ADDRESS} port 22, where handheld's entry")
 
 
 def a_target_for(destination: setup_remote_target.Destination, tmp_path: Path) -> ask.Target:
@@ -1304,6 +1290,144 @@ _HANDHELD = setup_remote_target.Destination(
     text="handheld", user="player", hostname=_ADDRESS, port="22", proxy_jump=None, proxy_command=None
 )
 _TREE_ID = "tree-" + hashlib.sha256(b"a manifest").hexdigest()
+
+
+class TestTheQuestionsStderr:
+    """#818 D7: what ssh and the target write on stderr ahead of the run's marker is held back until the run starts."""
+
+    def test_a_failure_it_does_not_recognise_passes_on_what_ssh_said(
+        self, there: There, capfd: pytest.CaptureFixture[str]
+    ) -> None:
+        there.world.fail_with = "ssh: a failure no pattern knows"
+        there.save()
+
+        status, out, err = called(capfd, "ask", "--target", "handheld", "detect")
+
+        assert (status, out) == (ask.BROKE_OFF, "")
+        assert err == (
+            "ssh: a failure no pattern knows\n"
+            "emu-atlas-dev: the question on handheld ended with 255 before its run started: the connection broke, or"
+            " the dispatcher or its sandbox there failed to start; what ssh and the target said is above.\n"
+        )
+
+    def test_what_the_targets_shell_writes_on_stderr_reaches_the_user(
+        self, there: There, capfd: pytest.CaptureFixture[str]
+    ) -> None:
+        """Held back ahead of the marker, and passed on once the run starts, ahead of the run's own stderr."""
+        assert called(capfd, "ask", "--target", "handheld", "detect")[0] == 0  # the target holds the tree
+        there.target().login_noise = "Welcome to the target.\n"
+        there.save()
+
+        status, _, err = called(capfd, "ask", "--target", "handheld", "detect")
+
+        assert (status, err) == (0, "Welcome to the target.\natlas said this on stderr\n")
+
+    def test_the_stderr_of_a_run_that_started_streams_as_it_comes(
+        self, there: There, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """The probe waits until its first stderr line has reached this process's stderr: held to the end, it would
+        wait in vain."""
+        go = tmp_path / "go"
+        write_tree(
+            there.tree,
+            {
+                "scripts/probes/waits.py": (
+                    "import os, sys, time\n"
+                    "sys.stderr.write('progress\\n'); sys.stderr.flush()\n"
+                    "for _ in range(200):\n"
+                    "    if os.path.exists(sys.argv[1]):\n"
+                    "        print('it came'); sys.exit(0)\n"
+                    "    time.sleep(0.05)\n"
+                    "print('it never came'); sys.exit(1)\n"
+                )
+            },
+        )
+        reading, writing = os.pipe()
+        seen = bytearray()
+
+        def watch() -> None:
+            for chunk in iter(lambda: os.read(reading, 4096), b""):
+                seen.extend(chunk)
+                if b"progress\n" in seen:
+                    go.touch()
+
+        watcher = threading.Thread(target=watch, daemon=True)
+        watcher.start()
+        stderr = os.fdopen(writing, "w", buffering=1)
+        monkeypatch.setattr(ask.sys, "stderr", stderr)
+        try:
+            status = ask.main("probe", ["--target", "handheld", "waits.py", str(go)])
+        finally:
+            stderr.close()
+            watcher.join(10)
+            os.close(reading)
+
+        assert status == 0, bytes(seen)
+        assert bytes(seen) == b"progress\n"
+
+
+class TestShellOutputBeforeAFailure:
+    """#818 D8: output on stdout ahead of the marker names another dispatcher only for a 0; any other status is the
+    failure's own, told as it is without that output."""
+
+    NOISE = "    'Welcome back.'"
+
+    @pytest.mark.parametrize(
+        ("status", "stderr", "then", "ends_with"),
+        [
+            (
+                255,
+                f"ssh: connect to host {_ADDRESS} port 22: Connection refused\n",
+                ask.NOT_ASKED,
+                f"emu-atlas-dev: no SSH server answers at {_ADDRESS} port 22, where handheld's entry says it is.\n",
+            ),
+            (
+                127,
+                "sh: 1: /usr/bin/python3: not found\n",
+                ask.NOT_ASKED,
+                "emu-atlas-dev: handheld could not start the interpreter its dispatcher runs on (the shell there ended"
+                " with 127)",
+            ),
+            (
+                1,
+                "",
+                ask.BROKE_OFF,
+                "emu-atlas-dev: the question on handheld ended with 1 before its run started: the connection broke, or"
+                " the dispatcher or its sandbox there failed to start; what ssh and the target said is above.",
+            ),
+        ],
+        ids=["ssh's own failure", "no interpreter", "a dispatcher that broke"],
+    )
+    def test_a_failure_with_shell_output_gives_its_own_reason_and_status(
+        self,
+        tmp_path: Path,
+        capfd: pytest.CaptureFixture[str],
+        status: int,
+        stderr: str,
+        then: int,
+        ends_with: str,
+    ) -> None:
+        asking = ask.Asking(ask.Request("ask", "handheld", ("detect",)), a_target_for(_HANDHELD, tmp_path), copied=False)
+
+        code = ask.judge(status, stderr, asking, ask.Answer(b"Welcome back.\n", marked=False))
+
+        err = capfd.readouterr().err
+        assert code == then
+        assert err.startswith(
+            f"emu-atlas-dev: handheld wrote this on stdout, and no run started:\n{self.NOISE}\n{ask.SHELL_PRINTS}\n"
+        )
+        assert ends_with in err
+        assert ask.OTHER_DISPATCHER not in err
+
+    def test_a_0_with_shell_output_and_no_marker_names_another_dispatcher(
+        self, tmp_path: Path, capfd: pytest.CaptureFixture[str]
+    ) -> None:
+        asking = ask.Asking(ask.Request("ask", "handheld", ("detect",)), a_target_for(_HANDHELD, tmp_path), copied=False)
+
+        code = ask.judge(0, "", asking, ask.Answer(b"Welcome back.\n", marked=False))
+
+        assert code == ask.NOT_ASKED
+        assert ask.OTHER_DISPATCHER in capfd.readouterr().err
 
 
 class TestTheAnswer:
