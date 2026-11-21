@@ -1427,7 +1427,12 @@ class TestShellOutputBeforeAFailure:
         code = ask.judge(0, "", asking, ask.Answer(b"Welcome back.\n", marked=False))
 
         assert code == ask.NOT_ASKED
-        assert ask.OTHER_DISPATCHER in capfd.readouterr().err
+        assert capfd.readouterr().err == (
+            "emu-atlas-dev: no marker came from handheld, so what arrived on stdout cannot be told apart from what its"
+            f" shell prints:\n{self.NOISE}\n"
+            f"  {ask.OTHER_DISPATCHER}\n    mise run setup:remote-target handheld player@{_ADDRESS}\n"
+            "  No answer was taken; the question gave none here.\n"
+        )
 
 
 class TestTheAnswer:
@@ -1810,6 +1815,7 @@ class TestWhatIsCaughtBeforeContact:
         status, out, err = called(capfd, "ask", "--target", "handheld", "detect")
 
         assert (status, out) == (ask.NOT_ASKED, "")
+        assert err.startswith(f"/bin/sh: 1: {there.target_home / 'no-python3'}: not found\n")  # what ssh said, above
         assert err.endswith(
             "emu-atlas-dev: handheld could not start the interpreter its dispatcher runs on (the shell there ended"
             f" with 127): {sys.executable} may be gone or not executable, after a system update say; what ssh said is"
