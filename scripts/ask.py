@@ -852,8 +852,8 @@ class Answer:
     write_failed: OSError | None = None
     """Why passing the answer on to this process's stdout stopped, where it did."""
     cut_off: bool = False
-    """Whether this client ended the connection itself, more than :data:`AHEAD_LIMIT` having come with no marker: the
-    status is then ssh's being killed, not the target's."""
+    """Whether more than :data:`AHEAD_LIMIT` came with no marker, so that this client stopped reading and ended the
+    connection: the status is then mostly ssh's being killed, and is not taken for the target's failure."""
 
 
 QUESTION_STATUSES = frozenset(dev_dispatch.STATUSES) - {dev_dispatch.COPY_FAILED}
