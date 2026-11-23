@@ -28,14 +28,12 @@ from __future__ import annotations
 import base64
 import errno
 import hashlib
-import io
 import json
 import os
 import re
 import shlex
 import subprocess
 import sys
-import tarfile
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
@@ -68,7 +66,9 @@ from tests.remote_target_suite import (
     REPO,
     ROOT,
     isolated_module,
+    manifest_line,
     snapshot,
+    tree_id,
 )
 
 pytestmark = pytest.mark.usefixtures(isolated_module.__name__)
@@ -1353,12 +1353,7 @@ class TestTheWrittenEntryAlone:
         code, _, err = remote.setup(capsys, "handheld", f"player@{_ADDRESS}")
         assert code == 0, err
         config = config_home / "emu-atlas-dev" / "ssh_config"
-        stream = io.BytesIO()
-        with tarfile.open(fileobj=stream, mode="w") as archive:
-            manifest = f'{{"requires_python": "{FLOOR}"}}'.encode()
-            member = tarfile.TarInfo("tree.json")
-            member.size = len(manifest)
-            archive.addfile(member, io.BytesIO(manifest))
+        manifest = manifest_line({}, floor=FLOOR)  # a tree of no files: the copy lacks nothing and asks for none
         logged = len(log_lines(remote.world))
 
         def ssh(request: str, stdin: bytes = b"") -> subprocess.CompletedProcess[bytes]:
@@ -1369,10 +1364,11 @@ class TestTheWrittenEntryAlone:
                 check=False,
             )
 
-        copied = ssh("copy", stream.getvalue())
+        copied = ssh(f"copy {tree_id(manifest)}", manifest + b"\n")
         refused = ssh("sh")
 
         assert copied.returncode == 0, copied.stderr
+        assert copied.stdout == f"{dev_dispatch.LACKS}\n{tree_id(manifest)}\n".encode()
         assert (remote.root / "current" / "tree.json").read_bytes() == manifest
         assert refused.returncode == 3
         assert refused.stderr.decode().endswith(f"emu-atlas-dev: refused: sh\n{dev_dispatch.MAY}\n")

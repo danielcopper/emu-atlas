@@ -10,7 +10,9 @@ with this tree's atlas, the way the dispatcher runs them on a target. With
 --target <name>, a target set up with ``mise run setup:remote-target``, this
 tree's atlas/ and scripts/probes/ are copied there as they stand and the
 question or the script runs there, in the dispatcher's sandbox; its answer on
-stdout, its stderr and its exit status come back here unchanged.
+stdout, its stderr and its exit status come back here unchanged. A target that
+holds this tree already, named by the digest of its manifest, is asked in one
+connection; one that does not gets a copy of the files it lacks first.
 
 --target is read only as the first argument, so a question's own --target
 (``save-portability --target <label>``) stays the question's. What is copied,
@@ -21,21 +23,24 @@ docs/remote-target.md, "Asking a target".
 from __future__ import annotations
 
 import base64
+import contextlib
+import hashlib
 import io
 import json
 import os
 import re
 import select
 import signal
+import stat
 import subprocess
 import sys
 import tarfile
 import threading
-import time
 import traceback
-from dataclasses import dataclass
+from collections.abc import Callable
+from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import IO, Final, Literal, NamedTuple, assert_never
+from typing import IO, Final, Iterator, Literal, NamedTuple, assert_never
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -56,9 +61,6 @@ COPIED = ("atlas", dev_dispatch.PROBES)
 
 _COPIED_ROOTS = tuple(Path(top).as_posix() for top in COPIED)
 
-SKIPPED_DIRECTORY = "__pycache__"
-SKIPPED_SUFFIX = ".pyc"
-
 # This client's own exit statuses. A usage error ends with 2, as atlas's own
 # does, before anything is contacted; the client's other failures end with
 # statuses neither atlas (0, 2) nor the dispatcher (dev_dispatch.STATUSES)
@@ -72,9 +74,13 @@ BROKE_OFF = 7
 # device that is asleep answers no connection at all.
 CONNECT_TIMEOUT = 15
 
-# How much may arrive on stdout ahead of the run's marker before the client
-# stops waiting for it: the dispatcher writes nothing there before it.
+# How much may arrive on stdout ahead of the run's marker, or of the copy's
+# lacks line, before the client stops waiting for it: the dispatcher writes
+# nothing there before either.
 AHEAD_LIMIT = 64 * 1024
+
+CHUNK = 64 * 1024
+"""The most one read takes off a pipe of the connection."""
 
 Mode = Literal["ask", "probe"]
 """Which task called: ``mise run ask`` or ``mise run probe``."""
@@ -100,10 +106,21 @@ SHELL_PRINTS = (
 COPY_CUT_OFF = "{target}'s current tree is this copy whole, or the one before it. Nothing was asked."
 COPY_WENT_THROUGH = "The copy went through; nothing was asked."
 
+OLDER_TREE_GONE = 8
+"""What a dispatcher set up after the run's marker line but before trees were named by their content ends a question
+with for a tree it does not hold: every first question this client puts to one, since that dispatcher names its trees
+otherwise. One from before the marker line refuses the request (3) instead. Either way the setup run again installs
+this checkout's dispatcher, which never ends with 8."""
+
+COPY_GZIP_LEVEL = 1
+"""How hard the files a copy sends are compressed: gzip's fastest level, which takes most of the size off at little
+cost."""
+
 # What the target's interpreter says for a dispatcher that is not there.
 _NO_DISPATCHER = re.compile(f"can't open file '[^']*/{re.escape(DISPATCHER_NAME)}'")
 _TREE_AT_THE_END = re.compile(f"({dev_dispatch.TREE_ID.pattern})\n\\Z", re.ASCII)
 _MARKER = (dev_dispatch.RUN_MARKER + "\n").encode("ascii")
+_LACKS = dev_dispatch.LACKS.encode("ascii")
 
 PhaseName = Literal[
     "before anything was contacted",
@@ -255,10 +272,11 @@ def run_here(request: Request) -> int:
 
 
 def copy_members(tree: Path) -> tuple[list[Path], list[Path]]:
-    """What a copy of *tree* carries, in a stable order, and what it leaves out for being no file or directory.
+    """The files a copy of *tree* carries, and what it leaves out for being no file or directory.
 
-    Every file and directory under :data:`COPIED`, parents before what they
-    hold, without ``__pycache__`` and ``*.pyc``; links are not followed.
+    Every file under :data:`COPIED`, without the bytecode the dispatcher
+    compiles (``__pycache__`` and ``*.pyc``); links are not followed, and a
+    link is left out like anything else that is no file or directory.
     """
     members: list[Path] = []
     left_out: list[Path] = []
@@ -269,23 +287,23 @@ def copy_members(tree: Path) -> tuple[list[Path], list[Path]]:
 
 
 def _visit(path: Path, members: list[Path], left_out: list[Path]) -> None:
-    """*path* and what it holds into *members*, or into *left_out* where it is no file or directory."""
-    if path.name == SKIPPED_DIRECTORY or path.name.endswith(SKIPPED_SUFFIX):
+    """The files *path* is or holds into *members*, and what is no file or directory into *left_out*."""
+    if path.name == dev_dispatch.CACHE_DIRECTORY or path.name.endswith(dev_dispatch.COMPILED_SUFFIX):
         return
     if path.is_symlink() or not (path.is_dir() or path.is_file()):
         left_out.append(path)
-        return
-    members.append(path)
-    if path.is_dir():
-        for child in sorted(path.iterdir(), key=lambda child: child.name):
+    elif path.is_dir():
+        for child in path.iterdir():
             _visit(child, members, left_out)
+    else:
+        members.append(path)
 
 
 def member_name(tree: Path, path: Path) -> str:
-    """*path*'s name in a copy of *tree*: relative to it, inside one of :data:`COPIED`, with no ``..`` in it.
+    """*path*'s path in the manifest of *tree*: relative to it, inside one of :data:`COPIED`, with no ``..`` in it.
 
-    The walk of :func:`copy_members` follows no link, so every name it gives
-    holds already; this says so where the archive is written.
+    The walk of :func:`copy_members` follows no link, so every path it gives
+    holds already; this says so where the manifest is written.
     """
     name = path.relative_to(tree).as_posix()
     inside = any(name == root or name.startswith(f"{root}/") for root in _COPIED_ROOTS)
@@ -294,33 +312,54 @@ def member_name(tree: Path, path: Path) -> str:
     return name
 
 
-def build_copy(tree: Path, floor: str) -> bytes:
-    """The uncompressed tar stream a ``copy`` sends: :func:`copy_members` of *tree*, then the manifest last.
+@dataclass(frozen=True)
+class Copy:
+    """What a copy of a tree carries: its manifest as sent, and the content of each of its files by its sha256."""
 
-    The manifest states *floor*, the Python the tree needs. Owners are left
-    out: the target unpacks as its own user.
+    manifest: bytes
+    contents: dict[str, bytes]
+
+    @property
+    def tree_id(self) -> str:
+        """The tree's id: ``tree-`` and the sha256 of its manifest, so the same content has the same id anywhere."""
+        return dev_dispatch.tree_id_of(self.manifest)
+
+    def archive(self, hashes: list[str]) -> bytes:
+        """The gzip tar of the files *hashes* names, each member named by its sha256: what a copy sends of them."""
+        buffer = io.BytesIO()
+        with tarfile.open(fileobj=buffer, mode="w:gz", compresslevel=COPY_GZIP_LEVEL) as archive:
+            for digest in hashes:
+                data = self.contents[digest]
+                info = tarfile.TarInfo(digest)
+                info.size = len(data)
+                info.mode = 0o600
+                archive.addfile(info, io.BytesIO(data))  # NOSONAR S6096: writes, never unpacks; names are hashes
+        return buffer.getvalue()
+
+
+def build_copy(tree: Path, floor: str) -> Copy:
+    """The copy of *tree*: the manifest of :func:`copy_members`'s files, and their contents.
+
+    The manifest is one line of compact JSON with sorted keys, so the same
+    files give the same bytes and the same id: ``requires_python``, *floor*,
+    and ``files``, each file's path, sha256 and whether it is executable,
+    sorted by path. Directories are implied by the files they hold.
     """
     members, left_out = copy_members(tree)
     for path in left_out:
         say(f"{PREFIX}: not copied, being no file or directory: {path.relative_to(tree)}")
-    buffer = io.BytesIO()
-    with tarfile.open(fileobj=buffer, mode="w", format=tarfile.PAX_FORMAT) as archive:
-        for path in members:
-            info = archive.gettarinfo(str(path), arcname=member_name(tree, path))
-            info.uid = info.gid = 0
-            info.uname = info.gname = ""
-            if info.isreg():
-                with open(path, "rb") as handle:
-                    archive.addfile(info, handle)  # NOSONAR S6096: writes, never unpacks; names from member_name
-            else:
-                archive.addfile(info)  # NOSONAR S6096: writes, never unpacks; names from member_name
-        manifest = json.dumps({"requires_python": floor}).encode("utf-8")
-        info = tarfile.TarInfo(dev_dispatch.MANIFEST)
-        info.size = len(manifest)
-        info.mode = 0o644
-        info.mtime = int(time.time())
-        archive.addfile(info, io.BytesIO(manifest))
-    return buffer.getvalue()
+    files: list[dict[str, object]] = []
+    contents: dict[str, bytes] = {}
+    for path in members:
+        name = member_name(tree, path)
+        data = path.read_bytes()
+        digest = hashlib.sha256(data).hexdigest()
+        contents[digest] = data
+        executable = bool(path.stat().st_mode & stat.S_IXUSR)
+        files.append({"path": name, "sha256": digest, "executable": executable})
+    files.sort(key=lambda file: str(file["path"]))
+    manifest = json.dumps({"files": files, "requires_python": floor}, sort_keys=True, separators=(",", ":"))
+    return Copy(manifest.encode("ascii"), contents)
 
 
 def word(arguments: tuple[str, ...]) -> str:
@@ -474,13 +513,6 @@ def ssh_not_started(error: OSError) -> str:
     return f"{PREFIX}: ssh could not be started: {setup.reason(error)}."
 
 
-def run_ssh(command: list[str], stdin: bytes | None) -> subprocess.CompletedProcess[bytes]:
-    try:
-        return subprocess.run(command, input=stdin, capture_output=True, check=False)
-    except OSError as error:
-        raise Refusal(NOT_ASKED, f"{ssh_not_started(error)}\n  Nothing was contacted.") from error
-
-
 def write_all(descriptor: int, data: bytes) -> None:
     """All of *data* on *descriptor*: a write that took part of it, or found a full non-blocking pipe, goes on."""
     view = memoryview(data)
@@ -505,11 +537,12 @@ def say(message: str) -> None:
         pass
 
 
-def dispatcher_status(status: int, name: str) -> str:
+def dispatcher_status(status: int, target: Target) -> str:
     """The line this client adds below a status of the dispatcher's own, which ran nothing of the request's."""
+    name = target.name
     line = f"{PREFIX}: that was {name}'s dispatcher ({status}, {dev_dispatch.STATUSES[status]}), not atlas or a probe."
     if status == dev_dispatch.REFUSED:
-        line += f"\n  {OTHER_DISPATCHER}\n{setup_line(name, None)}"
+        line += f"\n  {OTHER_DISPATCHER}\n{setup_line(name, target.destination)}"
     return line
 
 
@@ -521,27 +554,27 @@ def shown(text: str) -> str:
 
 
 def tree_named(stdout: bytes, target: Target) -> str:
-    """The id of the tree the copy made, the line its dispatcher answers with on stdout and the last there.
+    """The id of the tree the copy made: the line its dispatcher writes on stdout after the lacks line, and the last.
 
-    Anything ahead of it, glued onto it or after it is refused before a
-    question is asked: it is what the target's shell prints for a command run
-    without a terminal, and it would land in front of every answer. No id at
-    all is what a dispatcher older than this client answers.
+    Anything ahead of it, glued onto it or after it is refused before the
+    question is asked again: it is what the target's shell prints for a command
+    run without a terminal, and it would land in front of every answer. No id
+    at all is what a program other than this checkout's dispatcher answers.
     """
     text = stdout.decode("utf-8", "replace")
     at_the_end = _TREE_AT_THE_END.search(text)
     if at_the_end is not None and at_the_end.start() == 0:
         return at_the_end.group(1)
     went_through = f"  {COPY_WENT_THROUGH}"
-    older = f"  {OLDER_DISPATCHER}\n{setup_line(target.name, target.destination)}"
+    other = f"  {OTHER_DISPATCHER}\n{setup_line(target.name, target.destination)}"
     if not text:
         raise Refusal(
             NOT_ASKED,
             f"{PREFIX}: {target.name}'s dispatcher took the copy but named no tree to ask from.\n"
-            f"{older}\n{went_through}",
+            f"{other}\n{went_through}",
         )
     arrived = text if at_the_end is None else text[: at_the_end.start()]
-    named_none = "" if dev_dispatch.TREE_ID.search(text) else f"\n  It named no tree either.\n{older}"
+    named_none = "" if dev_dispatch.TREE_ID.search(text) else f"\n  It named no tree either.\n{other}"
     raise Refusal(
         NOT_ASKED,
         f"{PREFIX}: {target.name} wrote this on stdout beside its dispatcher's answer to the copy:\n{shown(arrived)}\n"
@@ -549,48 +582,179 @@ def tree_named(stdout: bytes, target: Target) -> str:
     )
 
 
-def copy_tree(target: Target, phase: Phase) -> str:
-    """Send the copy; the id of the tree it made, else a :class:`Refusal` with the status this call ends with."""
+class Sent(NamedTuple):
+    """What came back from a copy's one connection."""
+
+    ahead: bytes
+    """What arrived on stdout ahead of the dispatcher's lacks line."""
+    lacking: list[str] | None
+    """The sha256 of each file the lacks line named; ``None`` where no such line came."""
+    after: bytes
+    """What arrived on stdout after the lacks line: the tree's id."""
+    status: int
+    stderr: bytes
+
+
+def chunks(pipe: IO[bytes]) -> Iterator[bytes]:
+    """What arrives on *pipe*, as it arrives, up to its end; read off its descriptor, so nothing is buffered ahead."""
+    return iter(lambda: os.read(pipe.fileno(), CHUNK), b"")
+
+
+def collect(pipe: IO[bytes], sink: Sink | None, kept: bytearray) -> None:
+    """Keep all of *pipe* in *kept*, passing it on to *sink*, where there is one, as it arrives."""
+    for chunk in chunks(pipe):
+        if sink is not None:
+            sink.write(chunk)
+        kept.extend(chunk)
+
+
+def read_up_to(pipe: IO[bytes], marker: bytes) -> tuple[bytes, bytes | None]:
+    """Read *pipe* until *marker* arrives: what came ahead of it, and what came after it so far.
+
+    ``None`` after it where the stream ends first or more than
+    :data:`AHEAD_LIMIT` arrives without it.
+    """
+    buffer = b""
+    while marker not in buffer:
+        if len(buffer) > AHEAD_LIMIT:
+            return buffer, None
+        chunk = os.read(pipe.fileno(), CHUNK)
+        if not chunk:
+            return buffer, None
+        buffer += chunk
+    ahead, _, after = buffer.partition(marker)
+    return ahead, after
+
+
+def end_connection(process: subprocess.Popen[bytes]) -> None:
+    """End *process*, ssh, and close every pipe to it: the dispatcher on the target sees its connection go."""
+    process.kill()
+    process.wait()
+    for pipe in (process.stdin, process.stdout, process.stderr):
+        if pipe is not None:
+            with contextlib.suppress(OSError):
+                pipe.close()
+
+
+def send(pipe: IO[bytes], data: bytes, *, close: bool) -> threading.Thread:
+    """Write *data* to *pipe* in a thread of its own, then close it where *close*: what reads the other pipes meanwhile
+    never waits on the write, nor the write on them."""
+
+    def write() -> None:
+        try:
+            pipe.write(data)
+            pipe.flush()
+        except (OSError, ValueError):
+            pass  # the dispatcher stopped reading: its status says why
+        finally:
+            if close:
+                with contextlib.suppress(OSError, ValueError):
+                    pipe.close()
+
+    thread = threading.Thread(target=write, daemon=True)
+    thread.start()
+    return thread
+
+
+def read_lacking(pipe: IO[bytes]) -> tuple[bytes, list[str] | None, bytes]:
+    """Read *pipe* through the copy's lacks line: what came ahead of it, the sha256 it names, and what came after it.
+
+    No line at all, ``None``, where the stream ends first or more than
+    :data:`AHEAD_LIMIT` arrives ahead of one.
+    """
+    ahead, after = read_up_to(pipe, _LACKS)
+    if after is None:
+        return ahead, None, b""
+    while b"\n" not in after:
+        chunk = os.read(pipe.fileno(), CHUNK)
+        if not chunk:
+            return ahead, None, b""
+        after += chunk
+    line, _, rest = after.partition(b"\n")
+    return ahead, line.decode("ascii", "replace").split(), rest
+
+
+def exchange(target: Target, copy: Copy) -> Sent:
+    """The copy's one connection: the manifest out, the lacks line back, the files it names out, the tree's id back.
+
+    Where anything arrives ahead of the lacks line, or none comes, no file is
+    sent; the dispatcher then finds the stream closed.
+    """
     try:
-        stream = build_copy(TREE, setup.python_floor())
+        process = subprocess.Popen(
+            target.ssh(["copy", copy.tree_id]), stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        )
     except OSError as error:
-        raise Refusal(
-            NOT_ASKED, f"{PREFIX}: the copy could not be built here: {error}. Nothing was contacted."
-        ) from error
+        raise Refusal(NOT_ASKED, f"{ssh_not_started(error)}\n  Nothing was done on {target.name}.") from error
+    said = bytearray()
+    try:
+        assert process.stdin is not None and process.stdout is not None and process.stderr is not None
+        errors = threading.Thread(target=collect, args=(process.stderr, None, said), daemon=True)
+        errors.start()
+        manifest_sent = send(process.stdin, copy.manifest + b"\n", close=False)
+        ahead, lacking, after = read_lacking(process.stdout)
+        manifest_sent.join()
+        wanted = [] if ahead or lacking is None else [digest for digest in lacking if digest in copy.contents]
+        files_sent = send(process.stdin, copy.archive(wanted) if wanted else b"", close=True)
+        after += b"".join(chunks(process.stdout))
+        status = dev_dispatch.status_of(process.wait())
+        files_sent.join()
+        errors.join()
+    except BaseException:
+        # The copy ends with its connection: the dispatcher finds its stream
+        # cut off and leaves the current tree as it was.
+        end_connection(process)
+        raise
+    return Sent(ahead, lacking, after, status, bytes(said))
+
+
+def copy_tree(target: Target, phase: Phase, copy: Copy) -> None:
+    """Copy to *target* the files of *copy* it lacks, in one connection; else a :class:`Refusal` with the status this
+    call ends with."""
     phase.now = COPYING
-    copied = run_ssh(target.ssh(["copy"]), stream)
-    status = dev_dispatch.status_of(copied.returncode)
-    if status == 0:
+    sent = exchange(target, copy)
+    name = target.name
+    if sent.ahead:
+        pass_on(sent.stderr)
+        raise Refusal(
+            NOT_ASKED,
+            f"{PREFIX}: {name} wrote this on stdout ahead of its dispatcher's answer to the copy:\n"
+            f"{shown(sent.ahead.decode('utf-8', 'replace'))}\n{SHELL_PRINTS}\n"
+            f"  No file was sent. {COPY_CUT_OFF.format(target=name)}",
+        )
+    if sent.status == 0 and sent.lacking is not None:
         phase.now = AFTER_COPY
-        pass_on(copied.stderr)
-        return tree_named(copied.stdout, target)
-    if status == setup.SSH_FAILED:
-        message = not_reached(copied.stderr.decode("utf-8", "replace"), target)
+        pass_on(sent.stderr)
+        named = tree_named(sent.after, target)
+        if named != copy.tree_id:
+            raise Refusal(
+                NOT_ASKED,
+                f"{PREFIX}: {name}'s dispatcher answered the copy of {copy.tree_id} with another tree, {named}.\n"
+                f"  {OTHER_DISPATCHER}\n{setup_line(name, target.destination)}\n  {COPY_WENT_THROUGH}",
+            )
+        return
+    stderr = sent.stderr.decode("utf-8", "replace")
+    if sent.status == setup.SSH_FAILED and sent.lacking is None:
+        message = not_reached(stderr, target)
         if message is not None:
-            raise Refusal(NOT_ASKED, f"{message}\n  Nothing was done on {target.name}.")
-    pass_on(copied.stderr)
-    raise copy_failed(status, copied.stderr.decode("utf-8", "replace"), target)
+            raise Refusal(NOT_ASKED, f"{message}\n  Nothing was done on {name}.")
+    pass_on(sent.stderr)
+    if sent.status == 0:
+        raise Refusal(
+            NOT_ASKED,
+            f"{PREFIX}: {name}'s dispatcher answered the copy without naming the files it lacks.\n"
+            f"  {OTHER_DISPATCHER}\n{setup_line(name, target.destination)}\n  No file was sent; nothing was asked.",
+        )
+    raise copy_failed(sent.status, stderr, target)
 
 
 def copy_failed(status: int, stderr: str, target: Target) -> Refusal:
     """The refusal for a copy that ended with *status*, *stderr* said, and is no failure before the login."""
     if status in dev_dispatch.STATUSES:
-        return Refusal(status, dispatcher_status(status, target.name) + "\n  Nothing was asked.")
-    line = setup_line(target.name, target.destination)
-    repair = f"  Run the setup again:\n{line}\n  Nothing was done on {target.name}."
-    if status in (setup.NOT_FOUND, NOT_EXECUTABLE):
-        return Refusal(
-            NOT_ASKED,
-            f"{PREFIX}: {target.name} could not start the interpreter its dispatcher runs on (the shell there ended"
-            f" with {status}): {setup.TARGET_PYTHON} may be gone or not executable, after a system update say; what"
-            f" ssh said is above.\n{repair}",
-        )
-    if _NO_DISPATCHER.search(stderr):
-        return Refusal(
-            NOT_ASKED,
-            f"{PREFIX}: {target.name}'s dispatcher is gone: its interpreter could not open it; what it said is"
-            f" above.\n{repair}",
-        )
+        return Refusal(status, dispatcher_status(status, target) + "\n  Nothing was asked.")
+    unstarted = dispatcher_not_started(status, stderr, target)
+    if unstarted is not None:
+        return Refusal(NOT_ASKED, f"{unstarted}\n  Nothing was done on {target.name}.")
     return Refusal(
         BROKE_OFF,
         f"{PREFIX}: the copy to {target.name} ended with {status} without a word from its dispatcher — the connection"
@@ -603,12 +767,35 @@ NOT_EXECUTABLE = 126
 """What a POSIX shell ends with for a command it found but could not run."""
 
 
-class Sink:
-    """One of this process's own descriptors, written to until a write fails, then left alone."""
+def dispatcher_not_started(status: int, stderr: str, target: Target) -> str | None:
+    """What to say for a request whose dispatcher never started — its interpreter or the dispatcher itself gone —
+    and how to repair it; ``None`` for any other ending."""
+    repair = f"  Run the setup again:\n{setup_line(target.name, target.destination)}"
+    if status in (setup.NOT_FOUND, NOT_EXECUTABLE):
+        return (
+            f"{PREFIX}: {target.name} could not start the interpreter its dispatcher runs on (the shell there ended"
+            f" with {status}): {setup.TARGET_PYTHON} may be gone or not executable, after a system update say; what"
+            f" ssh said is above.\n{repair}"
+        )
+    if _NO_DISPATCHER.search(stderr):
+        return (
+            f"{PREFIX}: {target.name}'s dispatcher is gone: its interpreter could not open it; what it said is"
+            f" above.\n{repair}"
+        )
+    return None
 
-    def __init__(self, descriptor: int) -> None:
+
+class Sink:
+    """One of this process's own descriptors, written to until a write fails, then left alone.
+
+    *on_marked* runs where :func:`read_answer` finds the run's marker, before
+    anything after it is written.
+    """
+
+    def __init__(self, descriptor: int, on_marked: Callable[[], None] | None = None) -> None:
         self.descriptor = descriptor
         self.failed: OSError | None = None
+        self.on_marked = on_marked
 
     def write(self, data: bytes) -> None:
         if self.failed is not None or not data:
@@ -617,6 +804,43 @@ class Sink:
             write_all(self.descriptor, data)
         except OSError as error:
             self.failed = error
+
+    def marked(self) -> None:
+        if self.on_marked is not None:
+            self.on_marked()
+
+
+class HeldSink(Sink):
+    """A :class:`Sink` that holds what it is given until :meth:`release`, then passes that on and the rest as it comes;
+    or :meth:`drop` forgets what it held.
+
+    The question's stderr goes through one (#818 D7): what ssh and the target
+    write ahead of the run's marker stays back until the run starts, so that
+    where the client recognises a failure before the login, its own
+    explanation stands alone.
+    """
+
+    def __init__(self, descriptor: int) -> None:
+        super().__init__(descriptor)
+        self._lock = threading.Lock()
+        self._held: bytearray | None = bytearray()
+
+    def write(self, data: bytes) -> None:
+        with self._lock:
+            if self._held is not None:
+                self._held.extend(data)
+                return
+            super().write(data)
+
+    def release(self) -> None:
+        with self._lock:
+            held, self._held = self._held, None
+            if held:
+                super().write(bytes(held))
+
+    def drop(self) -> None:
+        with self._lock:
+            self._held = None
 
 
 @dataclass(frozen=True)
@@ -627,13 +851,13 @@ class Answer:
     marked: bool
     write_failed: OSError | None = None
     """Why passing the answer on to this process's stdout stopped, where it did."""
+    cut_off: bool = False
+    """Whether more than :data:`AHEAD_LIMIT` came with no marker, so that this client stopped reading and ended the
+    connection: the status is then mostly ssh's being killed, and is not taken for the target's failure."""
 
 
-def collect(pipe: IO[bytes], sink: Sink, kept: bytearray) -> None:
-    """Pass *pipe* on to *sink* as it arrives, and keep it all in *kept*."""
-    for chunk in iter(lambda: os.read(pipe.fileno(), 65536), b""):
-        sink.write(chunk)
-        kept.extend(chunk)
+QUESTION_STATUSES = frozenset(dev_dispatch.STATUSES) - {dev_dispatch.COPY_FAILED}
+"""The dispatcher's own statuses a question can end with: a copy's COPY_FAILED is none of them."""
 
 
 def read_answer(pipe: IO[bytes], sink: Sink) -> Answer:
@@ -642,86 +866,118 @@ def read_answer(pipe: IO[bytes], sink: Sink) -> Answer:
     What arrives ahead of it is kept and the reading stops there: where it is
     anything, the call ends without taking an answer.
     """
-    buffer = b""
-    while _MARKER not in buffer and len(buffer) <= AHEAD_LIMIT:
-        chunk = os.read(pipe.fileno(), 65536)
-        if not chunk:
-            return Answer(buffer, marked=False)
-        buffer += chunk
-    if _MARKER not in buffer:
-        return Answer(buffer, marked=False)
-    ahead, _, rest = buffer.partition(_MARKER)
+    ahead, rest = read_up_to(pipe, _MARKER)
+    if rest is None:
+        return Answer(ahead, marked=False)
+    sink.marked()
     if ahead:
         return Answer(ahead, marked=True)
     sink.write(rest)
-    for chunk in iter(lambda: os.read(pipe.fileno(), 65536), b""):
+    for chunk in chunks(pipe):
         sink.write(chunk)
     return Answer(b"", marked=True, write_failed=sink.failed)
 
 
-def ask_there(target: Target, request: Request, tree: str) -> int:
-    """Send the request for *tree*: its answer passed on after the run's marker, its stderr as it comes and kept."""
+@dataclass(frozen=True)
+class Asking:
+    """One request put to a target, and whether this call's copy went through before it."""
+
+    request: Request
+    target: Target
+    copied: bool
+
+    def not_asked(self) -> str:
+        """The line that ends a failure of the request."""
+        if self.copied:
+            return f"  {what_runs(self.request).capitalize()} was not asked; the copy went through."
+        return f"  Nothing was done on {self.target.name}."
+
+
+def ask_there(asking: Asking, tree: str) -> int | None:
+    """Send the request for *tree*: its answer passed on after the run's marker, its stderr held back until the run
+    starts, then passed on as it comes (:class:`HeldSink`), and kept.
+
+    ``None`` where the target does not hold *tree*: nothing ran, and the
+    dispatcher said so with :data:`dev_dispatch.TREE_ABSENT` alone.
+    """
     sys.stdout.flush()
     sys.stderr.flush()
-    command = target.ssh(remote_request(request, tree))
+    command = asking.target.ssh(remote_request(asking.request, tree))
     try:
         process = subprocess.Popen(command, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     except OSError as error:
-        raise Refusal(NOT_ASKED, f"{ssh_not_started(error)}\n{not_asked(request)}") from error
+        after = asking.not_asked() if asking.copied else "  Nothing was contacted."
+        raise Refusal(NOT_ASKED, f"{ssh_not_started(error)}\n{after}") from error
     said = bytearray()
+    held = HeldSink(sys.stderr.fileno())
     try:
         assert process.stdout is not None and process.stderr is not None
-        errors = threading.Thread(target=collect, args=(process.stderr, Sink(sys.stderr.fileno()), said), daemon=True)
+        errors = threading.Thread(target=collect, args=(process.stderr, held, said), daemon=True)
         errors.start()
-        answer = read_answer(process.stdout, Sink(sys.stdout.fileno()))
-        if answer.ahead:
-            # The run ends with its connection: ssh gone and its output no
-            # longer read, the dispatcher sees its output hang up.
+        answer = read_answer(process.stdout, Sink(sys.stdout.fileno(), on_marked=held.release))
+        if answer.marked and answer.ahead or len(answer.ahead) > AHEAD_LIMIT:
+            # The client stopped reading before the output ended. The run ends
+            # with its connection: ssh gone and its output no longer read, the
+            # dispatcher sees its output hang up.
             process.kill()
             process.stdout.close()
+            answer = replace(answer, cut_off=not answer.marked)
         status = dev_dispatch.status_of(process.wait())
         errors.join()
     except BaseException:
         # The run ends with its connection: ssh gone and both pipes closed, the
-        # dispatcher sees its output hang up.
-        process.kill()
-        process.wait()
-        for pipe in (process.stdout, process.stderr):
-            if pipe is not None:
-                pipe.close()
+        # dispatcher sees its output hang up. What was held back is shown.
+        end_connection(process)
+        held.release()
         raise
-    return judge(status, bytes(said).decode("utf-8", "replace"), target, request, answer)
+    stderr = bytes(said).decode("utf-8", "replace")
+    if not answer.marked and status == setup.SSH_FAILED and not_reached(stderr, asking.target) is not None:
+        held.drop()  # the client's own explanation stands alone (#818 D7)
+    else:
+        held.release()
+    if status == dev_dispatch.TREE_ABSENT and not answer.marked and not answer.ahead:
+        return None
+    return judge(status, stderr, asking, answer)
 
 
 def what_runs(request: Request) -> str:
     return "the question" if request.mode == "ask" else f"the probe {request.words[0]}"
 
 
-def not_asked(request: Request) -> str:
-    return f"  {what_runs(request).capitalize()} was not asked; the copy went through."
-
-
-def judge(status: int, stderr: str, target: Target, request: Request, answer: Answer) -> int:
+def judge(status: int, stderr: str, asking: Asking, answer: Answer) -> int:
     """This call's status for a request that ended with *status*: the run's own, the dispatcher's or the client's."""
+    target = asking.target
     if answer.ahead:
-        return _output_ahead(status, target, request, answer)
-    if status in dev_dispatch.STATUSES and status != dev_dispatch.COPY_FAILED:
-        say(dispatcher_status(status, target.name))
+        return _output_ahead(status, stderr, asking, answer)
+    if status == OLDER_TREE_GONE and not answer.marked:
+        say(
+            f"{PREFIX}: {target.name}'s dispatcher ended with {status}, which only one older than this client ends a"
+            f" question with.\n  {OLDER_DISPATCHER}\n{setup_line(target.name, target.destination)}\n"
+            f"{asking.not_asked()}"
+        )
+        return NOT_ASKED
+    if not answer.marked and status in QUESTION_STATUSES:
+        say(dispatcher_status(status, target))
         return status
     if answer.marked:
         if answer.write_failed is not None:
             return _not_written(answer.write_failed, status, target)
-        return status if status != setup.SSH_FAILED else _broke_off(request, target)
-    return _unmarked(status, stderr, target, request)
+        return status if status != setup.SSH_FAILED else _broke_off(asking.request, target)
+    return _unmarked(status, stderr, asking)
 
 
-def _output_ahead(status: int, target: Target, request: Request, answer: Answer) -> int:
+def _output_ahead(status: int, stderr: str, asking: Asking, answer: Answer) -> int:
     """The status for a request with output on stdout where the run's answer was not: ahead of the marker, or with none.
 
     With the marker, that output is the shell's, and the run is ended unanswered.
-    Without one, a status of the dispatcher's own stands, the output named
-    beside it; any other run's output cannot be told apart from the shell's.
+    Without one, a status of the dispatcher's own a question can end with
+    stands, the output named beside it. A 0 without a marker is a program that
+    ran the request and wrote none, and so is one whose output this client cut
+    off past :data:`AHEAD_LIMIT`: neither output can be told apart from the
+    shell's. Any other status is a failure of its own (#818 D8): the output is
+    shown as the shell's, and the failure is told as it is without it.
     """
+    target, request = asking.target, asking.request
     arrived = shown(answer.ahead.decode("utf-8", "replace"))
     if answer.marked:
         say(
@@ -729,13 +985,22 @@ def _output_ahead(status: int, target: Target, request: Request, answer: Answer)
             f"  The run was ended and no answer taken from it; {what_runs(request)} gave none here."
         )
         return NOT_ASKED
-    if status in dev_dispatch.STATUSES:
+    if status == dev_dispatch.TREE_ABSENT:
+        say(
+            f"{PREFIX}: {target.name} wrote this on stdout beside its dispatcher's answer:\n{arrived}\n{SHELL_PRINTS}\n"
+            f"{asking.not_asked()}"
+        )
+        return NOT_ASKED
+    if status in QUESTION_STATUSES:
         say(f"{PREFIX}: {target.name} wrote this on stdout as well:\n{arrived}\n{SHELL_PRINTS}")
-        say(dispatcher_status(status, target.name))
+        say(dispatcher_status(status, target))
         return status
+    if status != 0 and not answer.cut_off:
+        say(f"{PREFIX}: {target.name} wrote this on stdout, and no run started:\n{arrived}\n{SHELL_PRINTS}")
+        return judge(status, stderr, asking, Answer(b"", marked=False))
     say(
         f"{PREFIX}: no marker came from {target.name}, so what arrived on stdout cannot be told apart from what its"
-        f" shell prints:\n{arrived}\n  {OLDER_DISPATCHER}\n{setup_line(target.name, target.destination)}\n"
+        f" shell prints:\n{arrived}\n  {OTHER_DISPATCHER}\n{setup_line(target.name, target.destination)}\n"
         f"  No answer was taken; {what_runs(request)} gave none here."
     )
     return NOT_ASKED
@@ -764,17 +1029,22 @@ def _broke_off(request: Request, target: Target) -> int:
     return BROKE_OFF
 
 
-def _unmarked(status: int, stderr: str, target: Target, request: Request) -> int:
+def _unmarked(status: int, stderr: str, asking: Asking) -> int:
     """The status for a request that ended before the run's marker came, and ended with no dispatcher's status."""
+    target, request = asking.target, asking.request
     if status == setup.SSH_FAILED:
         message = not_reached(stderr, target)
         if message is not None:
-            say(f"{message}\n{not_asked(request)}")
+            say(f"{message}\n{asking.not_asked()}")
             return NOT_ASKED
+    unstarted = dispatcher_not_started(status, stderr, target)
+    if unstarted is not None:
+        say(f"{unstarted}\n{asking.not_asked()}")
+        return NOT_ASKED
     if status == 0:
         say(
             f"{PREFIX}: {target.name}'s dispatcher ran the request but wrote no marker ahead of its answer, so none was"
-            f" taken.\n  {OLDER_DISPATCHER}\n{setup_line(target.name, target.destination)}"
+            f" taken.\n  {OTHER_DISPATCHER}\n{setup_line(target.name, target.destination)}"
         )
         return NOT_ASKED
     say(
@@ -784,14 +1054,43 @@ def _unmarked(status: int, stderr: str, target: Target, request: Request) -> int
     return BROKE_OFF
 
 
+def prepared_copy() -> Copy:
+    """This tree's copy, built before anything is contacted."""
+    try:
+        return build_copy(TREE, setup.python_floor())
+    except OSError as error:
+        raise Refusal(
+            NOT_ASKED, f"{PREFIX}: the copy could not be built here: {error}. Nothing was contacted."
+        ) from error
+
+
 def run_there(request: Request, phase: Phase) -> int:
-    """Copy this tree to the target, then ask there from that copy; the run's own status, the dispatcher's or ours."""
+    """Ask the target from this tree, copying first what it lacks where it does not hold the tree; the run's own
+    status, the dispatcher's or ours.
+
+    A target that holds the tree is asked in one connection. One that does not
+    gets the copy, then the question once more; where it holds no tree even
+    then, the call ends with that said rather than copying again.
+    """
     assert request.target is not None
     target = find_target(request.target)
     phase.target = target.name
-    tree = copy_tree(target, phase)
+    copy = prepared_copy()
     phase.now = ASKING
-    return ask_there(target, request, tree)
+    status = ask_there(Asking(request, target, copied=False), copy.tree_id)
+    if status is not None:
+        return status
+    copy_tree(target, phase, copy)
+    phase.now = ASKING
+    again = Asking(request, target, copied=True)
+    status = ask_there(again, copy.tree_id)
+    if status is None:
+        raise Refusal(
+            NOT_ASKED,
+            f"{PREFIX}: {target.name} does not hold the tree {copy.tree_id} its copy just made current: another copy"
+            f" replaced it in between, or it was removed.\n{again.not_asked()} Ask again.",
+        )
+    return status
 
 
 def crashed(phase: Phase) -> int:

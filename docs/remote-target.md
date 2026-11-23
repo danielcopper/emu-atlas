@@ -82,35 +82,64 @@ The dispatcher lets four requests through; everything else, a login among it, is
 
 - **`/usr/bin/python3 -I -`** — the setup request: the setup's install script on stdin. It is the command line the setup
   sends to whichever login gets in; through a login of your own it reaches a plain shell and runs unchanged.
-- **`copy`** — an uncompressed tar stream of the tree on stdin, unpacked into a new directory under `trees/` with
-  `tarfile`'s `data` filter, files and directories only, and made `current` with one rename once it arrived whole; the
-  older trees are removed after that. It answers with the new tree's id, `tree-` and letters, digits and `_`, the one
-  line it writes on stdout.
+- **`copy <tree>`** — the tree `<tree>`, built beside the current one from the files the target lacks and made `current`
+  with one rename once it is whole; the older trees are removed after that. The exchange is below, under "The copy".
 - **`ask <tree> <word>`** — one question: `python -m atlas <arguments>` from the tree `<tree>`, in the sandbox.
 - **`probe <tree> <name> [<word>]`** — the tree `<tree>`'s `scripts/probes/<name>`, in the sandbox; `<name>` is a bare
   file name, `[A-Za-z0-9_]+\.py`.
 
-`<tree>` is the id a copy answered with: a question runs from the tree its own copy made, held for as long as it runs,
-and from no other — never from `current`, which another client's copy may have moved on in between. As its first act
-inside the sandbox, the run writes one line on stdout, `emu-atlas-dev: the answer follows`, and its own output comes
-after it: a sandbox or an interpreter that fails to start writes none. `<word>` is the argument list as a JSON array of
-strings, UTF-8, base64url-encoded: content paths carry blanks, quotes and parentheses, which words split on blanks
-cannot.
+`<tree>` is a tree's id: `tree-` and the sha256 of its manifest in lowercase hex, which names every file of the tree and
+its content, so the same files have the same id on every machine. A tree's directory under `trees/` is named by it. A
+question runs from the tree its id names, held for as long as it runs, and from no other — never from `current`, which
+another client's copy may have moved on in between: an answer is the answer of the content the id names. A tree the
+target does not hold — never copied, or removed by a later copy — runs nothing and ends with `TREE_ABSENT`, the client's
+cue to copy it. As its first act inside the sandbox, the run writes one line on stdout,
+`emu-atlas-dev: the answer follows`, and its own output comes after it: a sandbox or an interpreter that fails to start
+writes none. `<word>` is the argument list as a JSON array of strings, UTF-8, base64url-encoded: content paths carry
+blanks, quotes and parentheses, which words split on blanks cannot.
 
-A target set up before the copy answered with an id, or before the marker line, runs an older dispatcher: run the setup
-again, which installs this checkout's dispatcher through the key.
+A target set up before trees were named by their content runs an older dispatcher, and the client asks for the setup to
+be run again, which installs this checkout's dispatcher through the key; how the client tells one is under the statuses
+below.
 
 The setup request runs outside the sandbox: through it the key can run any code on the target with the user's rights,
 its own `authorized_keys` line among what it can rewrite. So `from=` is the only bound on the key, and the sandbox
 guards against a faulty probe script or a core that writes, not against the key's holder.
 
-**The copy.** A copy arrives whole when its last member is the manifest, `tree.json` at the top level, stating the
-Python floor the tree needs: `{"requires_python": "3.12"}`. A stream that breaks off before that, a member that is
-neither a file nor a directory, or one the `data` filter refuses — a path out of the new directory — leaves the current
-tree as it was and removes the partial one; a leading `/` the filter strips, so such a member lands inside the new tree.
-Whatever sends a copy has to write the manifest last; the floor it states is `pyproject.toml`'s `requires-python`. An
-older tree that cannot be removed is named on stderr, after it has been moved aside where the rename went through; the
-copy stays current, and a later copy tries again.
+**The copy.** One connection carries it, and it sends only what the target lacks:
+
+1. The client sends the manifest on one line: compact JSON with sorted keys, `requires_python` — `pyproject.toml`'s
+   floor, `X.Y` — and `files`, every file of the tree sorted by path, each with its `path`, its `sha256` and whether it
+   is `executable`. Directories are implied by the files they hold; `__pycache__` and `*.pyc` are never listed. The
+   dispatcher refuses a manifest whose sha256 is not the id the request names, and one with a path that is absolute,
+   holds `.`, `..`, an empty name or `__pycache__`, names a `.pyc` or the manifest itself, is listed twice, or is a file
+   that another path needs as its directory.
+2. The dispatcher answers with one line, `emu-atlas-dev: lacks` and, each after a blank, the sha256 of every file whose
+   content its current tree does not hold — none where it holds the tree already. It hashes the current tree's files to
+   know, rather than take its manifest's word for them.
+3. Where that line names any, the client sends a gzip tar, at gzip's fastest level, of those files alone, each member a
+   regular file named by its sha256: the same content at two paths goes over once. Then it closes its end.
+4. The dispatcher builds the new tree beside the current one, in a directory of its own under `trees/`: the files
+   received, and copies — not hard links — of the current tree's files for the rest. It writes the manifest as
+   `tree.json`, checks every file against its sha256 and its mode (700 for an executable file, 600 for the rest), and
+   compiles the tree (below). Then one rename puts the tree at its id, and another makes it `current`. Its last line on
+   stdout is the tree's id.
+
+Whatever fails leaves the current tree as it was and removes what the copy built. A stream that breaks off, a member
+that is no regular file, one that was not asked for or comes twice, and a file whose content is not its sha256 are a
+copy that did not arrive whole; an error of the target's own while building — a full disk, say — is named with the step
+it stopped at; an exception of the dispatcher's own ends the copy with its traceback. A copy killed outright leaves its
+directory for the next copy to remove. Two copies take turns, never building at the same time. An older tree that cannot
+be removed is named on stderr, after it has been moved aside where the rename went through; the copy stays current, and
+a later copy tries again.
+
+**The bytecode.** Before the rename, the dispatcher compiles every `.py` file of the new tree with its own interpreter —
+`/usr/bin/python3`, the one the sandbox runs — into the `__pycache__` beside it, as checked-hash bytecode: at import
+Python checks each file against the hash of its source, not its timestamp. It compiles and runs nothing, outside the
+sandbox. The bytecode of a source the current tree holds unchanged, where it is this interpreter's checked-hash file,
+comes over from it; every other source is compiled. The sandbox only reads the files. A source that does not compile
+gets none, and a question fails on it as it would without; one that finds bytecode stale or missing compiles the source
+in memory and answers, as it did before the copy compiled anything.
 
 **The sandbox.** Every question and every probe script runs through `/usr/bin/bwrap`
 (`--ro-bind / / --dev /dev --proc /proc --tmpfs /tmp --unshare-net --unshare-pid --die-with-parent`): the file system
@@ -135,13 +164,18 @@ status is passed through unchanged, and a run ended by a signal answers 128 plus
 a run the dispatcher ended because its connection was gone among them:
 
 - **3 `REFUSED`** — the request is none of the four above, or its argument word is no JSON array of strings.
-- **4 `CANNOT_RUN`** — nothing ran: a tree without a readable manifest, an interpreter below the tree's floor, a probe
-  the tree does not hold, no working sandbox, a run that could not be started, a `copy` on a Python whose `tarfile` has
-  no `data` filter, an error reading the tree, or an exception of the dispatcher's own, its traceback on stderr.
-- **5 `COPY_FAILED`** — the copy could not start, did not arrive whole, or arrived but could not be made current; the
-  current tree is as it was.
-- **8 `TREE_GONE`** — nothing ran: the tree the request names is not there, removed by a later copy or never copied. Ask
-  again; every call copies first.
+- **4 `CANNOT_RUN`** — nothing ran: a tree without a readable manifest (remove it on the target, and the next call
+  copies it anew), an interpreter below the tree's floor, a probe the tree does not hold, no working sandbox, a run that
+  could not be started, an error reading the tree, or an exception of the dispatcher's own, its traceback on stderr.
+- **5 `COPY_FAILED`** — the copy was refused for its manifest, could not start, did not arrive whole, could not be built
+  on the target (a full disk, say; the message names the step), or arrived but could not be put in place or made
+  current; the current tree is as it was.
+- **9 `TREE_ABSENT`** — nothing ran: the target does not hold the tree the request names, never copied or removed by a
+  later copy. It says nothing on stderr: the client copies the tree and asks again.
+
+8 is no status of this dispatcher's. A target set up after the marker line but before trees were named by their content
+ends a question with 8 for a tree it does not hold; one from before the marker line refuses the request (3). Either way
+the client asks for the setup to be run again.
 
 A probe script that raises — at compile and import time as well — ends with 2, a question it could not put, with its
 traceback on stderr: the bootstrap that runs it turns its crash into that, here as on a target.
@@ -227,40 +261,50 @@ mise run ask --target handheld -- save-portability gba --source <a> --target <b>
 changes. `--target <name>` (or `--target=<name>`) counts only as the first argument: everything after it is the
 question, a `--target` of its own among it.
 
-**Every call copies first.** With `--target`, the client reads the target's entry from this tool's SSH config alone
-(`ssh -F ~/.config/emu-atlas-dev/ssh_config`) — so with the restricted key alone, and nothing of your own SSH config —
-and sends a `copy` of the working tree as it stands, uncommitted edits and all: every file and directory under `atlas/`
-and `scripts/probes/`, without `__pycache__` and `*.pyc`, in a stable order, then `tree.json` with `pyproject.toml`'s
-floor. A link, or anything else that is no file or directory, is left out and named on stderr. The copy answers with the
-id of the tree it made, and the client sends `ask <tree> <word>` or `probe <tree> <name> [<word>]` with that id, so the
-question runs from this copy and no other client's. What the run writes after the dispatcher's marker arrives on stdout
-and its stderr on stderr, byte for byte, and its exit status is the command's. A note the copy writes on stderr — an
-older tree it could not remove — is shown there, and the question is still asked. `ssh` gives up on an address that
-takes no connection within 15 seconds.
+**A call copies only what the target lacks.** With `--target`, the client reads the target's entry from this tool's SSH
+config alone (`ssh -F ~/.config/emu-atlas-dev/ssh_config`) — so with the restricted key alone, and nothing of your own
+SSH config — and builds the manifest of the working tree as it stands, uncommitted edits and all: every file under
+`atlas/` and `scripts/probes/`, without `__pycache__` and `*.pyc`. A link, or anything else that is no file or
+directory, is left out and named on stderr. The manifest's sha256 is the tree's id, and the client asks at once:
+`ask <tree> <word>` or `probe <tree> <name> [<word>]`. A target that holds the tree runs the question in that one
+connection. One that does not ends with `TREE_ABSENT`; the client then sends `copy <tree>`, which carries only the files
+the target lacks (see "The copy" above), and asks again, once. A target that holds no such tree even then — another
+client's copy replaced it in between — ends the call with that said, and nothing is copied twice. What the run writes
+after the dispatcher's marker arrives on stdout and its stderr on stderr, byte for byte, and its exit status is the
+command's. What `ssh` and the target write on stderr before the run starts is held back until it starts, and passed on
+then; where no run starts, it is passed on ahead of the client's message, unless the client recognises a failure before
+the login, whose explanation then stands alone. A note the copy writes on stderr — an older tree it could not remove —
+is shown there, and the question is still asked. `ssh` gives up on an address that takes no connection within 15
+seconds.
 
 **The target's shell.** sshd runs the dispatcher through the user's shell, and that shell's startup files may print. On
 stderr that passes on with the run's own stderr. On stdout it would land in front of the answer, so nothing on stdout
-counts but the tree's id at the copy and what follows the marker at the question. Anything else there — ahead of the id
-or glued to it, or ahead of the marker — ends the call without an answer, shows what arrived, each line escaped, and
-asks for the startup files to be silent for a shell without a terminal; the copy went through. No id at all, or no
-marker, is what a dispatcher older than this client answers: run the setup again.
+counts but the copy's lines and what follows the marker at the question. Anything else there — ahead of the marker or of
+a `TREE_ABSENT`, ahead of the copy's lacks line, or beside its id — ends the call without an answer, shows what arrived,
+each line escaped, and asks for the startup files to be silent for a shell without a terminal. Where it came ahead of
+the copy's lacks line, no file was sent; beside its id, the copy went through and nothing was asked. No lacks line or no
+id, like a question that ends with 8 (see the statuses above), means the dispatcher there is not this checkout's: run
+the setup again. So does a question that ends with 0 and no marker, or that writes more than 64 KiB on stdout without
+one, after which the client ends the connection. One that ends with any other status and no marker is told by its own
+failure, below the shell's output, as it is without that output.
 
 What comes back is printed here and written nowhere, the tree included.
 
-**The statuses.** atlas ends with 0 or 2; the dispatcher's 3, 4, 5 and 8 are passed on with what it said and a line that
-names them as the dispatcher's. The client's failures past a usage error are none of those; a usage error ends with 2,
-as atlas's does, before anything is contacted. A probe script ends with 0, 1 or 2, so that its status is never taken for
-the dispatcher's, or for a failure of the client's past a usage error:
+**The statuses.** atlas ends with 0 or 2; the dispatcher's 3, 4 and 5 are passed on with what it said and a line that
+names them as the dispatcher's. Its 9 is the client's cue to copy and never passed on. The client's failures past a
+usage error are none of those; a usage error ends with 2, as atlas's does, before anything is contacted. A probe script
+ends with 0, 1 or 2, so that its status is never taken for the dispatcher's, or for a failure of the client's past a
+usage error:
 
 - **2 `USAGE`** — the call could not be put, as for atlas: no question, no probe script, a script `scripts/probes/` does
   not hold or the dispatcher would not take, or a target name the setup would not accept. Nothing was contacted.
 - **6 `NOT_ASKED`** — no answer was taken, and nothing was done on the target but a copy where one went through: no such
   target, an entry without an address or a user, no key for targets here, no `ssh` or one that could not be started, a
   copy that could not be built here, an `ssh` that ended before the login (below), an interpreter the target cannot
-  start or a dispatcher that is gone there, the target shell's output or an older dispatcher (the run, if it started,
-  ended before its answer was taken), or a crash of the client before it contacted anything or after the copy went
-  through. Without `--target`: Python that could not be started here, or a crash of the client, after which whatever ran
-  here printed above and its status is lost.
+  start or a dispatcher that is gone there, the target shell's output, an older dispatcher or another one (the run, if
+  it started, ended before its answer was taken), a target that holds no tree even after its copy went through, or a
+  crash of the client before it contacted anything or after the copy went through. Without `--target`: Python that could
+  not be started here, or a crash of the client, after which whatever ran here printed above and its status is lost.
 - **7 `BROKE_OFF`** — the request ended without a status of the dispatcher's or the run's: the connection broke, the
   dispatcher or the run's sandbox there failed to start, or `ssh` failed before the login with a message no pattern
   knows, so that whether the request reached the target is not known. After a copy, the target's current tree is that
@@ -271,8 +315,8 @@ the dispatcher's, or for a failure of the client's past a usage error:
 
 An interrupt (Ctrl-C) ends the call with 130 and says where it found it.
 
-Each failure before the login says what to do and ends with **nothing done on the target**, or, after a copy went
-through, that the question was not asked:
+Each failure before the login says what to do, the client's explanation alone, and ends with **nothing done on the
+target**, or, after a copy went through, that the question was not asked:
 
 | What the call meets                     | What to do                                                                                |
 | --------------------------------------- | ----------------------------------------------------------------------------------------- |
@@ -283,6 +327,29 @@ through, that the question was not asked:
 | no record of the target's host key      | run the setup again: it shows the fingerprint and records it                              |
 | the build host's key refused            | run the setup again: the address the target sees this machine at may have changed         |
 | a hop on the way that fails             | as the setup words it: check that hop with your own `ssh`                                 |
+
+## What a question costs
+
+Measured from a build host on a Steam Deck on the same network, medians of five runs, when every call copied the whole
+tree and nothing was compiled ahead of the question:
+
+| Part                                                                                       | Time        |
+| ------------------------------------------------------------------------------------------ | ----------- |
+| one connection alone: the login and the dispatcher's start                                 | 0.27 s      |
+| the copy, its own connection included: the whole tree, an uncompressed tar of about 7.4 MB | 0.48 s      |
+| a question up to the run's marker: connection, dispatcher and sandbox                      | 0.33 s      |
+| importing `atlas.cli` in the sandbox                                                       | 1.05–1.13 s |
+| of that, compiling atlas's 69 source files, which the sandbox cannot keep                  | 0.72–0.91 s |
+| `atlas --version` in all, copy and question                                                | 1.85 s      |
+
+Nearly all of it was the fixed cost, not atlas's own work. What remains for a question about a tree the target holds is
+one connection — the 0.33 s up to the marker — and the import from the bytecode the copy compiled, without the compile.
+Measured on the same device for a tree it held, medians of five runs: `atlas --version` 1.07 s and `atlas health` 1.05 s
+in all, the client's own work here, about 0.06 s, included. Importing `atlas.cli` from that bytecode took 0.53–0.58 s in
+three runs of a probe. The same probe compiled atlas's sources in memory in 1.06–1.18 s that day against 0.72–0.91 s on
+the day of the table, so the device ran slower and the table's parts are not that day's. A call after a change pays two
+connections more, the question that finds the tree absent and the copy, and the copy sends the changed files alone,
+gzip-compressed, and compiles the sources whose bytecode it cannot carry over.
 
 ## A device that is also a romm-tender target
 
