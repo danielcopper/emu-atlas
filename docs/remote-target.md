@@ -344,12 +344,12 @@ tree and nothing was compiled ahead of the question:
 
 Nearly all of it was the fixed cost, not atlas's own work. What remains for a question about a tree the target holds is
 one connection — the 0.33 s up to the marker — and the import from the bytecode the copy compiled, without the compile.
-Measured on the same device once trees were named by their content, medians of five runs: `atlas --version` 1.07 s and
-`atlas health` 1.05 s in all, the client's own start included, with importing `atlas.cli` from that bytecode at
-0.53–0.58 s in three runs of a probe; the device compiled atlas's sources in 1.06–1.18 s that day, slower than on the
-day of the table above. A call after a change pays two connections more, the question that finds the tree absent and the
-copy, and the copy sends the changed files alone, gzip-compressed, and compiles the sources whose bytecode it cannot
-carry over.
+Measured on the same device for a tree it held, medians of five runs: `atlas --version` 1.07 s and `atlas health` 1.05 s
+in all, the client's own work here, about 0.06 s, included. Importing `atlas.cli` from that bytecode took 0.53–0.58 s in
+three runs of a probe. The same probe compiled atlas's sources in memory in 1.06–1.18 s that day against 0.72–0.91 s on
+the day of the table, so the device ran slower and the table's parts are not that day's. A call after a change pays two
+connections more, the question that finds the tree absent and the copy, and the copy sends the changed files alone,
+gzip-compressed, and compiles the sources whose bytecode it cannot carry over.
 
 ## A device that is also a romm-tender target
 
